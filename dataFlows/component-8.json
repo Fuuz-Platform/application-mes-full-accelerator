@@ -1,0 +1,1875 @@
+{
+  "header": {
+    "id": "calendarEventFromShiftOnEvent",
+    "name": "Calendar Event from Shift on Event",
+    "description": "Create or update a Calendar Event from the Shift record when someone changes it.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cm6tpqqzq00n90775fro53xiq",
+    "number": "0.0.18",
+    "description": "",
+    "dataFlowId": "calendarEventFromShiftOnEvent",
+    "flow": {
+      "id": "cm6tpqqzq00n90775fro53xiq",
+      "name": "Calendar Event from Shift on Event",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "0bc3fdc0-c57c-4764-bd6a-4086b0761605",
+          "name": "Data Changes",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "nextNodes": [
+              "8c90def9-363f-4896-9d6d-2164400cc19b"
+            ],
+            "type": "Shift",
+            "operations": [
+              "Create",
+              "Update",
+              "Delete"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "125f32c8-16b0-438e-9403-ce03f33cc354",
+          "name": "Log",
+          "type": "log",
+          "data": {
+            "messageTransform": "$string($)",
+            "level": "Debug",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "29140713-0b26-45bf-81a9-3fba986991df",
+          "name": "Upsert Calendar Events",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  /* There is a chance that the end date is before the start */\n  $start := $moment($state.context.REQUEST.value.after.startAt).tz($state.context.TIMEZONE, true);\n  $end := $moment($state.context.REQUEST.value.after.endAt).tz($state.context.TIMEZONE, true);\n\n  $end := $moment($end).isBefore($moment($start)) ? $moment($end).add(1,'day') : $end; \n\n  $durationSeconds := $moment($end).diff($start,'seconds');\n\n  {\n    \"payload\": $state.context.SHIFTGROUP.(\n      $id := calendarId & '::' & $state.context.REQUEST.value.after.id;\n      {\n        \"create\": {\n          \"id\": $id,\n          \"calendarId\": calendarId,\n          \"calendarEventTypeId\": \"available\",\n          \"title\": $state.context.REQUEST.value.after.name,\n          \"description\": \"Created & Maintained by Fuuz system event.\",\n          \"priority\": 0,\n          \"eventJson\": {\n            \"duration\": $durationSeconds * 1000,\n            \"rrule\": {\n              \"dtstart\": $dtstart,\n              \"freq\": \"daily\",\n              \"byweekday\": $state.context.REQUEST.value.after.[\n                (sunday) ? 6,\n                (monday) ? 0,\n                (tuesday) ? 1,\n                (wednesday) ? 2,\n                (thursday) ? 3,\n                (friday) ? 4,\n                (saturday) ? 5\n              ]\n            },\n            \"allDay\": false,\n            \"recurring\": true,\n            \"start\": $start,\n            \"end\": $end,\n            \"display\": \"background\"\n          }\n        },\n        \"update\": {\n          \"calendarEventTypeId\": \"available\",\n          \"title\": $state.context.REQUEST.value.after.name,\n          \"description\": \"Created & Maintained by Fuuz system event.\",\n          \"priority\": 0,\n          \"eventJson\": {\n            \"duration\": $durationSeconds * 1000,\n            \"rrule\": {\n              \"dtstart\": $dtstart,\n              \"freq\": \"daily\",\n              \"byweekday\": $state.context.REQUEST.value.after.[\n                (sunday) ? 6,\n                (monday) ? 0,\n                (tuesday) ? 1,\n                (wednesday) ? 2,\n                (thursday) ? 3,\n                (friday) ? 4,\n                (saturday) ? 5\n              ]\n            },\n            \"allDay\": false,\n            \"recurring\": true,\n            \"start\": $start,\n            \"end\": $end,\n            \"display\": \"background\"\n          }\n        },\n        \"where\": {\n          \"id\": $id\n        }\n      }\n    )\n  }   \n)",
+            "mutation": "mutation upsertCalendarEvent($payload:[CalendarEventUpsertPayloadInput!]!) {\n  upsertCalendarEvent(payload:$payload){\n    id\n  }\n}",
+            "nextNodes": [
+              "8c234d2d-b291-46c4-aacd-fc43dfd634a2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "49c65dee-988e-4728-8715-18e6bb4eed47",
+          "name": "Save REQUEST",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"REQUEST\": $\n}",
+            "nextNodes": [
+              "1b9bcd82-557a-4853-a799-cb96ca1a7fff"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+          "name": "Query Calendar on Shift",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"shifts\": {\n      \"_some\": {\n        \"shiftId\": {\n          \"_in\": [$coalesce([$.value.after.id, $.value.before.id])]\n        }\n      }      \n    }\n  }\n}",
+            "query": "query shiftGroup($where:ShiftGroupWhereInput!){\n  shiftGroup(where:$where) {\n    edges {\n      node {\n        id\n        name\n        calendarId\n      }\n    }\n  }\n  \n  setting(where: { id: { _eq: \"TimeZone\" } }) {\n    edges {\n      node {\n        defaultValue\n      }\n    }\n  }\n}",
+            "nextNodes": [
+              "52b278e9-3749-4885-b84f-2556114dd303"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "52b278e9-3749-4885-b84f-2556114dd303",
+          "name": "Save SHIFTGROUP to memory",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"SHIFTGROUP\": shiftGroup.edges.node,\n  \"TIMEZONE\": setting.edges[0].node.defaultValue\n}",
+            "nextNodes": [
+              "e94f1878-5d78-4338-9d93-a6f820bdfdad"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "af09a88c-d613-4497-b549-d1f2dd53c94c",
+          "name": "Mutate - Update Shift Record",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"calendarEventId\": upsertCalendarEvent.id\n    },\n    \"where\": {\n      \"id\": $state.context.REQUEST.value.after._id\n    }\n  }\n}",
+            "mutation": "mutation upsertShift($payload:[ShiftUpdatePayloadInput!]!) {\n  updateShift(payload:$payload) {\n    id\n  }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "8c90def9-363f-4896-9d6d-2164400cc19b",
+          "name": "Reject if no changes.",
+          "type": "unless",
+          "data": {
+            "transform": "$objectDiff($coalesce([$.value.before,{}]), $coalesce([$.value.after,{}]), {\"detailed\": true, \"ignore\": [[\"calendarEventId\"]]}).(\n  $isNilOrEmpty(added) and $isNilOrEmpty(deleted) and $isNilOrEmpty(updated)\n)",
+            "nextNodes": [
+              "49c65dee-988e-4728-8715-18e6bb4eed47",
+              "125f32c8-16b0-438e-9403-ce03f33cc354"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+          "name": "Accept if calendarEventId is Missing",
+          "type": "when",
+          "data": {
+            "nextNodes": [
+              "af09a88c-d613-4497-b549-d1f2dd53c94c"
+            ],
+            "transform": "$isNilOrEmpty($state.context.REQUEST.value.after.calendarEventId)"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+          "name": "If Create or Update",
+          "type": "ifElse",
+          "data": {
+            "onTrueNextNodes": [
+              "29140713-0b26-45bf-81a9-3fba986991df"
+            ],
+            "transform": "$state.context.REQUEST.value.operation = 'create'\n  or $state.context.REQUEST.value.operation = 'update'",
+            "onFalseNextNodes": [
+              "a43efd28-437a-4690-9531-a64cd845c10c"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a43efd28-437a-4690-9531-a64cd845c10c",
+          "name": "Delete Calendar Events",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": $state.context.SHIFTGROUP.(\n    $id := calendarId & '::' & $state.context.REQUEST.value.before.id;\n    {       \n      \"where\": {\n        \"id\": $id\n      }\n    }\n  )\n}   \n",
+            "mutation": "mutation deleteCalendarEvent($payload:[CalendarEventDeletePayloadInput!]!) {\n  deleteCalendarEvent(payload:$payload){\n    id\n  }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.17"
+    },
+    "diagram": {
+      "id": "cm6tpqqzq00n90775fro53xiq",
+      "offsetX": -1590.23,
+      "offsetY": 6.67,
+      "zoom": 84.27,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "f5689ac4-0750-496b-9e52-507383a00f9d",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "f3785167-e20e-4f8e-8ef2-b6181f323bb4": {
+              "points": [
+                {
+                  "id": "b406d78d-f0a2-4056-8a2e-9809a20a08b4",
+                  "type": "point",
+                  "x": 544,
+                  "y": 334.73
+                },
+                {
+                  "id": "f32eaa8c-5cee-4b72-ae79-5996c2902381",
+                  "type": "point",
+                  "x": 625,
+                  "y": 334.73
+                }
+              ],
+              "id": "f3785167-e20e-4f8e-8ef2-b6181f323bb4",
+              "type": "default",
+              "selected": false,
+              "source": "49c65dee-988e-4728-8715-18e6bb4eed47",
+              "sourcePort": "clen0ta0a00kz356dve4py9w6",
+              "target": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+              "targetPort": "clen0tok800lm356dls1lvamk",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "45d62b5a-c00d-4778-aacc-5816ca884987": {
+              "points": [
+                {
+                  "id": "ddb82102-53e3-4942-9406-4cbb3ec97cba",
+                  "type": "point",
+                  "x": 797.72,
+                  "y": 334.73
+                },
+                {
+                  "id": "0306d196-8df4-46ab-955c-ed7a6e71d73b",
+                  "type": "point",
+                  "x": 885,
+                  "y": 334.73
+                }
+              ],
+              "id": "45d62b5a-c00d-4778-aacc-5816ca884987",
+              "type": "default",
+              "selected": false,
+              "source": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+              "sourcePort": "clen0tok800lo356d1avnxthy",
+              "target": "52b278e9-3749-4885-b84f-2556114dd303",
+              "targetPort": "clen0werk00nc356d9rmi73ls",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "31ce7173-b711-4e91-801a-400261ab255d": {
+              "points": [
+                {
+                  "id": "a33aacbe-3d0a-47f2-9d23-13540fa5e936",
+                  "type": "point",
+                  "x": 342.81,
+                  "y": 334.73
+                },
+                {
+                  "id": "a8f19257-ed94-4eec-bc44-6e4bee20e147",
+                  "type": "point",
+                  "x": 390,
+                  "y": 334.73
+                }
+              ],
+              "id": "31ce7173-b711-4e91-801a-400261ab255d",
+              "type": "default",
+              "selected": false,
+              "source": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "sourcePort": "cleodo46o02b4356d0gbm7d8l",
+              "target": "49c65dee-988e-4728-8715-18e6bb4eed47",
+              "targetPort": "clen0ta0a00kx356dbzhjqp0q",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "099f3277-db08-4af0-8742-4d6e3e4d4d6d": {
+              "points": [
+                {
+                  "id": "cf746d1b-ec34-44b5-874f-d01f1320a56f",
+                  "type": "point",
+                  "x": 69,
+                  "y": 264.73
+                },
+                {
+                  "id": "dd26e69a-1eec-405b-9252-2922576472c9",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "099f3277-db08-4af0-8742-4d6e3e4d4d6d",
+              "type": "default",
+              "selected": false,
+              "source": "0bc3fdc0-c57c-4764-bd6a-4086b0761605",
+              "sourcePort": "clen0jpwd00fz356dzdtv1kw0",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "62d4d0f2-71c6-461e-b55d-32220cea7305": {
+              "points": [
+                {
+                  "id": "79c6c2ed-51b6-4140-a9cc-57915fb4841b",
+                  "type": "point",
+                  "x": 342.81,
+                  "y": 334.73
+                },
+                {
+                  "id": "dd3f162a-5a70-47a8-bd80-fd37d32d75cc",
+                  "type": "point",
+                  "x": 390,
+                  "y": 244.73
+                }
+              ],
+              "id": "62d4d0f2-71c6-461e-b55d-32220cea7305",
+              "type": "default",
+              "selected": false,
+              "source": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "sourcePort": "cleodo46o02b4356d0gbm7d8l",
+              "target": "125f32c8-16b0-438e-9403-ce03f33cc354",
+              "targetPort": "clen0ldg000hx356dvw4klef2",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ad6b97b7-f31d-4040-8946-5c6c585130fa": {
+              "points": [
+                {
+                  "id": "4195eee3-3193-43f5-9a00-0482aa1f3dfe",
+                  "type": "point",
+                  "x": 68.98,
+                  "y": 329.73
+                },
+                {
+                  "id": "64bda76a-016c-4d4c-a0c1-c708e32e7da6",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "ad6b97b7-f31d-4040-8946-5c6c585130fa",
+              "type": "default",
+              "selected": false,
+              "source": "bd167dac-9e29-4d46-8d19-7bbee24b67cb",
+              "sourcePort": "cleodvjwl02oa356d1mnzb5tf",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9103e1b2-71c4-470b-9eae-eb69dd2fb98b": {
+              "points": [
+                {
+                  "id": "6f5a9d30-687b-43f9-a9ce-0f93a2a931b6",
+                  "type": "point",
+                  "x": 1631.19,
+                  "y": 299.73
+                },
+                {
+                  "id": "e2372a90-448b-4d01-bcf1-40beb1bb78f9",
+                  "type": "point",
+                  "x": 1680,
+                  "y": 299.73
+                }
+              ],
+              "id": "9103e1b2-71c4-470b-9eae-eb69dd2fb98b",
+              "type": "default",
+              "selected": false,
+              "source": "29140713-0b26-45bf-81a9-3fba986991df",
+              "sourcePort": "clen0oyzo00ji356dcxym2r3y",
+              "target": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+              "targetPort": "cleoe85wj02v4356dcu6dn6ch",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ae7545ef-4bf0-405f-a11b-2dbbb6ed1046": {
+              "points": [
+                {
+                  "id": "cc93fc17-62f3-4ab5-b79e-a099aebeb840",
+                  "type": "point",
+                  "x": 1921.5,
+                  "y": 299.73
+                },
+                {
+                  "id": "ad0bf23a-438b-4ebd-8403-5a6d7aae435d",
+                  "type": "point",
+                  "x": 2000,
+                  "y": 299.73
+                }
+              ],
+              "id": "ae7545ef-4bf0-405f-a11b-2dbbb6ed1046",
+              "type": "default",
+              "selected": false,
+              "source": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+              "sourcePort": "cleoe85wj02v6356d4biwclax",
+              "target": "af09a88c-d613-4497-b549-d1f2dd53c94c",
+              "targetPort": "cleocvzyu01wl356dw82ocvmh",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "fa17936a-bc13-4ae4-89b9-587a387d2a02": {
+              "points": [
+                {
+                  "id": "9f8b9372-251d-4121-b54d-ea3b036c35b1",
+                  "type": "point",
+                  "x": 68.98,
+                  "y": 394.73
+                },
+                {
+                  "id": "8c6b72ee-835c-4b3b-a31e-3155f30ba40b",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "fa17936a-bc13-4ae4-89b9-587a387d2a02",
+              "type": "default",
+              "selected": false,
+              "source": "406ba390-3379-4421-8847-7ccf8bbe862e",
+              "sourcePort": "cm2p6glt7002g356jn97ger7m",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f55f8b47-3161-48fe-a7dc-90b4ea5907f5": {
+              "points": [
+                {
+                  "id": "711407bb-ba56-44b7-8706-545c9ddeadbe",
+                  "type": "point",
+                  "x": 81.77,
+                  "y": 459.73
+                },
+                {
+                  "id": "421e404c-3cd9-47ae-965a-36b051e56e61",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "f55f8b47-3161-48fe-a7dc-90b4ea5907f5",
+              "type": "default",
+              "selected": false,
+              "source": "f885605e-5bd8-4075-bb5f-d0b429db8052",
+              "sourcePort": "cm2p6vwuc00kb356jmddsoyie",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3aeffc32-7c78-4144-baa1-797ca723ded1": {
+              "points": [
+                {
+                  "id": "bb3e961c-aa2b-4af1-b6bb-42adfddcf685",
+                  "type": "point",
+                  "x": 1303.98,
+                  "y": 334.73
+                },
+                {
+                  "id": "08a48438-6458-43a7-87aa-aab020e2bee8",
+                  "type": "point",
+                  "x": 1460,
+                  "y": 299.73
+                }
+              ],
+              "id": "3aeffc32-7c78-4144-baa1-797ca723ded1",
+              "type": "default",
+              "selected": false,
+              "source": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+              "sourcePort": "cm2p7ec1i014e356j4d96ajxh",
+              "target": "29140713-0b26-45bf-81a9-3fba986991df",
+              "targetPort": "clen0oyzo00jg356dyxpkj41a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f6e6027c-95f5-4684-8b01-d39754526578": {
+              "points": [
+                {
+                  "id": "f9a2f6b0-ae95-4aae-9df1-7e6832be073c",
+                  "type": "point",
+                  "x": 1093.34,
+                  "y": 334.73
+                },
+                {
+                  "id": "262e5a6a-7fd2-4bf8-8c1d-354d2f970e5a",
+                  "type": "point",
+                  "x": 1150,
+                  "y": 334.73
+                }
+              ],
+              "id": "f6e6027c-95f5-4684-8b01-d39754526578",
+              "type": "default",
+              "selected": false,
+              "source": "52b278e9-3749-4885-b84f-2556114dd303",
+              "sourcePort": "clen0werl00ne356dt001tscf",
+              "target": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+              "targetPort": "cm2p7ec1i014c356jzcalx4k1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8aa68bc1-fa32-4835-8609-861d489751b4": {
+              "points": [
+                {
+                  "id": "b2f03062-b1e8-41e5-a6a0-6085fee9aa5b",
+                  "type": "point",
+                  "x": 1303.98,
+                  "y": 359.89
+                },
+                {
+                  "id": "ef921b3f-cdb5-4d96-8150-ec0161eac3c7",
+                  "type": "point",
+                  "x": 1460,
+                  "y": 379.73
+                }
+              ],
+              "id": "8aa68bc1-fa32-4835-8609-861d489751b4",
+              "type": "default",
+              "selected": false,
+              "source": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+              "sourcePort": "cm2p7ec1i014g356jndt4s4sj",
+              "target": "a43efd28-437a-4690-9531-a64cd845c10c",
+              "targetPort": "cm2p7f4wf017f356js7lgsdwy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ba18973b-b464-4fbc-9720-ef1a36511b0e": {
+              "points": [
+                {
+                  "id": "bc852ce5-f71e-4794-9618-7733045ed394",
+                  "type": "point",
+                  "x": 68.98,
+                  "y": 524.73
+                },
+                {
+                  "id": "7e792e41-586d-4759-9b08-d8d7fdbf40b7",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "ba18973b-b464-4fbc-9720-ef1a36511b0e",
+              "type": "default",
+              "selected": false,
+              "source": "538cf75e-da3b-400a-b9ce-d25574d989a7",
+              "sourcePort": "cm2p7g01j01by356jnhfw0j8j",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a8075fc9-705b-45f4-8c47-0b7f29e74989": {
+              "points": [
+                {
+                  "id": "8d5539ea-4a74-49bb-98fd-a1e37a17d612",
+                  "type": "point",
+                  "x": 1368.97,
+                  "y": 199.72
+                },
+                {
+                  "id": "9bf67df9-71d6-424b-8e33-8a253da73d82",
+                  "type": "point",
+                  "x": 1460,
+                  "y": 299.73
+                }
+              ],
+              "id": "a8075fc9-705b-45f4-8c47-0b7f29e74989",
+              "type": "default",
+              "selected": false,
+              "source": "2a847866-a358-438d-9a12-4b63e3ac871e",
+              "sourcePort": "cm6tpfbey00d8356jewv7e3zm",
+              "target": "29140713-0b26-45bf-81a9-3fba986991df",
+              "targetPort": "clen0oyzo00jg356dyxpkj41a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c442b1d4-c8f7-40a7-b401-99ffb1e7b89b": {
+              "points": [
+                {
+                  "id": "e94b0265-6723-4cd2-9488-615188e1cf63",
+                  "type": "point",
+                  "x": 68.97,
+                  "y": 174.73
+                },
+                {
+                  "id": "91515edc-63d3-4500-9789-044e1d95c3bd",
+                  "type": "point",
+                  "x": 185,
+                  "y": 334.73
+                }
+              ],
+              "id": "c442b1d4-c8f7-40a7-b401-99ffb1e7b89b",
+              "type": "default",
+              "selected": false,
+              "source": "e40209dc-5e86-48e1-9ff4-f12bb51babdf",
+              "sourcePort": "cm6tpjrl900et356j8g6gplnx",
+              "target": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "targetPort": "cleodo46o02b2356dx9cwkk1p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "124a97aa-3801-44c9-ba8c-860ac6da8062",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "0bc3fdc0-c57c-4764-bd6a-4086b0761605": {
+              "id": "0bc3fdc0-c57c-4764-bd6a-4086b0761605",
+              "type": "dataChanges",
+              "selected": false,
+              "x": -85,
+              "y": 225,
+              "ports": [
+                {
+                  "id": "clen0jpwd00fz356dzdtv1kw0",
+                  "type": "default",
+                  "x": 61,
+                  "y": 256.73,
+                  "name": "clen0jpwd00g0356de0aq1b3q",
+                  "parentNode": "0bc3fdc0-c57c-4764-bd6a-4086b0761605",
+                  "links": [
+                    "099f3277-db08-4af0-8742-4d6e3e4d4d6d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ],
+                "type": "Shift",
+                "operations": [
+                  "Create",
+                  "Update",
+                  "Delete"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Data Changes"
+            },
+            "125f32c8-16b0-438e-9403-ce03f33cc354": {
+              "id": "125f32c8-16b0-438e-9403-ce03f33cc354",
+              "type": "log",
+              "selected": false,
+              "x": 390,
+              "y": 205,
+              "ports": [
+                {
+                  "id": "clen0ldg000hx356dvw4klef2",
+                  "type": "default",
+                  "x": 382,
+                  "y": 236.73,
+                  "name": "clen0ldg000hy356dih8wkrmg",
+                  "parentNode": "125f32c8-16b0-438e-9403-ce03f33cc354",
+                  "links": [
+                    "62d4d0f2-71c6-461e-b55d-32220cea7305"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0ldg000hz356d4em1xcho",
+                  "type": "default",
+                  "x": 536,
+                  "y": 236.73,
+                  "name": "clen0ldg000i0356d1vz84z66",
+                  "parentNode": "125f32c8-16b0-438e-9403-ce03f33cc354",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "$string($)",
+                "level": "Debug",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log"
+            },
+            "29140713-0b26-45bf-81a9-3fba986991df": {
+              "id": "29140713-0b26-45bf-81a9-3fba986991df",
+              "type": "mutate",
+              "selected": false,
+              "x": 1460,
+              "y": 260,
+              "ports": [
+                {
+                  "id": "clen0oyzo00jg356dyxpkj41a",
+                  "type": "default",
+                  "x": 1452,
+                  "y": 291.73,
+                  "name": "clen0oyzo00jh356d4crkhksh",
+                  "parentNode": "29140713-0b26-45bf-81a9-3fba986991df",
+                  "links": [
+                    "3aeffc32-7c78-4144-baa1-797ca723ded1",
+                    "a8075fc9-705b-45f4-8c47-0b7f29e74989"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0oyzo00ji356dcxym2r3y",
+                  "type": "default",
+                  "x": 1623.19,
+                  "y": 291.73,
+                  "name": "clen0oyzo00jj356duk4nlwsi",
+                  "parentNode": "29140713-0b26-45bf-81a9-3fba986991df",
+                  "links": [
+                    "9103e1b2-71c4-470b-9eae-eb69dd2fb98b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  /* There is a chance that the end date is before the start */\n  $start := $moment($state.context.REQUEST.value.after.startAt).tz($state.context.TIMEZONE, true);\n  $end := $moment($state.context.REQUEST.value.after.endAt).tz($state.context.TIMEZONE, true);\n\n  $end := $moment($end).isBefore($moment($start)) ? $moment($end).add(1,'day') : $end; \n\n  $durationSeconds := $moment($end).diff($start,'seconds');\n\n  {\n    \"payload\": $state.context.SHIFTGROUP.(\n      $id := calendarId & '::' & $state.context.REQUEST.value.after.id;\n      {\n        \"create\": {\n          \"id\": $id,\n          \"calendarId\": calendarId,\n          \"calendarEventTypeId\": \"available\",\n          \"title\": $state.context.REQUEST.value.after.name,\n          \"description\": \"Created & Maintained by Fuuz system event.\",\n          \"priority\": 0,\n          \"eventJson\": {\n            \"duration\": $durationSeconds * 1000,\n            \"rrule\": {\n              \"dtstart\": $dtstart,\n              \"freq\": \"daily\",\n              \"byweekday\": $state.context.REQUEST.value.after.[\n                (sunday) ? 6,\n                (monday) ? 0,\n                (tuesday) ? 1,\n                (wednesday) ? 2,\n                (thursday) ? 3,\n                (friday) ? 4,\n                (saturday) ? 5\n              ]\n            },\n            \"allDay\": false,\n            \"recurring\": true,\n            \"start\": $start,\n            \"end\": $end,\n            \"display\": \"background\"\n          }\n        },\n        \"update\": {\n          \"calendarEventTypeId\": \"available\",\n          \"title\": $state.context.REQUEST.value.after.name,\n          \"description\": \"Created & Maintained by Fuuz system event.\",\n          \"priority\": 0,\n          \"eventJson\": {\n            \"duration\": $durationSeconds * 1000,\n            \"rrule\": {\n              \"dtstart\": $dtstart,\n              \"freq\": \"daily\",\n              \"byweekday\": $state.context.REQUEST.value.after.[\n                (sunday) ? 6,\n                (monday) ? 0,\n                (tuesday) ? 1,\n                (wednesday) ? 2,\n                (thursday) ? 3,\n                (friday) ? 4,\n                (saturday) ? 5\n              ]\n            },\n            \"allDay\": false,\n            \"recurring\": true,\n            \"start\": $start,\n            \"end\": $end,\n            \"display\": \"background\"\n          }\n        },\n        \"where\": {\n          \"id\": $id\n        }\n      }\n    )\n  }   \n)",
+                "mutation": "mutation upsertCalendarEvent($payload:[CalendarEventUpsertPayloadInput!]!) {\n  upsertCalendarEvent(payload:$payload){\n    id\n  }\n}",
+                "nextNodes": [
+                  "8c234d2d-b291-46c4-aacd-fc43dfd634a2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Upsert Calendar Events"
+            },
+            "49c65dee-988e-4728-8715-18e6bb4eed47": {
+              "id": "49c65dee-988e-4728-8715-18e6bb4eed47",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 390,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "clen0ta0a00kx356dbzhjqp0q",
+                  "type": "default",
+                  "x": 382,
+                  "y": 326.73,
+                  "name": "clen0ta0a00ky356dzu4juu0m",
+                  "parentNode": "49c65dee-988e-4728-8715-18e6bb4eed47",
+                  "links": [
+                    "31ce7173-b711-4e91-801a-400261ab255d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0ta0a00kz356dve4py9w6",
+                  "type": "default",
+                  "x": 536,
+                  "y": 326.73,
+                  "name": "clen0ta0a00l0356dkwhwl6jo",
+                  "parentNode": "49c65dee-988e-4728-8715-18e6bb4eed47",
+                  "links": [
+                    "f3785167-e20e-4f8e-8ef2-b6181f323bb4"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"REQUEST\": $\n}",
+                "nextNodes": [
+                  "1b9bcd82-557a-4853-a799-cb96ca1a7fff"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Save REQUEST",
+              "note": "Save REQUEST to memory"
+            },
+            "1b9bcd82-557a-4853-a799-cb96ca1a7fff": {
+              "id": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+              "type": "query",
+              "selected": false,
+              "x": 625,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "clen0tok800lm356dls1lvamk",
+                  "type": "default",
+                  "x": 617,
+                  "y": 326.73,
+                  "name": "clen0tok800ln356d8t9tgavr",
+                  "parentNode": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+                  "links": [
+                    "f3785167-e20e-4f8e-8ef2-b6181f323bb4"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0tok800lo356d1avnxthy",
+                  "type": "default",
+                  "x": 789.72,
+                  "y": 326.73,
+                  "name": "clen0tok800lp356dvlkimygo",
+                  "parentNode": "1b9bcd82-557a-4853-a799-cb96ca1a7fff",
+                  "links": [
+                    "45d62b5a-c00d-4778-aacc-5816ca884987"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"shifts\": {\n      \"_some\": {\n        \"shiftId\": {\n          \"_in\": [$coalesce([$.value.after.id, $.value.before.id])]\n        }\n      }      \n    }\n  }\n}",
+                "query": "query shiftGroup($where:ShiftGroupWhereInput!){\n  shiftGroup(where:$where) {\n    edges {\n      node {\n        id\n        name\n        calendarId\n      }\n    }\n  }\n  \n  setting(where: { id: { _eq: \"TimeZone\" } }) {\n    edges {\n      node {\n        defaultValue\n      }\n    }\n  }\n}",
+                "nextNodes": [
+                  "52b278e9-3749-4885-b84f-2556114dd303"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Calendar on Shift",
+              "note": "Query Calendar on Shift"
+            },
+            "52b278e9-3749-4885-b84f-2556114dd303": {
+              "id": "52b278e9-3749-4885-b84f-2556114dd303",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 885,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "clen0werk00nc356d9rmi73ls",
+                  "type": "default",
+                  "x": 877,
+                  "y": 326.73,
+                  "name": "clen0werl00nd356dlbr0cj6a",
+                  "parentNode": "52b278e9-3749-4885-b84f-2556114dd303",
+                  "links": [
+                    "45d62b5a-c00d-4778-aacc-5816ca884987"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0werl00ne356dt001tscf",
+                  "type": "default",
+                  "x": 1085.34,
+                  "y": 326.73,
+                  "name": "clen0werl00nf356dkz52p5of",
+                  "parentNode": "52b278e9-3749-4885-b84f-2556114dd303",
+                  "links": [
+                    "f6e6027c-95f5-4684-8b01-d39754526578"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"SHIFTGROUP\": shiftGroup.edges.node,\n  \"TIMEZONE\": setting.edges[0].node.defaultValue\n}",
+                "nextNodes": [
+                  "e94f1878-5d78-4338-9d93-a6f820bdfdad"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Save SHIFTGROUP to memory",
+              "note": "Save SHIFTGROUP to memory"
+            },
+            "af09a88c-d613-4497-b549-d1f2dd53c94c": {
+              "id": "af09a88c-d613-4497-b549-d1f2dd53c94c",
+              "type": "mutate",
+              "selected": false,
+              "x": 2000,
+              "y": 260,
+              "ports": [
+                {
+                  "id": "cleocvzyu01wl356dw82ocvmh",
+                  "type": "default",
+                  "x": 1992,
+                  "y": 291.73,
+                  "name": "cleocvzyu01wm356djzb9kpcx",
+                  "parentNode": "af09a88c-d613-4497-b549-d1f2dd53c94c",
+                  "links": [
+                    "ae7545ef-4bf0-405f-a11b-2dbbb6ed1046"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleocvzyu01wn356dal05y17q",
+                  "type": "default",
+                  "x": 2193,
+                  "y": 291.73,
+                  "name": "cleocvzyu01wo356dlhlkvole",
+                  "parentNode": "af09a88c-d613-4497-b549-d1f2dd53c94c",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"calendarEventId\": upsertCalendarEvent.id\n    },\n    \"where\": {\n      \"id\": $state.context.REQUEST.value.after._id\n    }\n  }\n}",
+                "mutation": "mutation upsertShift($payload:[ShiftUpdatePayloadInput!]!) {\n  updateShift(payload:$payload) {\n    id\n  }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate - Update Shift Record"
+            },
+            "8c90def9-363f-4896-9d6d-2164400cc19b": {
+              "id": "8c90def9-363f-4896-9d6d-2164400cc19b",
+              "type": "unless",
+              "selected": false,
+              "x": 185,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "cleodo46o02b2356dx9cwkk1p",
+                  "type": "default",
+                  "x": 177,
+                  "y": 326.73,
+                  "name": "cleodo46o02b3356d8px5xgil",
+                  "parentNode": "8c90def9-363f-4896-9d6d-2164400cc19b",
+                  "links": [
+                    "099f3277-db08-4af0-8742-4d6e3e4d4d6d",
+                    "ad6b97b7-f31d-4040-8946-5c6c585130fa",
+                    "fa17936a-bc13-4ae4-89b9-587a387d2a02",
+                    "f55f8b47-3161-48fe-a7dc-90b4ea5907f5",
+                    "ba18973b-b464-4fbc-9720-ef1a36511b0e",
+                    "c442b1d4-c8f7-40a7-b401-99ffb1e7b89b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleodo46o02b4356d0gbm7d8l",
+                  "type": "default",
+                  "x": 334.81,
+                  "y": 326.73,
+                  "name": "cleodo46o02b5356d5uv3gesm",
+                  "parentNode": "8c90def9-363f-4896-9d6d-2164400cc19b",
+                  "links": [
+                    "31ce7173-b711-4e91-801a-400261ab255d",
+                    "62d4d0f2-71c6-461e-b55d-32220cea7305"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$objectDiff($coalesce([$.value.before,{}]), $coalesce([$.value.after,{}]), {\"detailed\": true, \"ignore\": [[\"calendarEventId\"]]}).(\n  $isNilOrEmpty(added) and $isNilOrEmpty(deleted) and $isNilOrEmpty(updated)\n)",
+                "nextNodes": [
+                  "49c65dee-988e-4728-8715-18e6bb4eed47",
+                  "125f32c8-16b0-438e-9403-ce03f33cc354"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Reject if no changes."
+            },
+            "bd167dac-9e29-4d46-8d19-7bbee24b67cb": {
+              "id": "bd167dac-9e29-4d46-8d19-7bbee24b67cb",
+              "type": "debugSource",
+              "selected": false,
+              "x": -85,
+              "y": 290,
+              "ports": [
+                {
+                  "id": "cleodvjwl02oa356d1mnzb5tf",
+                  "type": "default",
+                  "x": 60.98,
+                  "y": 321.73,
+                  "name": "cleodvjwl02ob356d71artk9k",
+                  "parentNode": "bd167dac-9e29-4d46-8d19-7bbee24b67cb",
+                  "links": [
+                    "ad6b97b7-f31d-4040-8946-5c6c585130fa"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "headers": {
+                    "userId": "clb5apr60001u01kv1yqic60z",
+                    "tenantId": "mes2",
+                    "apiKeyId": "null"
+                  },
+                  "topic": "mfgx.tenant.mes2.dataChange.application.shift.create",
+                  "value": {
+                    "collection": "shift",
+                    "operation": "create",
+                    "before": null,
+                    "after": {
+                      "name": "__TEST__",
+                      "endHour": 17,
+                      "endMinute": 0,
+                      "startHour": 7,
+                      "startMinute": 0,
+                      "creditAtStart": true,
+                      "friday": false,
+                      "monday": true,
+                      "saturday": false,
+                      "sunday": false,
+                      "thursday": true,
+                      "tuesday": true,
+                      "wednesday": true,
+                      "timeZone": "America/Detroit",
+                      "shiftGroupId": "clewxbbvt0062017tcyt2h98v",
+                      "id": "clewyrcm300820181gj461msq",
+                      "createdByUserId": "clb5apr60001u01kv1yqic60z",
+                      "createdAt": "2023-03-06T15:14:59.355Z",
+                      "updatedByUserId": "clb5apr60001u01kv1yqic60z",
+                      "updatedAt": "2023-03-06T15:14:59.355Z",
+                      "_id": "clewyrcm300820181gj461msq",
+                      "collation": {
+                        "locale": "en",
+                        "strength": 2
+                      }
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ],
+                "context": null
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Run Here",
+              "note": "Connect this node to the node that errored. Please verify that no destructive actions are ran in the node that errored prior to retrying."
+            },
+            "8c234d2d-b291-46c4-aacd-fc43dfd634a2": {
+              "id": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+              "type": "when",
+              "selected": false,
+              "x": 1680,
+              "y": 260,
+              "ports": [
+                {
+                  "id": "cleoe85wj02v4356dcu6dn6ch",
+                  "type": "default",
+                  "x": 1672,
+                  "y": 291.73,
+                  "name": "cleoe85wj02v5356dkmb2a7du",
+                  "parentNode": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+                  "links": [
+                    "9103e1b2-71c4-470b-9eae-eb69dd2fb98b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleoe85wj02v6356d4biwclax",
+                  "type": "default",
+                  "x": 1913.5,
+                  "y": 291.73,
+                  "name": "cleoe85wj02v7356dki4p6as3",
+                  "parentNode": "8c234d2d-b291-46c4-aacd-fc43dfd634a2",
+                  "links": [
+                    "ae7545ef-4bf0-405f-a11b-2dbbb6ed1046"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "af09a88c-d613-4497-b549-d1f2dd53c94c"
+                ],
+                "transform": "$isNilOrEmpty($state.context.REQUEST.value.after.calendarEventId)"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Accept if calendarEventId is Missing"
+            },
+            "406ba390-3379-4421-8847-7ccf8bbe862e": {
+              "id": "406ba390-3379-4421-8847-7ccf8bbe862e",
+              "type": "debugDataChange",
+              "selected": false,
+              "x": -85,
+              "y": 355,
+              "ports": [
+                {
+                  "id": "cm2p6glt7002g356jn97ger7m",
+                  "type": "default",
+                  "x": 60.98,
+                  "y": 386.73,
+                  "name": "cm2p6glt7002h356jzngrdadg",
+                  "parentNode": "406ba390-3379-4421-8847-7ccf8bbe862e",
+                  "links": [
+                    "fa17936a-bc13-4ae4-89b9-587a387d2a02"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "beforeData": {
+                  "_id": "clsdb2uzf000d016t6nbyh7j8",
+                  "id": "clsdb2uzf000d016t6nbyh7j8",
+                  "name": "Press ATTT",
+                  "active": true,
+                  "creditAtStart": true,
+                  "friday": false,
+                  "monday": true,
+                  "saturday": false,
+                  "sunday": false,
+                  "thursday": false,
+                  "tuesday": true,
+                  "wednesday": true,
+                  "createdByUserId": "System",
+                  "createdAt": "2024-08-19T14:30:55.026Z",
+                  "updatedByUserId": "cm2kp2hox000c01s52lp36b2h",
+                  "updatedAt": "2024-10-25T20:54:15.149Z",
+                  "endAt": "2024-02-08T09:00:00.000Z",
+                  "startAt": "2024-02-08T21:00:00.000Z",
+                  "calendarEventId": "clsdb2uzf000d016t6nbyh7j8"
+                },
+                "afterData": {
+                  "_id": "clsdb2uzf000d016t6nbyh7j8",
+                  "id": "clsdb2uzf000d016t6nbyh7j8",
+                  "name": "Press A",
+                  "active": true,
+                  "creditAtStart": true,
+                  "friday": false,
+                  "monday": true,
+                  "saturday": false,
+                  "sunday": false,
+                  "thursday": false,
+                  "tuesday": true,
+                  "wednesday": true,
+                  "createdByUserId": "System",
+                  "createdAt": "2024-08-19T14:30:55.026Z",
+                  "updatedByUserId": "cm2kp2hox000c01s52lp36b2h",
+                  "updatedAt": "2024-10-25T20:54:20.313Z",
+                  "endAt": "2024-02-08T09:00:00.000Z",
+                  "startAt": "2024-02-08T21:00:00.000Z",
+                  "calendarEventId": "clsdb2uzf000d016t6nbyh7j8"
+                },
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ],
+                "type": "Shift",
+                "operation": "Update"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Update Shift"
+            },
+            "f885605e-5bd8-4075-bb5f-d0b429db8052": {
+              "id": "f885605e-5bd8-4075-bb5f-d0b429db8052",
+              "type": "debugDataChange",
+              "selected": false,
+              "x": -85,
+              "y": 420,
+              "ports": [
+                {
+                  "id": "cm2p6vwuc00kb356jmddsoyie",
+                  "type": "default",
+                  "x": 73.77,
+                  "y": 451.73,
+                  "name": "cm2p6vwuc00kc356jw8fjrm5g",
+                  "parentNode": "f885605e-5bd8-4075-bb5f-d0b429db8052",
+                  "links": [
+                    "f55f8b47-3161-48fe-a7dc-90b4ea5907f5"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "beforeData": {
+                  "_id": "clsdb2uzf000d016t6nbyh7j8",
+                  "id": "clsdb2uzf000d016t6nbyh7j8",
+                  "name": "Press A",
+                  "active": true,
+                  "creditAtStart": true,
+                  "friday": false,
+                  "monday": true,
+                  "saturday": false,
+                  "sunday": false,
+                  "thursday": true,
+                  "tuesday": true,
+                  "wednesday": true,
+                  "createdByUserId": "System",
+                  "createdAt": "2024-08-19T14:30:55.026Z",
+                  "updatedByUserId": "seed",
+                  "updatedAt": "2024-10-25T20:32:33.537Z",
+                  "endAt": "2024-02-08T09:00:00.000Z",
+                  "startAt": "2024-02-08T21:00:00.000Z"
+                },
+                "afterData": {
+                  "_id": "clsdb2uzf000d016t6nbyh7j8",
+                  "id": "clsdb2uzf000d016t6nbyh7j8",
+                  "name": "Press A",
+                  "active": true,
+                  "creditAtStart": true,
+                  "friday": false,
+                  "monday": true,
+                  "saturday": false,
+                  "sunday": false,
+                  "thursday": false,
+                  "tuesday": true,
+                  "wednesday": true,
+                  "createdByUserId": "System",
+                  "createdAt": "2024-08-19T14:30:55.026Z",
+                  "updatedByUserId": "seed",
+                  "updatedAt": "2024-10-25T20:32:36.637Z",
+                  "endAt": "2024-02-08T09:00:00.000Z",
+                  "startAt": "2024-02-08T21:00:00.000Z"
+                },
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ],
+                "type": "Shift",
+                "operation": "Update"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Update Overnight Shift"
+            },
+            "e94f1878-5d78-4338-9d93-a6f820bdfdad": {
+              "id": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+              "type": "ifElse",
+              "selected": false,
+              "x": 1150,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "cm2p7ec1i014c356jzcalx4k1",
+                  "type": "default",
+                  "x": 1142,
+                  "y": 326.73,
+                  "name": "cm2p7ec1i014d356jujir89gc",
+                  "parentNode": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+                  "links": [
+                    "f6e6027c-95f5-4684-8b01-d39754526578"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm2p7ec1i014e356j4d96ajxh",
+                  "type": "default",
+                  "x": 1295.98,
+                  "y": 326.73,
+                  "name": "cm2p7ec1i014f356jcilx863c",
+                  "parentNode": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+                  "links": [
+                    "3aeffc32-7c78-4144-baa1-797ca723ded1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "cm2p7ec1i014g356jndt4s4sj",
+                  "type": "default",
+                  "x": 1295.98,
+                  "y": 351.89,
+                  "name": "cm2p7ec1i014h356jxbcjw8jh",
+                  "parentNode": "e94f1878-5d78-4338-9d93-a6f820bdfdad",
+                  "links": [
+                    "8aa68bc1-fa32-4835-8609-861d489751b4"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onTrueNextNodes": [
+                  "29140713-0b26-45bf-81a9-3fba986991df"
+                ],
+                "transform": "$state.context.REQUEST.value.operation = 'create'\n  or $state.context.REQUEST.value.operation = 'update'",
+                "onFalseNextNodes": [
+                  "a43efd28-437a-4690-9531-a64cd845c10c"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "If Create or Update"
+            },
+            "a43efd28-437a-4690-9531-a64cd845c10c": {
+              "id": "a43efd28-437a-4690-9531-a64cd845c10c",
+              "type": "mutate",
+              "selected": false,
+              "x": 1460,
+              "y": 340,
+              "ports": [
+                {
+                  "id": "cm2p7f4wf017f356js7lgsdwy",
+                  "type": "default",
+                  "x": 1452,
+                  "y": 371.73,
+                  "name": "cm2p7f4wf017g356jvopxyu8g",
+                  "parentNode": "a43efd28-437a-4690-9531-a64cd845c10c",
+                  "links": [
+                    "8aa68bc1-fa32-4835-8609-861d489751b4"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm2p7f4wf017h356jy861h05f",
+                  "type": "default",
+                  "x": 1621.62,
+                  "y": 371.73,
+                  "name": "cm2p7f4wf017i356jlwzi1z81",
+                  "parentNode": "a43efd28-437a-4690-9531-a64cd845c10c",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": $state.context.SHIFTGROUP.(\n    $id := calendarId & '::' & $state.context.REQUEST.value.before.id;\n    {       \n      \"where\": {\n        \"id\": $id\n      }\n    }\n  )\n}   \n",
+                "mutation": "mutation deleteCalendarEvent($payload:[CalendarEventDeletePayloadInput!]!) {\n  deleteCalendarEvent(payload:$payload){\n    id\n  }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Delete Calendar Events"
+            },
+            "538cf75e-da3b-400a-b9ce-d25574d989a7": {
+              "id": "538cf75e-da3b-400a-b9ce-d25574d989a7",
+              "type": "debugDataChange",
+              "selected": false,
+              "x": -85,
+              "y": 485,
+              "ports": [
+                {
+                  "id": "cm2p7g01j01by356jnhfw0j8j",
+                  "type": "default",
+                  "x": 60.98,
+                  "y": 516.73,
+                  "name": "cm2p7g01j01bz356j32dh09xn",
+                  "parentNode": "538cf75e-da3b-400a-b9ce-d25574d989a7",
+                  "links": [
+                    "ba18973b-b464-4fbc-9720-ef1a36511b0e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "beforeData": {
+                  "_id": "clsdb2uzf000d016t6nbyh7j8",
+                  "id": "clsdb2uzf000d016t6nbyh7j8",
+                  "name": "Press A",
+                  "active": true,
+                  "creditAtStart": true,
+                  "friday": false,
+                  "monday": true,
+                  "saturday": false,
+                  "sunday": false,
+                  "thursday": true,
+                  "tuesday": true,
+                  "wednesday": true,
+                  "createdByUserId": "System",
+                  "createdAt": "2024-08-19T14:30:55.026Z",
+                  "updatedByUserId": "seed",
+                  "updatedAt": "2024-10-25T20:32:33.537Z",
+                  "endAt": "2024-02-08T09:00:00.000Z",
+                  "startAt": "2024-02-08T21:00:00.000Z"
+                },
+                "afterData": null,
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ],
+                "type": "Shift",
+                "operation": "Delete"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Delete Shift"
+            },
+            "2a847866-a358-438d-9a12-4b63e3ac871e": {
+              "id": "2a847866-a358-438d-9a12-4b63e3ac871e",
+              "type": "debugSource",
+              "selected": false,
+              "x": 1215,
+              "y": 160,
+              "ports": [
+                {
+                  "id": "cm6tpfbey00d8356jewv7e3zm",
+                  "type": "default",
+                  "x": 1360.97,
+                  "y": 191.72,
+                  "name": "cm6tpfbey00d9356jlkdm8jnc",
+                  "parentNode": "2a847866-a358-438d-9a12-4b63e3ac871e",
+                  "links": [
+                    "a8075fc9-705b-45f4-8c47-0b7f29e74989"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "shiftGroup": {
+                    "edges": []
+                  },
+                  "setting": {
+                    "edges": [
+                      {
+                        "node": {
+                          "defaultValue": null
+                        }
+                      }
+                    ]
+                  }
+                },
+                "nextNodes": [
+                  "29140713-0b26-45bf-81a9-3fba986991df"
+                ],
+                "context": {
+                  "REQUEST": {
+                    "headers": {
+                      "tenantId": "mes20252",
+                      "userId": "System"
+                    },
+                    "topic": "mfgx.tenant.mes20252.dataChange.application.shift.create",
+                    "value": {
+                      "collection": "shift",
+                      "operation": "create",
+                      "before": null,
+                      "after": {
+                        "id": "cm2wcikhh007q356jsx3lbaos",
+                        "name": "Shift 1",
+                        "active": true,
+                        "creditAtStart": true,
+                        "friday": true,
+                        "monday": true,
+                        "saturday": true,
+                        "sunday": true,
+                        "thursday": true,
+                        "tuesday": true,
+                        "wednesday": true,
+                        "timeZone": "America/Detroit",
+                        "endAt": "2024-10-30T14:00:00.000Z",
+                        "startAt": "2024-10-30T06:00:00.000Z",
+                        "createdByUserId": "System",
+                        "createdAt": "2025-02-06T18:06:45.486Z",
+                        "updatedByUserId": "System",
+                        "updatedAt": "2025-02-06T18:06:45.486Z",
+                        "_id": "cm2wcikhh007q356jsx3lbaos"
+                      }
+                    }
+                  },
+                  "TIMEZONE": null
+                }
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Run Here",
+              "note": "Connect this node to the node that errored. Please verify that no destructive actions are ran in the node that errored prior to retrying."
+            },
+            "e40209dc-5e86-48e1-9ff4-f12bb51babdf": {
+              "id": "e40209dc-5e86-48e1-9ff4-f12bb51babdf",
+              "type": "debugSource",
+              "selected": false,
+              "x": -85,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm6tpjrl900et356j8g6gplnx",
+                  "type": "default",
+                  "x": 60.97,
+                  "y": 166.73,
+                  "name": "cm6tpjrl900eu356jv1o7ppl6",
+                  "parentNode": "e40209dc-5e86-48e1-9ff4-f12bb51babdf",
+                  "links": [
+                    "c442b1d4-c8f7-40a7-b401-99ffb1e7b89b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "headers": {
+                    "tenantId": "mes20252",
+                    "userId": "System"
+                  },
+                  "topic": "mfgx.tenant.mes20252.dataChange.application.shift.create",
+                  "value": {
+                    "collection": "shift",
+                    "operation": "create",
+                    "before": null,
+                    "after": {
+                      "id": "cm2wcikhh007q356jsx3lbaos",
+                      "name": "Shift 1",
+                      "active": true,
+                      "creditAtStart": true,
+                      "friday": true,
+                      "monday": true,
+                      "saturday": true,
+                      "sunday": true,
+                      "thursday": true,
+                      "tuesday": true,
+                      "wednesday": true,
+                      "timeZone": "America/Detroit",
+                      "endAt": "2024-10-30T14:00:00.000Z",
+                      "startAt": "2024-10-30T06:00:00.000Z",
+                      "createdByUserId": "System",
+                      "createdAt": "2025-02-06T18:06:45.486Z",
+                      "updatedByUserId": "System",
+                      "updatedAt": "2025-02-06T18:06:45.486Z",
+                      "_id": "cm2wcikhh007q356jsx3lbaos"
+                    }
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "8c90def9-363f-4896-9d6d-2164400cc19b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Calendar Event from Shift on Event",
+      "type": "System",
+      "version": "0.0.17",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

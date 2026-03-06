@@ -1,0 +1,19 @@
+{
+  "header": {
+    "id": "cldvrlwvz00hk016u6q1419ok",
+    "name": "Visualization Datasource: ProductionCountsByHour",
+    "description": "Auto-generated saved transform to drive visualization \"ProductionCountsByHour\".",
+    "active": true,
+    "deprecated": false
+  },
+  "version": {
+    "id": "clpksn3ow007301swh56m90ty",
+    "number": "1.0.0",
+    "description": "Auto-generated saved transform to drive visualization \"ProductionCountsByHour\".",
+    "savedTransformId": "cldvrlwvz00hk016u6q1419ok",
+    "scriptLanguageId": "JSONata",
+    "transform": "(\n  $data := $ \n    ~> | $ | {\n      \"category\": $moment(startAt).format(\"MM/DD/YYYY HH\")\n    } |;\n    \n  $groupedData := ($data{\n    category: {\n      \"category\": $first(category),\n      \"production\": $sum(totalProductionQuantity[$not($isNil($))]),\n      \"scrap\": $sum(totalScrapQuantity[$not($isNil($))])\n    }\n  } ~> $values)^(category);\n\n  $avgP := $round($average($groupedData.production), 2);\n  $avgS := $round($average($groupedData.scrap), 2);\n\n  {\n    \"categories\": [\n        {\n            \"category\": [$groupedData.{\n              \"label\": category\n            }]\n        }\n    ],\n    \"dataSet\": [\n        {\n          \"seriesname\":\"Production\",\n          \"data\": [$groupedData.{\n          \"value\": production\n        }]\n        },\n        {\n        \"seriesname\":\"Scrap\",\n          \"data\": [$groupedData.{\n          \"value\": scrap\n        }]\n        }\n    ],\n    \"trendlines\": [\n      {\n        \"line\": [\n         \n          {\n            \"startvalue\": $avg,\n            \"color\": \"#43a047\",\n            \"displayvalue\": \"Avg Production: \" & $string($avgP),\n            \"valueOnRight\": true\n          },\n           {\n            \"startvalue\": $avg,\n            \"color\": \"#c02723\",\n            \"displayvalue\": \"Avg Scrap: \" & $string($avgS),\n            \"valueOnRight\": true\n          }\n        ]\n      }\n    ]\n  }\n)",
+    "inputSchema": {},
+    "outputSchema": {}
+  }
+}

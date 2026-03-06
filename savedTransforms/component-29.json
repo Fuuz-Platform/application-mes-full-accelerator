@@ -1,0 +1,46 @@
+{
+  "header": {
+    "id": "evaluateQualityChecks",
+    "name": "Evaluate Quality Checks",
+    "description": "Evaluates quality checks with 2 possible actions (CREATE - creates quality checks, with any missing values to be updated later / UPDATE - updates existing quality checks that are not already completed). Takes in an object with a _required_ **action** [string] , _optional_ **values** [object]** **(only needed for the CREATE_AND_COMPLETE and UPDATE routes of the Quality Functions Flow) with the key being the specification name, a _required_ specList** [array of specification objects]  **for specifications of the quality checks to be evaluated. If using the UPDATE action, the specList will also need to have the relevant qualityChecks queried relevant to the report. Takes in a _required_ reportId** [string] **to be used to link the quality checks to the report (for the CREATE action), and to verify the reportId when updating existing quality checks. Also takes in an _optional_ **sampleSize** [any] (can be null for no sample sizes, a single sample size integer or an array of sample sizes) intended to be used with the CREATE action. Outputs the relevant create or update/where payloads for mutations.",
+    "active": true,
+    "deprecated": false
+  },
+  "version": {
+    "id": "cm84k49d200223j6jymaab4ai",
+    "number": "0.0.29",
+    "description": null,
+    "savedTransformId": "evaluateQualityChecks",
+    "scriptLanguageId": "JSONata",
+    "transform": "$$.specList.(\n  $spec:= $;\n  $qualityCheckFunction:= function($check, $values, $i){\n    $check.type.id = \"Number\" ? (\n      $numberValue := $lookup($values, $check.name)[$i] ~> $number;\n      $not($isNilOrEmpty($check.lowerBound)) and $not($isNilOrEmpty($check.upperBound)) ?\n        ($check.lowerBound ~> $number) <= $numberValue and $numberValue <= ($check.upperBound ~> $number)\n      :\n      $not($isNilOrEmpty($check.lowerBound)) ?\n        ($check.lowerBound ~> $number) <= $numberValue\n      :\n      $not($isNilOrEmpty($check.upperBound)) ?\n        $numberValue <= ($check.upperBound ~> $number)\n      :\n      $numberValue = ($check.expectedValue ~> $number)\n    ) : \n    $check.type.id = \"Boolean\" ? (\n      $lookup($values, $check.name)[$i] = $check.expectedValue\n    ) : \n    $check.type.id = \"String\" ? (\n      $lookup($values, $check.name)[$i] = $check.expectedValue\n    ) : \n    $check.type.id = \"Regex\" ? (\n      $contains($lookup($values, $check.name)[$i], $eval($check.expectedValue))\n    )  \n  };\n  \n  $$.action = \"CREATE\" ? (\n    $sampleSize:= $$.sampleSize[$ != null] ~> $isArray ? $max($$.sampleSize) \n    : $$.sampleSize[$ != null] ~> $isNumber ? $$.sampleSize[$ != null];\n    $not($isInteger($sampleSize)) and $isNotNilOrEmpty($sampleSize) ? \n      $throw(\"The sampleSize(s) can only be an integer.\");\n    $sampleIterator:= $isNotNilOrEmpty($sampleSize) ? [0..$sampleSize -1] : 0;\n    $sampleIterator#$index.(      \n      $spec.name in $keys($$.values) and $exists($lookup($$.values, $spec.name)[$index]) ? (\n        {\n          \"create\": \n            {\n              \"reportId\": $$.reportId,\n              \"complete\": true,\n              \"qualitySpecificationId\": $spec.id,\n              \"result\": $qualityCheckFunction($spec, $$.values, $index),\n              \"value\": $lookup($$.values, $spec.name)[$index]\n            }\n        }\n      ) : \n        {\n          \"create\":\n          {\n            \"reportId\": $$.reportId,\n            \"complete\": false,\n            \"qualitySpecificationId\": $spec.id\n          }\n        }\n    )\n  ) :\n  \n  $$.action = \"UPDATE\" ? (\n    $spec.(\n      qualityChecks.edges[node.complete = false]#$index.node.(\n        reportId != $$.reportId ? \n          $throw(\"The provided reportId does not match at least one of the quality checks to be updated\");\n        $checkId:= id;\n        $spec.name in $keys($$.values) and $exists($lookup($$.values, $spec.name)[$index]) ? (\n          {\n            \"update\": \n              {\n                \"complete\": true,\n                \"result\": $qualityCheckFunction($spec, $$.values, $index),\n                \"value\": $lookup($$.values, $spec.name)[$index]\n              },\n            \"where\": {\n              \"id\": $checkId\n            }\n          }\n        ) \n      )\n    )\n  ) : $throw(\"An appropriate action (CREATE/UPDATE) was not provided.\")\n)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "specList": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "additionalItems": false
+        },
+        "values": {
+          "type": "object"
+        },
+        "reportId": {
+          "type": "string"
+        },
+        "sampleSize": {},
+        "action": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "specList",
+        "action",
+        "reportId"
+      ],
+      "additionalProperties": false
+    },
+    "outputSchema": {}
+  }
+}

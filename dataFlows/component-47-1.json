@@ -1,0 +1,1654 @@
+{
+  "header": {
+    "id": "employeeClockFromScreen",
+    "name": "Employee Clock from Screen",
+    "description": "Process an employe clock record from a badge number provided by the collection screen.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "clcte64sr012k01b10x308a8w",
+    "number": "0.0.6",
+    "description": "Flipping from locations to clocks.",
+    "dataFlowId": "employeeClockFromScreen",
+    "flow": {
+      "id": "clcte64sr012k01b10x308a8w",
+      "name": "Employee Clock from Screen",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "9d6ee99a-1992-4162-9991-efa9cfddfafc",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "62dc8a96-6708-47ca-8d02-da01748036d4",
+              "e8ff01cb-9abf-42ed-b40a-9cd984a53497"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "62dc8a96-6708-47ca-8d02-da01748036d4",
+          "name": "Log",
+          "type": "log",
+          "data": {
+            "messageTransform": "$string($)",
+            "level": "Debug",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+          "name": "Query Employee & Open Clock Record",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"badgeNumber\": {\n      \"_eq\": $state.context.REQUEST.data.scan\n    }\n  }\n}",
+            "query": "query employee($where:EmployeeWhereInput!){\n  employee(where:$where) {\n    edges {\n      node {\n        id\n        firstName\n        lastName\n        employeeClocks(first:1 where:{employeeClockStatus:{complete:{_eq:false}}} orderBy:{field:createdAt}) {\n          edges {\n            node {\n              id\n              startedAt\n              completedAt\n            }\n          }\n        } \n      }\n    }\n  }\n  newStatus: employeeClockStatus(first:1 where:{complete:{_eq:false} approved:{_eq:false} exported:{_eq:false}}) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n  completedStatus: employeeClockStatus(first:1 where:{complete:{_eq:true} approved:{_eq:false} exported:{_eq:false}}) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}",
+            "nextNodes": [
+              "a024afbc-679b-48a0-b042-f6f7643460b3"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+          "name": "Save REQUEST",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"REQUEST\": $\n}",
+            "nextNodes": [
+              "0610fe80-d075-42b9-839f-c7cdc7fa9160"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+          "name": "Set Max Duration",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"maxDuration\": 12\n}",
+            "nextNodes": [
+              "430f73a1-d16a-4120-b577-2b0eaa33e80e"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "a024afbc-679b-48a0-b042-f6f7643460b3",
+          "name": "save QUERY",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "3d85daf2-6203-4902-b7a3-974bd77372c3"
+            ],
+            "transform": "{\n  \"QUERY\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "eeb0773b-1841-4560-8579-934363a1718f",
+          "name": "Clock Out",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"employeeClockStatusId\": $state.context.QUERY.completedStatus.edges.node.id,\n      \"completedAt\": $moment(),\n      \"clockId\": $state.context.REQUEST.data.clock.id\n    },\n    \"where\": {\n      \"id\": $state.context.QUERY.employee.edges.node.employeeClocks.edges.node.id\n    }\n  }\n}",
+            "nextNodes": [
+              "f7c31b54-b693-415b-990f-a2871e3f2fcb"
+            ],
+            "mutation": "mutation updateEmployeeClock($payload:[EmployeeClockUpdatePayloadInput!]!){\n  updateEmployeeClock(payload:$payload) {\n    id\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+          "name": "Clock In",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"startedAt\": $moment(),\n      \"employeeClockStatusId\": $state.context.QUERY.newStatus.edges.node.id,\n      \"employeeId\": $state.context.QUERY.employee.edges.node.id,\n      \"clockId\": $state.context.REQUEST.data.clock.id\n    }\n  }\n}",
+            "nextNodes": [
+              "2be0fed0-79c2-48ea-abf9-58c22d9e22f5"
+            ],
+            "mutation": "mutation createEmployeeClock($payload:[EmployeeClockCreatePayloadInput!]!){\n  createEmployeeClock(payload:$payload) {\n    id\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+          "name": "Determine Path",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Badge Missing",
+                "transform": "$count($state.context.QUERY.employee.edges)=0",
+                "nextNodes": [
+                  "f641eadd-eac9-455c-9309-000ba3a50226"
+                ]
+              },
+              {
+                "name": "Clock Out",
+                "nextNodes": [
+                  "eeb0773b-1841-4560-8579-934363a1718f"
+                ],
+                "transform": "$count($state.context.QUERY.employee.edges.node.employeeClocks.edges)>0"
+              },
+              {
+                "name": "Clock In",
+                "nextNodes": [
+                  "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64"
+                ],
+                "transform": "true"
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "f641eadd-eac9-455c-9309-000ba3a50226",
+          "name": "Not Found",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"message\": \"Badge wasn't found\",\n  \"options\": {\n    \"message\": \"Badge wasn't found\",\n    \"severity\": \"error\",\n    \"data\": $state.context\n  }\n}",
+            "nextNodes": [
+              "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+          "name": "Clock Out Message",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"message\": \"Clocked Out\",\n  \"options\": {\n    \"message\": \"Clocked Out\",\n    \"severity\": \"info\",\n    \"data\": $state.context\n  }\n}",
+            "nextNodes": [
+              "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+          "name": "Clock In Message",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"message\": \"Clocked In\",\n  \"options\": {\n    \"message\": \"Clocked In\",\n    \"severity\": \"success\",\n    \"data\": $state.context\n  }\n}",
+            "nextNodes": [
+              "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.6"
+    },
+    "diagram": {
+      "id": "clcte64sr012k01b10x308a8w",
+      "offsetX": -774.95,
+      "offsetY": -127.75,
+      "zoom": 78.33,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "87cc76a2-fce0-441c-886c-c167783e769c",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "f7bf4523-7e87-4327-bece-1d4fbbc5d02c": {
+              "points": [
+                {
+                  "id": "8edb6deb-c1ba-4f62-855c-a1ab5259e11b",
+                  "type": "point",
+                  "x": 239,
+                  "y": 289.73
+                },
+                {
+                  "id": "76119720-2372-4bfe-84c7-ded9febff1fa",
+                  "type": "point",
+                  "x": 285,
+                  "y": 289.73
+                }
+              ],
+              "id": "f7bf4523-7e87-4327-bece-1d4fbbc5d02c",
+              "type": "default",
+              "selected": false,
+              "source": "9d6ee99a-1992-4162-9991-efa9cfddfafc",
+              "sourcePort": "clcryuk4x000l356d1444gp9t",
+              "target": "62dc8a96-6708-47ca-8d02-da01748036d4",
+              "targetPort": "clcryun5i000r356dv8zt01ug",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9bef0095-e502-4029-970b-a226da93238f": {
+              "points": [
+                {
+                  "id": "d6d3a256-4ce7-4e79-90ec-ba4e6c837e69",
+                  "type": "point",
+                  "x": 238.98,
+                  "y": 359.73
+                },
+                {
+                  "id": "7962ee84-ee77-4967-8524-d34fd0328707",
+                  "type": "point",
+                  "x": 285,
+                  "y": 359.73
+                }
+              ],
+              "id": "9bef0095-e502-4029-970b-a226da93238f",
+              "type": "default",
+              "selected": false,
+              "source": "3f93b4c8-c2f8-4fe0-b2cc-3fb796e1167e",
+              "sourcePort": "clcrz0fvt004r356d8h1eu9yq",
+              "target": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+              "targetPort": "clcrz919o0095356debqethwb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a2c6d889-4e1f-4c62-a40a-38875f0134d5": {
+              "points": [
+                {
+                  "id": "9558235a-bcf5-463c-915f-40cd2042c0c7",
+                  "type": "point",
+                  "x": 439,
+                  "y": 359.73
+                },
+                {
+                  "id": "449d4fd7-822d-47db-9e4c-4ba89ca67d76",
+                  "type": "point",
+                  "x": 485,
+                  "y": 359.73
+                }
+              ],
+              "id": "a2c6d889-4e1f-4c62-a40a-38875f0134d5",
+              "type": "default",
+              "selected": false,
+              "source": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+              "sourcePort": "clcrz919o0097356dkt6z7f0t",
+              "target": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+              "targetPort": "clcrz928f0099356d1u8d6dsu",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2aae1f92-f253-4cc8-8677-4da836dd748d": {
+              "points": [
+                {
+                  "id": "9187f31a-5151-4873-ba71-b2e8c10c8a26",
+                  "type": "point",
+                  "x": 639,
+                  "y": 359.73
+                },
+                {
+                  "id": "b816d221-bb6a-457d-b10c-a92ccb1581c2",
+                  "type": "point",
+                  "x": 690,
+                  "y": 359.73
+                }
+              ],
+              "id": "2aae1f92-f253-4cc8-8677-4da836dd748d",
+              "type": "default",
+              "selected": false,
+              "source": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+              "sourcePort": "clcrz928f009b356dg3dps0st",
+              "target": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+              "targetPort": "clcrz0krr004z356dfatv6i48",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "dbf680bc-f6eb-4aa4-a56a-b29b1274ee64": {
+              "points": [
+                {
+                  "id": "8a19cff8-65a2-49c5-83c7-5354b3d8e4f8",
+                  "type": "point",
+                  "x": 239,
+                  "y": 289.73
+                },
+                {
+                  "id": "00deedda-327b-4284-a7b3-876f77d90a16",
+                  "type": "point",
+                  "x": 285,
+                  "y": 359.73
+                }
+              ],
+              "id": "dbf680bc-f6eb-4aa4-a56a-b29b1274ee64",
+              "type": "default",
+              "selected": false,
+              "source": "9d6ee99a-1992-4162-9991-efa9cfddfafc",
+              "sourcePort": "clcryuk4x000l356d1444gp9t",
+              "target": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+              "targetPort": "clcrz919o0095356debqethwb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "cbde954a-1ed4-4df4-b7eb-5c8f1f5619d0": {
+              "points": [
+                {
+                  "id": "d4d7907e-9da1-4115-bdc2-fddf31af0463",
+                  "type": "point",
+                  "x": 939.28,
+                  "y": 359.73
+                },
+                {
+                  "id": "e1cd21ea-650c-4a08-8c5d-bc366e656d51",
+                  "type": "point",
+                  "x": 985,
+                  "y": 359.73
+                }
+              ],
+              "id": "cbde954a-1ed4-4df4-b7eb-5c8f1f5619d0",
+              "type": "default",
+              "source": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+              "sourcePort": "clcrz0krr0051356da1t34s2k",
+              "target": "a024afbc-679b-48a0-b042-f6f7643460b3",
+              "targetPort": "clcrzb5hv00do356dg3soalr5",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "786efd5e-d2a1-4ab4-98c0-32ffcc690dc3": {
+              "points": [
+                {
+                  "id": "7958cfa5-1b11-40db-bec2-7910ecd9b18e",
+                  "type": "point",
+                  "x": 238.98,
+                  "y": 424.73
+                },
+                {
+                  "id": "4e72ee8b-7a5d-422d-bbf2-4a19129c10a0",
+                  "type": "point",
+                  "x": 285,
+                  "y": 359.73
+                }
+              ],
+              "id": "786efd5e-d2a1-4ab4-98c0-32ffcc690dc3",
+              "type": "default",
+              "selected": false,
+              "source": "72d7215a-e963-4f52-bdd9-e58ee35d360c",
+              "sourcePort": "clcrzce6700fp356dncim4qrm",
+              "target": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+              "targetPort": "clcrz919o0095356debqethwb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "fa39cf57-951a-4b59-8091-c612b2d6d5ce": {
+              "points": [
+                {
+                  "id": "981ee03d-efe5-41ca-b37b-5d3e012cf664",
+                  "type": "point",
+                  "x": 1353.33,
+                  "y": 410.05
+                },
+                {
+                  "id": "b0855cc4-b855-4da6-a7d9-9c9d4a9bf8f9",
+                  "type": "point",
+                  "x": 1460,
+                  "y": 449.73
+                }
+              ],
+              "id": "fa39cf57-951a-4b59-8091-c612b2d6d5ce",
+              "type": "default",
+              "selected": false,
+              "source": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+              "sourcePort": "clcrzl15l00mr356dquunx10t",
+              "target": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+              "targetPort": "clcrzd5lp00j7356dwlpndq1b",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "97446a92-3221-4ff4-8be7-8742884cab22": {
+              "points": [
+                {
+                  "id": "f3b10ac0-cd4e-456c-89e3-2ce1971f39c5",
+                  "type": "point",
+                  "x": 1353.33,
+                  "y": 384.89
+                },
+                {
+                  "id": "00d13cad-3343-4099-b641-4ef8aca2f944",
+                  "type": "point",
+                  "x": 1460,
+                  "y": 379.73
+                }
+              ],
+              "id": "97446a92-3221-4ff4-8be7-8742884cab22",
+              "type": "default",
+              "selected": false,
+              "source": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+              "sourcePort": "clcrzl0tb00mo356d2cxmp61o",
+              "target": "eeb0773b-1841-4560-8579-934363a1718f",
+              "targetPort": "clcrzcyqn00i8356dhsv5lhnu",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d9d7366b-40d5-43ee-b189-76ef67dcbbe1": {
+              "points": [
+                {
+                  "id": "4187c2a0-1db2-4623-b970-895d10b6e76d",
+                  "type": "point",
+                  "x": 1139,
+                  "y": 359.73
+                },
+                {
+                  "id": "d669341a-3226-43ac-b885-7b054b269657",
+                  "type": "point",
+                  "x": 1185,
+                  "y": 359.73
+                }
+              ],
+              "id": "d9d7366b-40d5-43ee-b189-76ef67dcbbe1",
+              "type": "default",
+              "selected": false,
+              "source": "a024afbc-679b-48a0-b042-f6f7643460b3",
+              "sourcePort": "clcrzb5hv00dq356dr6w63b8d",
+              "target": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+              "targetPort": "clcrzkx8n00me356d32eclk96",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f68531ea-1d0c-44fe-b8aa-362df92e2dca": {
+              "points": [
+                {
+                  "id": "9d401bda-e66b-4815-8d4d-bb5de6561fde",
+                  "type": "point",
+                  "x": 1353.33,
+                  "y": 359.73
+                },
+                {
+                  "id": "e57a98af-6a30-4327-b494-220c377add73",
+                  "type": "point",
+                  "x": 1680,
+                  "y": 309.73
+                }
+              ],
+              "id": "f68531ea-1d0c-44fe-b8aa-362df92e2dca",
+              "type": "default",
+              "selected": false,
+              "source": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+              "sourcePort": "clcrzkzr900ml356dvifanv0r",
+              "target": "f641eadd-eac9-455c-9309-000ba3a50226",
+              "targetPort": "clcs04ps3018s356dlnpm2aui",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5055225e-16b7-44f3-aa9b-72ebf8842a18": {
+              "points": [
+                {
+                  "id": "3c616f67-7528-41bb-b551-2276b07682c0",
+                  "type": "point",
+                  "x": 1834,
+                  "y": 309.73
+                },
+                {
+                  "id": "45119e67-9e89-4bc1-9510-8aa976fb5503",
+                  "type": "point",
+                  "x": 1955,
+                  "y": 359.73
+                }
+              ],
+              "id": "5055225e-16b7-44f3-aa9b-72ebf8842a18",
+              "type": "default",
+              "selected": false,
+              "source": "f641eadd-eac9-455c-9309-000ba3a50226",
+              "sourcePort": "clcs04ps3018u356d92c2qwdp",
+              "target": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+              "targetPort": "clcryukq6000n356dwbil5tv1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "71133179-f997-46de-8c8d-87cb685e96c1": {
+              "points": [
+                {
+                  "id": "678f5210-93df-44f9-8de8-25f7fef27be9",
+                  "type": "point",
+                  "x": 1614,
+                  "y": 379.73
+                },
+                {
+                  "id": "3a448f55-c64a-473f-8430-1c332adbd4a7",
+                  "type": "point",
+                  "x": 1680,
+                  "y": 379.73
+                }
+              ],
+              "id": "71133179-f997-46de-8c8d-87cb685e96c1",
+              "type": "default",
+              "selected": false,
+              "source": "eeb0773b-1841-4560-8579-934363a1718f",
+              "sourcePort": "clcrzcyqn00ia356dhse6n5dc",
+              "target": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+              "targetPort": "clcs06ti801c2356debz7rn1r",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "484f34e7-d315-443a-b497-f8b6818b9702": {
+              "points": [
+                {
+                  "id": "c68d6eac-1ea2-4773-a82d-aff2c068e8ea",
+                  "type": "point",
+                  "x": 1614,
+                  "y": 449.73
+                },
+                {
+                  "id": "d4b3d3e1-da78-4cbd-826c-4f96255aee66",
+                  "type": "point",
+                  "x": 1680,
+                  "y": 449.73
+                }
+              ],
+              "id": "484f34e7-d315-443a-b497-f8b6818b9702",
+              "type": "default",
+              "selected": false,
+              "source": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+              "sourcePort": "clcrzd5lp00j9356dk5rh247n",
+              "target": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+              "targetPort": "clcs07ib601ed356dfh0x030g",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e0f06dc6-c524-42a7-a534-442e064cc33f": {
+              "points": [
+                {
+                  "id": "c1a6fdd8-9fec-497d-9759-3c7291e5b0c2",
+                  "type": "point",
+                  "x": 1834,
+                  "y": 379.73
+                },
+                {
+                  "id": "c01fc655-8e46-43f1-a6da-fe3c774c31dc",
+                  "type": "point",
+                  "x": 1955,
+                  "y": 359.73
+                }
+              ],
+              "id": "e0f06dc6-c524-42a7-a534-442e064cc33f",
+              "type": "default",
+              "selected": false,
+              "source": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+              "sourcePort": "clcs06ti801c4356d6ah32pl4",
+              "target": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+              "targetPort": "clcryukq6000n356dwbil5tv1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ebb1ccce-7baa-4209-86bb-6f632bdf811b": {
+              "points": [
+                {
+                  "id": "83ab8903-2de5-4cd3-bb18-d39d334f0915",
+                  "type": "point",
+                  "x": 1834,
+                  "y": 449.73
+                },
+                {
+                  "id": "8c0e36ff-6095-43dc-bf6f-2b3a51c8f350",
+                  "type": "point",
+                  "x": 1955,
+                  "y": 359.73
+                }
+              ],
+              "id": "ebb1ccce-7baa-4209-86bb-6f632bdf811b",
+              "type": "default",
+              "selected": false,
+              "source": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+              "sourcePort": "clcs07ib601ef356d4c370cvn",
+              "target": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+              "targetPort": "clcryukq6000n356dwbil5tv1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "d1990c58-68ee-4c95-8f07-8952881344dc",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "9d6ee99a-1992-4162-9991-efa9cfddfafc": {
+              "id": "9d6ee99a-1992-4162-9991-efa9cfddfafc",
+              "type": "request",
+              "selected": false,
+              "x": 85,
+              "y": 250,
+              "ports": [
+                {
+                  "id": "clcryuk4x000l356d1444gp9t",
+                  "type": "default",
+                  "x": 231,
+                  "y": 281.73,
+                  "name": "clcryuk4x000m356dp2xluppl",
+                  "parentNode": "9d6ee99a-1992-4162-9991-efa9cfddfafc",
+                  "links": [
+                    "f7bf4523-7e87-4327-bece-1d4fbbc5d02c",
+                    "dbf680bc-f6eb-4aa4-a56a-b29b1274ee64"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "62dc8a96-6708-47ca-8d02-da01748036d4",
+                  "e8ff01cb-9abf-42ed-b40a-9cd984a53497"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request"
+            },
+            "bd2f92f3-ab01-47a9-b009-95eefa975ef0": {
+              "id": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+              "type": "response",
+              "selected": false,
+              "x": 1955,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcryukq6000n356dwbil5tv1",
+                  "type": "default",
+                  "x": 1947,
+                  "y": 351.73,
+                  "name": "clcryukq6000o356dkqsz48ua",
+                  "parentNode": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+                  "links": [
+                    "5055225e-16b7-44f3-aa9b-72ebf8842a18",
+                    "e0f06dc6-c524-42a7-a534-442e064cc33f",
+                    "ebb1ccce-7baa-4209-86bb-6f632bdf811b"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clcryukq6000p356dekfr3173",
+                  "type": "default",
+                  "x": 2100.98,
+                  "y": 351.73,
+                  "name": "clcryukq6000q356d4tbtuv3f",
+                  "parentNode": "bd2f92f3-ab01-47a9-b009-95eefa975ef0",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response"
+            },
+            "62dc8a96-6708-47ca-8d02-da01748036d4": {
+              "id": "62dc8a96-6708-47ca-8d02-da01748036d4",
+              "type": "log",
+              "selected": false,
+              "x": 285,
+              "y": 250,
+              "ports": [
+                {
+                  "id": "clcryun5i000r356dv8zt01ug",
+                  "type": "default",
+                  "x": 277,
+                  "y": 281.73,
+                  "name": "clcryun5i000s356dnk5xr375",
+                  "parentNode": "62dc8a96-6708-47ca-8d02-da01748036d4",
+                  "links": [
+                    "f7bf4523-7e87-4327-bece-1d4fbbc5d02c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcryun5i000t356dsil41nfh",
+                  "type": "default",
+                  "x": 431,
+                  "y": 281.73,
+                  "name": "clcryun5i000u356dpoqfyzdc",
+                  "parentNode": "62dc8a96-6708-47ca-8d02-da01748036d4",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "$string($)",
+                "level": "Debug",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Log"
+            },
+            "3f93b4c8-c2f8-4fe0-b2cc-3fb796e1167e": {
+              "id": "3f93b4c8-c2f8-4fe0-b2cc-3fb796e1167e",
+              "type": "debugSource",
+              "selected": false,
+              "x": 85,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrz0fvt004r356d8h1eu9yq",
+                  "type": "default",
+                  "x": 230.98,
+                  "y": 351.73,
+                  "name": "clcrz0fvt004s356dhfut9jgo",
+                  "parentNode": "3f93b4c8-c2f8-4fe0-b2cc-3fb796e1167e",
+                  "links": [
+                    "9bef0095-e502-4029-970b-a226da93238f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "data": {
+                    "timer": "01:03:28 PM",
+                    "scan": "112233",
+                    "clock": {
+                      "id": "clctdzta5012j01b15aeg9bzr",
+                      "label": "Front Door PC A",
+                      "name": "Front Door PC A"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "e8ff01cb-9abf-42ed-b40a-9cd984a53497"
+                ],
+                "context": null
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Medwith",
+              "note": "Connect this node to the node that errored. Please verify that no destructive actions are ran in the node that errored prior to retrying."
+            },
+            "430f73a1-d16a-4120-b577-2b0eaa33e80e": {
+              "id": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+              "type": "query",
+              "selected": false,
+              "x": 690,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrz0krr004z356dfatv6i48",
+                  "type": "default",
+                  "x": 682,
+                  "y": 351.73,
+                  "name": "clcrz0krr0050356d9s690q8f",
+                  "parentNode": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+                  "links": [
+                    "2aae1f92-f253-4cc8-8677-4da836dd748d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrz0krr0051356da1t34s2k",
+                  "type": "default",
+                  "x": 931.28,
+                  "y": 351.73,
+                  "name": "clcrz0krr0052356dp0n948l7",
+                  "parentNode": "430f73a1-d16a-4120-b577-2b0eaa33e80e",
+                  "links": [
+                    "cbde954a-1ed4-4df4-b7eb-5c8f1f5619d0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"badgeNumber\": {\n      \"_eq\": $state.context.REQUEST.data.scan\n    }\n  }\n}",
+                "query": "query employee($where:EmployeeWhereInput!){\n  employee(where:$where) {\n    edges {\n      node {\n        id\n        firstName\n        lastName\n        employeeClocks(first:1 where:{employeeClockStatus:{complete:{_eq:false}}} orderBy:{field:createdAt}) {\n          edges {\n            node {\n              id\n              startedAt\n              completedAt\n            }\n          }\n        } \n      }\n    }\n  }\n  newStatus: employeeClockStatus(first:1 where:{complete:{_eq:false} approved:{_eq:false} exported:{_eq:false}}) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n  completedStatus: employeeClockStatus(first:1 where:{complete:{_eq:true} approved:{_eq:false} exported:{_eq:false}}) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}",
+                "nextNodes": [
+                  "a024afbc-679b-48a0-b042-f6f7643460b3"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query Employee & Open Clock Record"
+            },
+            "e8ff01cb-9abf-42ed-b40a-9cd984a53497": {
+              "id": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 285,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrz919o0095356debqethwb",
+                  "type": "default",
+                  "x": 277,
+                  "y": 351.73,
+                  "name": "clcrz919o0096356dk3izf6ir",
+                  "parentNode": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+                  "links": [
+                    "9bef0095-e502-4029-970b-a226da93238f",
+                    "dbf680bc-f6eb-4aa4-a56a-b29b1274ee64",
+                    "786efd5e-d2a1-4ab4-98c0-32ffcc690dc3"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrz919o0097356dkt6z7f0t",
+                  "type": "default",
+                  "x": 431,
+                  "y": 351.73,
+                  "name": "clcrz919o0098356dqlgbe3gv",
+                  "parentNode": "e8ff01cb-9abf-42ed-b40a-9cd984a53497",
+                  "links": [
+                    "a2c6d889-4e1f-4c62-a40a-38875f0134d5"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"REQUEST\": $\n}",
+                "nextNodes": [
+                  "0610fe80-d075-42b9-839f-c7cdc7fa9160"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save REQUEST"
+            },
+            "0610fe80-d075-42b9-839f-c7cdc7fa9160": {
+              "id": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 485,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrz928f0099356d1u8d6dsu",
+                  "type": "default",
+                  "x": 477,
+                  "y": 351.73,
+                  "name": "clcrz928f009a356dltwx0ee9",
+                  "parentNode": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+                  "links": [
+                    "a2c6d889-4e1f-4c62-a40a-38875f0134d5"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrz928f009b356dg3dps0st",
+                  "type": "default",
+                  "x": 631,
+                  "y": 351.73,
+                  "name": "clcrz928f009c356dw9lbqr61",
+                  "parentNode": "0610fe80-d075-42b9-839f-c7cdc7fa9160",
+                  "links": [
+                    "2aae1f92-f253-4cc8-8677-4da836dd748d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"maxDuration\": 12\n}",
+                "nextNodes": [
+                  "430f73a1-d16a-4120-b577-2b0eaa33e80e"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Set Max Duration"
+            },
+            "a024afbc-679b-48a0-b042-f6f7643460b3": {
+              "id": "a024afbc-679b-48a0-b042-f6f7643460b3",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 985,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrzb5hv00do356dg3soalr5",
+                  "type": "default",
+                  "x": 977,
+                  "y": 351.73,
+                  "name": "clcrzb5hv00dp356drwbf2om2",
+                  "parentNode": "a024afbc-679b-48a0-b042-f6f7643460b3",
+                  "links": [
+                    "cbde954a-1ed4-4df4-b7eb-5c8f1f5619d0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrzb5hv00dq356dr6w63b8d",
+                  "type": "default",
+                  "x": 1131,
+                  "y": 351.73,
+                  "name": "clcrzb5hv00dr356d2ppnxho9",
+                  "parentNode": "a024afbc-679b-48a0-b042-f6f7643460b3",
+                  "links": [
+                    "d9d7366b-40d5-43ee-b189-76ef67dcbbe1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "3d85daf2-6203-4902-b7a3-974bd77372c3"
+                ],
+                "transform": "{\n  \"QUERY\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "save QUERY"
+            },
+            "72d7215a-e963-4f52-bdd9-e58ee35d360c": {
+              "id": "72d7215a-e963-4f52-bdd9-e58ee35d360c",
+              "type": "debugSource",
+              "selected": false,
+              "x": 85,
+              "y": 385,
+              "ports": [
+                {
+                  "id": "clcrzce6700fp356dncim4qrm",
+                  "type": "default",
+                  "x": 230.98,
+                  "y": 416.73,
+                  "name": "clcrzce6700fq356dq3ta8ovl",
+                  "parentNode": "72d7215a-e963-4f52-bdd9-e58ee35d360c",
+                  "links": [
+                    "786efd5e-d2a1-4ab4-98c0-32ffcc690dc3"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "data": {
+                    "timer": "01:03:28 PM",
+                    "scan": "222333",
+                    "clock": {
+                      "id": "clctdzta5012j01b15aeg9bzr",
+                      "label": "Front Door PC A",
+                      "name": "Front Door PC A"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "e8ff01cb-9abf-42ed-b40a-9cd984a53497"
+                ],
+                "context": null
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Sorgi",
+              "note": "Connect this node to the node that errored. Please verify that no destructive actions are ran in the node that errored prior to retrying."
+            },
+            "eeb0773b-1841-4560-8579-934363a1718f": {
+              "id": "eeb0773b-1841-4560-8579-934363a1718f",
+              "type": "mutate",
+              "selected": true,
+              "x": 1460,
+              "y": 340,
+              "ports": [
+                {
+                  "id": "clcrzcyqn00i8356dhsv5lhnu",
+                  "type": "default",
+                  "x": 1452,
+                  "y": 371.73,
+                  "name": "clcrzcyqn00i9356d1x6ami2d",
+                  "parentNode": "eeb0773b-1841-4560-8579-934363a1718f",
+                  "links": [
+                    "97446a92-3221-4ff4-8be7-8742884cab22"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrzcyqn00ia356dhse6n5dc",
+                  "type": "default",
+                  "x": 1606,
+                  "y": 371.73,
+                  "name": "clcrzcyqn00ib356dmwwzoerf",
+                  "parentNode": "eeb0773b-1841-4560-8579-934363a1718f",
+                  "links": [
+                    "71133179-f997-46de-8c8d-87cb685e96c1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"employeeClockStatusId\": $state.context.QUERY.completedStatus.edges.node.id,\n      \"completedAt\": $moment(),\n      \"clockId\": $state.context.REQUEST.data.clock.id\n    },\n    \"where\": {\n      \"id\": $state.context.QUERY.employee.edges.node.employeeClocks.edges.node.id\n    }\n  }\n}",
+                "nextNodes": [
+                  "f7c31b54-b693-415b-990f-a2871e3f2fcb"
+                ],
+                "mutation": "mutation updateEmployeeClock($payload:[EmployeeClockUpdatePayloadInput!]!){\n  updateEmployeeClock(payload:$payload) {\n    id\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Clock Out"
+            },
+            "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64": {
+              "id": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+              "type": "mutate",
+              "selected": false,
+              "x": 1460,
+              "y": 410,
+              "ports": [
+                {
+                  "id": "clcrzd5lp00j7356dwlpndq1b",
+                  "type": "default",
+                  "x": 1452,
+                  "y": 441.73,
+                  "name": "clcrzd5lp00j8356dh7m0gmjz",
+                  "parentNode": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+                  "links": [
+                    "fa39cf57-951a-4b59-8091-c612b2d6d5ce"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrzd5lp00j9356dk5rh247n",
+                  "type": "default",
+                  "x": 1606,
+                  "y": 441.73,
+                  "name": "clcrzd5lp00ja356d3hlo77sl",
+                  "parentNode": "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64",
+                  "links": [
+                    "484f34e7-d315-443a-b497-f8b6818b9702"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"startedAt\": $moment(),\n      \"employeeClockStatusId\": $state.context.QUERY.newStatus.edges.node.id,\n      \"employeeId\": $state.context.QUERY.employee.edges.node.id,\n      \"clockId\": $state.context.REQUEST.data.clock.id\n    }\n  }\n}",
+                "nextNodes": [
+                  "2be0fed0-79c2-48ea-abf9-58c22d9e22f5"
+                ],
+                "mutation": "mutation createEmployeeClock($payload:[EmployeeClockCreatePayloadInput!]!){\n  createEmployeeClock(payload:$payload) {\n    id\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Clock In"
+            },
+            "3d85daf2-6203-4902-b7a3-974bd77372c3": {
+              "id": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+              "type": "switch",
+              "selected": false,
+              "x": 1185,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "clcrzkx8n00me356d32eclk96",
+                  "type": "default",
+                  "x": 1177,
+                  "y": 351.73,
+                  "name": "clcrzkx8n00mf356dy6km91ar",
+                  "parentNode": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+                  "links": [
+                    "d9d7366b-40d5-43ee-b189-76ef67dcbbe1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcrzkzr900ml356dvifanv0r",
+                  "type": "default",
+                  "x": 1345.33,
+                  "y": 351.73,
+                  "name": "clcrzkzr900mm356dw0b27z4c",
+                  "parentNode": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+                  "links": [
+                    "f68531ea-1d0c-44fe-b8aa-362df92e2dca"
+                  ],
+                  "in": false,
+                  "groupName": "Badge Missing",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcrzl0tb00mo356d2cxmp61o",
+                  "type": "default",
+                  "x": 1345.33,
+                  "y": 376.89,
+                  "name": "clcrzl0tb00mp356dmq1hr61g",
+                  "parentNode": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+                  "links": [
+                    "97446a92-3221-4ff4-8be7-8742884cab22"
+                  ],
+                  "in": false,
+                  "groupName": "Clock Out",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcrzl15l00mr356dquunx10t",
+                  "type": "default",
+                  "x": 1345.33,
+                  "y": 402.05,
+                  "name": "clcrzl15l00ms356dtzi5e6eh",
+                  "parentNode": "3d85daf2-6203-4902-b7a3-974bd77372c3",
+                  "links": [
+                    "fa39cf57-951a-4b59-8091-c612b2d6d5ce"
+                  ],
+                  "in": false,
+                  "groupName": "Clock In",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Badge Missing",
+                    "transform": "$count($state.context.QUERY.employee.edges)=0",
+                    "nextNodes": [
+                      "f641eadd-eac9-455c-9309-000ba3a50226"
+                    ]
+                  },
+                  {
+                    "name": "Clock Out",
+                    "nextNodes": [
+                      "eeb0773b-1841-4560-8579-934363a1718f"
+                    ],
+                    "transform": "$count($state.context.QUERY.employee.edges.node.employeeClocks.edges)>0"
+                  },
+                  {
+                    "name": "Clock In",
+                    "nextNodes": [
+                      "9bc8c607-e405-4a3c-b0f3-63ee5bb13d64"
+                    ],
+                    "transform": "true"
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Determine Path"
+            },
+            "f641eadd-eac9-455c-9309-000ba3a50226": {
+              "id": "f641eadd-eac9-455c-9309-000ba3a50226",
+              "type": "transform",
+              "selected": false,
+              "x": 1680,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "clcs04ps3018s356dlnpm2aui",
+                  "type": "default",
+                  "x": 1672,
+                  "y": 301.73,
+                  "name": "clcs04ps3018t356d3sgr7i7e",
+                  "parentNode": "f641eadd-eac9-455c-9309-000ba3a50226",
+                  "links": [
+                    "f68531ea-1d0c-44fe-b8aa-362df92e2dca"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcs04ps3018u356d92c2qwdp",
+                  "type": "default",
+                  "x": 1826,
+                  "y": 301.73,
+                  "name": "clcs04ps3018v356d6phiacug",
+                  "parentNode": "f641eadd-eac9-455c-9309-000ba3a50226",
+                  "links": [
+                    "5055225e-16b7-44f3-aa9b-72ebf8842a18"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"message\": \"Badge wasn't found\",\n  \"options\": {\n    \"message\": \"Badge wasn't found\",\n    \"severity\": \"error\",\n    \"data\": $state.context\n  }\n}",
+                "nextNodes": [
+                  "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Not Found"
+            },
+            "f7c31b54-b693-415b-990f-a2871e3f2fcb": {
+              "id": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+              "type": "transform",
+              "selected": false,
+              "x": 1680,
+              "y": 340,
+              "ports": [
+                {
+                  "id": "clcs06ti801c2356debz7rn1r",
+                  "type": "default",
+                  "x": 1672,
+                  "y": 371.73,
+                  "name": "clcs06ti801c3356dy4piq1eh",
+                  "parentNode": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+                  "links": [
+                    "71133179-f997-46de-8c8d-87cb685e96c1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcs06ti801c4356d6ah32pl4",
+                  "type": "default",
+                  "x": 1826,
+                  "y": 371.73,
+                  "name": "clcs06ti801c5356d14s4un30",
+                  "parentNode": "f7c31b54-b693-415b-990f-a2871e3f2fcb",
+                  "links": [
+                    "e0f06dc6-c524-42a7-a534-442e064cc33f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"message\": \"Clocked Out\",\n  \"options\": {\n    \"message\": \"Clocked Out\",\n    \"severity\": \"info\",\n    \"data\": $state.context\n  }\n}",
+                "nextNodes": [
+                  "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Clock Out Message"
+            },
+            "2be0fed0-79c2-48ea-abf9-58c22d9e22f5": {
+              "id": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+              "type": "transform",
+              "selected": false,
+              "x": 1680,
+              "y": 410,
+              "ports": [
+                {
+                  "id": "clcs07ib601ed356dfh0x030g",
+                  "type": "default",
+                  "x": 1672,
+                  "y": 441.73,
+                  "name": "clcs07ib601ee356dm3a7v7z7",
+                  "parentNode": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+                  "links": [
+                    "484f34e7-d315-443a-b497-f8b6818b9702"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcs07ib601ef356d4c370cvn",
+                  "type": "default",
+                  "x": 1826,
+                  "y": 441.73,
+                  "name": "clcs07ib601eg356djy34bvus",
+                  "parentNode": "2be0fed0-79c2-48ea-abf9-58c22d9e22f5",
+                  "links": [
+                    "ebb1ccce-7baa-4209-86bb-6f632bdf811b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"message\": \"Clocked In\",\n  \"options\": {\n    \"message\": \"Clocked In\",\n    \"severity\": \"success\",\n    \"data\": $state.context\n  }\n}",
+                "nextNodes": [
+                  "bd2f92f3-ab01-47a9-b009-95eefa975ef0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Clock In Message"
+            }
+          }
+        }
+      ],
+      "name": "Employee Clock from Screen",
+      "type": "System",
+      "version": "0.0.6",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

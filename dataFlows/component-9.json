@@ -1,0 +1,823 @@
+{
+  "header": {
+    "id": "calendarFromShiftGroupOnEvent",
+    "name": "Calendar from Shift Group on Event",
+    "description": "Create a Calendar from a Shift Group when it is created.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cleocnbwk002h019g7fpm1o2d",
+    "number": "0.0.6",
+    "description": "Added logging",
+    "dataFlowId": "calendarFromShiftGroupOnEvent",
+    "flow": {
+      "id": "cleocnbwk002h019g7fpm1o2d",
+      "name": "Calendar from Shift Group on Event",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+          "name": "Create/Update on Shift Group",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "type": "ShiftGroup",
+            "operations": [
+              "Create",
+              "Update"
+            ],
+            "nextNodes": [
+              "be574156-e676-492d-98e4-ae11ce8dd3a8",
+              "30fa250a-91f3-434e-bf23-59981c4cbbf2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+          "name": "Reject if Calendar Exists",
+          "type": "unless",
+          "data": {
+            "transform": "$exists($.value.after.calendarId)",
+            "nextNodes": [
+              "33222af5-5f36-4dae-b4d4-3dd1eaa287fc"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+          "name": "Create Calendar",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"name\": $.value.after.name,\n      \"description\": \"Simple calendar with a collection of events representing the shifts under the related shift group.\"\n    }\n  }\n}",
+            "mutation": "mutation createCalendar($payload:[CalendarCreatePayloadInput!]!) {\n  createCalendar(payload:$payload) {\n    id\n  }\n}",
+            "nextNodes": [
+              "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+          "name": "Link Calendar to Shift Group",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"calendarId\": $.createCalendar.id\n    },\n    \"where\": {\n      \"id\": $state.context.REQUEST.value.after._id\n    }\n  }\n}",
+            "mutation": "mutation updateShiftGroup($payload:[ShiftGroupUpdatePayloadInput!]!) {\n  updateShiftGroup(payload:$payload){\n    id\n  }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"REQUEST\": $\n}",
+            "nextNodes": [
+              "b9584b17-9b5e-4830-bdb5-fbd6021e2849"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "30fa250a-91f3-434e-bf23-59981c4cbbf2",
+          "name": "Log",
+          "type": "log",
+          "data": {
+            "messageTransform": "$string($)",
+            "level": "Debug",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.5"
+    },
+    "diagram": {
+      "id": "cleocnbwk002h019g7fpm1o2d",
+      "offsetX": -52.74,
+      "offsetY": 55.76,
+      "zoom": 95,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "9a57529b-4dd9-4b40-a725-e1eb624328f4",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "3dea4ada-cc73-47b4-89c9-86c60b6f75e3": {
+              "points": [
+                {
+                  "id": "eaeddddf-a092-474d-8709-16eab4338f7f",
+                  "type": "point",
+                  "x": 263.98,
+                  "y": 384.73
+                },
+                {
+                  "id": "2c2bad13-a8e5-44a2-acf7-aa7d70d2180f",
+                  "type": "point",
+                  "x": 390,
+                  "y": 329.73
+                }
+              ],
+              "id": "3dea4ada-cc73-47b4-89c9-86c60b6f75e3",
+              "type": "default",
+              "selected": false,
+              "source": "ad6f77bd-5776-43c3-8f67-fd52f6a65264",
+              "sourcePort": "clen04mht004o356dz8nfw8v4",
+              "target": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+              "targetPort": "clen050ql004q356d8gz5wjeb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "96b8ff4d-cd03-4aca-9211-55d990e5f16d": {
+              "points": [
+                {
+                  "id": "7401e6a8-044c-4847-b70e-ff4f91801254",
+                  "type": "point",
+                  "x": 314.97,
+                  "y": 299.73
+                },
+                {
+                  "id": "d2431493-090f-4c5c-a42c-f3bff1e1f4e7",
+                  "type": "point",
+                  "x": 390,
+                  "y": 329.73
+                }
+              ],
+              "id": "96b8ff4d-cd03-4aca-9211-55d990e5f16d",
+              "type": "default",
+              "selected": false,
+              "source": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+              "sourcePort": "clen00ilm000a356dnkwcrkrp",
+              "target": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+              "targetPort": "clen050ql004q356d8gz5wjeb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "514a1dce-0c4c-44b9-bda3-d41b20b47481": {
+              "points": [
+                {
+                  "id": "25f6bf3b-c321-41cb-b597-151f8445cac2",
+                  "type": "point",
+                  "x": 565.94,
+                  "y": 329.73
+                },
+                {
+                  "id": "c9a601f3-6e34-4df6-9525-40273778bce3",
+                  "type": "point",
+                  "x": 625,
+                  "y": 329.73
+                }
+              ],
+              "id": "514a1dce-0c4c-44b9-bda3-d41b20b47481",
+              "type": "default",
+              "selected": false,
+              "source": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+              "sourcePort": "clen050ql004s356dwmvhlw05",
+              "target": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+              "targetPort": "clen0ao48008r356duttk1edx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7bdacfd2-100e-46cc-8600-547c7683c5c7": {
+              "points": [
+                {
+                  "id": "4a2ed93d-f675-435f-8f6e-d43199b0387c",
+                  "type": "point",
+                  "x": 779,
+                  "y": 329.73
+                },
+                {
+                  "id": "06300d66-c8b2-41c8-85bc-867481c043b9",
+                  "type": "point",
+                  "x": 850,
+                  "y": 329.73
+                }
+              ],
+              "id": "7bdacfd2-100e-46cc-8600-547c7683c5c7",
+              "type": "default",
+              "selected": false,
+              "source": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+              "sourcePort": "clen0ao48008t356dn428h7ip",
+              "target": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+              "targetPort": "clen0618k005r356dquy6s8zc",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "438ef6fe-9b55-4c7d-8985-efe8f464e05e": {
+              "points": [
+                {
+                  "id": "996111d6-ae33-47ca-9296-9777a15cc61f",
+                  "type": "point",
+                  "x": 1004,
+                  "y": 329.73
+                },
+                {
+                  "id": "b5dc43f5-b511-4217-94c8-f8917f783b97",
+                  "type": "point",
+                  "x": 1085,
+                  "y": 329.73
+                }
+              ],
+              "id": "438ef6fe-9b55-4c7d-8985-efe8f464e05e",
+              "type": "default",
+              "selected": false,
+              "source": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+              "sourcePort": "clen0618k005t356dzqyl4c31",
+              "target": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+              "targetPort": "clen0a6ik007r356dd4fy3pjx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "be2e44a8-c208-4a10-b209-0e79e9c73b65": {
+              "points": [
+                {
+                  "id": "afe284eb-8df9-49a2-a964-8bc9b78514a0",
+                  "type": "point",
+                  "x": 314.97,
+                  "y": 299.73
+                },
+                {
+                  "id": "679c1dd3-4fd4-462b-b0fd-962a02523cc5",
+                  "type": "point",
+                  "x": 419.72,
+                  "y": 227.19
+                }
+              ],
+              "id": "be2e44a8-c208-4a10-b209-0e79e9c73b65",
+              "type": "default",
+              "selected": false,
+              "source": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+              "sourcePort": "clen00ilm000a356dnkwcrkrp",
+              "target": "30fa250a-91f3-434e-bf23-59981c4cbbf2",
+              "targetPort": "cleocn2gy018q356dqq553x2d",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "56689ce8-9007-44fd-9f43-3cafa603229f",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "36d2932e-cd66-4821-8a7f-47dcce5412f1": {
+              "id": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+              "type": "dataChanges",
+              "selected": false,
+              "x": 110,
+              "y": 260,
+              "ports": [
+                {
+                  "id": "clen00ilm000a356dnkwcrkrp",
+                  "type": "default",
+                  "x": 306.97,
+                  "y": 291.73,
+                  "name": "clen00ilm000b356daq5835cw",
+                  "parentNode": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+                  "links": [
+                    "96b8ff4d-cd03-4aca-9211-55d990e5f16d",
+                    "be2e44a8-c208-4a10-b209-0e79e9c73b65"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "type": "ShiftGroup",
+                "operations": [
+                  "Create",
+                  "Update"
+                ],
+                "nextNodes": [
+                  "be574156-e676-492d-98e4-ae11ce8dd3a8",
+                  "30fa250a-91f3-434e-bf23-59981c4cbbf2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create/Update on Shift Group",
+              "note": "Trigger on add/update of a Shift Group."
+            },
+            "ad6f77bd-5776-43c3-8f67-fd52f6a65264": {
+              "id": "ad6f77bd-5776-43c3-8f67-fd52f6a65264",
+              "type": "debugSource",
+              "selected": false,
+              "x": 110,
+              "y": 345,
+              "ports": [
+                {
+                  "id": "clen04mht004o356dz8nfw8v4",
+                  "type": "default",
+                  "x": 255.98,
+                  "y": 376.73,
+                  "name": "clen04mht004p356dkrgzorpo",
+                  "parentNode": "ad6f77bd-5776-43c3-8f67-fd52f6a65264",
+                  "links": [
+                    "3dea4ada-cc73-47b4-89c9-86c60b6f75e3"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "headers": {
+                    "userId": "ckoui070900160iql9ziiceb5",
+                    "tenantId": "mes2",
+                    "apiKeyId": "null"
+                  },
+                  "topic": "mfgx.tenant.mes2.dataChange.application.shiftGroup.update",
+                  "value": {
+                    "collection": "shiftGroup",
+                    "operation": "update",
+                    "before": {
+                      "_id": "cleinwbp6001u019w1bmq9phv",
+                      "name": "2 shifts by 10 hours / 4 days",
+                      "timeZone": "America/Detroi",
+                      "id": "cleinwbp6001u019w1bmq9phv",
+                      "createdByUserId": "ckoui070900160iql9ziiceb5",
+                      "createdAt": "2023-02-24T15:02:09.210Z",
+                      "updatedByUserId": "ckoui070900160iql9ziiceb5",
+                      "updatedAt": "2023-02-27T15:55:22.694Z",
+                      "collation": {
+                        "locale": "en",
+                        "strength": 2
+                      }
+                    },
+                    "after": {
+                      "timeZone": "America/Detroit",
+                      "_id": "cleinwbp6001u019w1bmq9phv",
+                      "name": "2 shifts by 10 hours / 4 days",
+                      "id": "cleinwbp6001u019w1bmq9phv",
+                      "createdByUserId": "ckoui070900160iql9ziiceb5",
+                      "createdAt": "2023-02-24T15:02:09.210Z",
+                      "updatedByUserId": "ckoui070900160iql9ziiceb5",
+                      "updatedAt": "2023-02-27T15:55:22.694Z",
+                      "collation": {
+                        "locale": "en",
+                        "strength": 2
+                      }
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "be574156-e676-492d-98e4-ae11ce8dd3a8"
+                ],
+                "context": null
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Run Here",
+              "note": "Sample Test for a shift."
+            },
+            "be574156-e676-492d-98e4-ae11ce8dd3a8": {
+              "id": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+              "type": "unless",
+              "selected": false,
+              "x": 390,
+              "y": 290,
+              "ports": [
+                {
+                  "id": "clen050ql004q356d8gz5wjeb",
+                  "type": "default",
+                  "x": 382,
+                  "y": 321.73,
+                  "name": "clen050ql004r356d71smt50z",
+                  "parentNode": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+                  "links": [
+                    "3dea4ada-cc73-47b4-89c9-86c60b6f75e3",
+                    "96b8ff4d-cd03-4aca-9211-55d990e5f16d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen050ql004s356dwmvhlw05",
+                  "type": "default",
+                  "x": 557.94,
+                  "y": 321.73,
+                  "name": "clen050ql004t356d7ej225zk",
+                  "parentNode": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+                  "links": [
+                    "514a1dce-0c4c-44b9-bda3-d41b20b47481"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$exists($.value.after.calendarId)",
+                "nextNodes": [
+                  "33222af5-5f36-4dae-b4d4-3dd1eaa287fc"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Reject if Calendar Exists",
+              "note": "Only continue if the calendar is missing."
+            },
+            "b9584b17-9b5e-4830-bdb5-fbd6021e2849": {
+              "id": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+              "type": "mutate",
+              "selected": false,
+              "x": 850,
+              "y": 290,
+              "ports": [
+                {
+                  "id": "clen0618k005r356dquy6s8zc",
+                  "type": "default",
+                  "x": 842,
+                  "y": 321.73,
+                  "name": "clen0618k005s356dpt9cv4re",
+                  "parentNode": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+                  "links": [
+                    "7bdacfd2-100e-46cc-8600-547c7683c5c7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0618k005t356dzqyl4c31",
+                  "type": "default",
+                  "x": 996,
+                  "y": 321.73,
+                  "name": "clen0618k005u356d7gcklm8d",
+                  "parentNode": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+                  "links": [
+                    "438ef6fe-9b55-4c7d-8985-efe8f464e05e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"name\": $.value.after.name,\n      \"description\": \"Simple calendar with a collection of events representing the shifts under the related shift group.\"\n    }\n  }\n}",
+                "mutation": "mutation createCalendar($payload:[CalendarCreatePayloadInput!]!) {\n  createCalendar(payload:$payload) {\n    id\n  }\n}",
+                "nextNodes": [
+                  "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create Calendar",
+              "note": "Create the calendar first."
+            },
+            "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a": {
+              "id": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+              "type": "mutate",
+              "selected": false,
+              "x": 1085,
+              "y": 290,
+              "ports": [
+                {
+                  "id": "clen0a6ik007r356dd4fy3pjx",
+                  "type": "default",
+                  "x": 1077,
+                  "y": 321.73,
+                  "name": "clen0a6ik007s356dsbm4cqjl",
+                  "parentNode": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+                  "links": [
+                    "438ef6fe-9b55-4c7d-8985-efe8f464e05e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0a6ik007t356d7wo9845w",
+                  "type": "default",
+                  "x": 1273.81,
+                  "y": 321.73,
+                  "name": "clen0a6ik007u356di2qxwv3l",
+                  "parentNode": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"update\": {\n      \"calendarId\": $.createCalendar.id\n    },\n    \"where\": {\n      \"id\": $state.context.REQUEST.value.after._id\n    }\n  }\n}",
+                "mutation": "mutation updateShiftGroup($payload:[ShiftGroupUpdatePayloadInput!]!) {\n  updateShiftGroup(payload:$payload){\n    id\n  }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Link Calendar to Shift Group",
+              "note": "Link the calendar to the shift group."
+            },
+            "33222af5-5f36-4dae-b4d4-3dd1eaa287fc": {
+              "id": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 625,
+              "y": 290,
+              "ports": [
+                {
+                  "id": "clen0ao48008r356duttk1edx",
+                  "type": "default",
+                  "x": 617,
+                  "y": 321.73,
+                  "name": "clen0ao48008s356d7k90u8zd",
+                  "parentNode": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+                  "links": [
+                    "514a1dce-0c4c-44b9-bda3-d41b20b47481"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clen0ao48008t356dn428h7ip",
+                  "type": "default",
+                  "x": 771,
+                  "y": 321.73,
+                  "name": "clen0ao48008u356dl5v8v0s1",
+                  "parentNode": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+                  "links": [
+                    "7bdacfd2-100e-46cc-8600-547c7683c5c7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"REQUEST\": $\n}",
+                "nextNodes": [
+                  "b9584b17-9b5e-4830-bdb5-fbd6021e2849"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context",
+              "note": "Save the changes to memory for future reference."
+            },
+            "30fa250a-91f3-434e-bf23-59981c4cbbf2": {
+              "id": "30fa250a-91f3-434e-bf23-59981c4cbbf2",
+              "type": "log",
+              "selected": true,
+              "x": 419.73,
+              "y": 187.46,
+              "ports": [
+                {
+                  "id": "cleocn2gy018q356dqq553x2d",
+                  "type": "default",
+                  "x": 411.72,
+                  "y": 219.19,
+                  "name": "cleocn2gy018r356d5w59xa1b",
+                  "parentNode": "30fa250a-91f3-434e-bf23-59981c4cbbf2",
+                  "links": [
+                    "be2e44a8-c208-4a10-b209-0e79e9c73b65"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleocn2gy018s356dbs1945or",
+                  "type": "default",
+                  "x": 565.72,
+                  "y": 219.19,
+                  "name": "cleocn2gy018t356ddldi8l9k",
+                  "parentNode": "30fa250a-91f3-434e-bf23-59981c4cbbf2",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "$string($)",
+                "level": "Debug",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log"
+            }
+          }
+        }
+      ],
+      "name": "Calendar from Shift Group on Event",
+      "type": "System",
+      "version": "0.0.5",
+      "walkthrough": {
+        "steps": [
+          {
+            "id": "36d2932e-cd66-4821-8a7f-47dcce5412f1",
+            "target": "#mfgx-node-36d2932e-cd66-4821-8a7f-47dcce5412f1",
+            "title": "Create/Update on Shift Group",
+            "subtitle": "Data Changes",
+            "content": "Trigger on add/update of a Shift Group."
+          },
+          {
+            "id": "ad6f77bd-5776-43c3-8f67-fd52f6a65264",
+            "target": "#mfgx-node-ad6f77bd-5776-43c3-8f67-fd52f6a65264",
+            "title": "Run Here",
+            "subtitle": "Source",
+            "content": "Sample Test for a shift."
+          },
+          {
+            "id": "be574156-e676-492d-98e4-ae11ce8dd3a8",
+            "target": "#mfgx-node-be574156-e676-492d-98e4-ae11ce8dd3a8",
+            "title": "Reject if Calendar Exists",
+            "subtitle": "Reject",
+            "content": "Only continue if the calendar is missing."
+          },
+          {
+            "id": "33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+            "target": "#mfgx-node-33222af5-5f36-4dae-b4d4-3dd1eaa287fc",
+            "title": "Merge Context",
+            "subtitle": "Merge Context",
+            "content": "Save the changes to memory for future reference."
+          },
+          {
+            "id": "b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+            "target": "#mfgx-node-b9584b17-9b5e-4830-bdb5-fbd6021e2849",
+            "title": "Create Calendar",
+            "subtitle": "Mutate",
+            "content": "Create the calendar first."
+          },
+          {
+            "id": "4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+            "target": "#mfgx-node-4f7c0b0f-9466-4877-ab92-1bb79f8ed75a",
+            "title": "Link Calendar to Shift Group",
+            "subtitle": "Mutate",
+            "content": "Link the calendar to the shift group."
+          }
+        ],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

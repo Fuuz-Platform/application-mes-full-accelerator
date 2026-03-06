@@ -1,0 +1,1731 @@
+{
+  "header": {
+    "id": "adjustMasterInventoryInFuuz",
+    "name": "Adjust Master Inventory in Fuuz",
+    "description": "Adjust Master Inventory in Fuuz",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "inventory"
+  },
+  "version": {
+    "id": "clyhh0vpd099a018g3lyx8usv",
+    "number": "0.0.4",
+    "description": "Adjusting the node \"Create Inventory Transaction\"\n\n- Added field Custom Data\n- Set CustomData to hold Claims as a value, This is done to add the userId to the record of each inventory. ",
+    "dataFlowId": "adjustMasterInventoryInFuuz",
+    "flow": {
+      "id": "clyhh0vpd099a018g3lyx8usv",
+      "name": "Adjust Master Inventory in Fuuz",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "f6ca4901-b5b5-4bf4-8289-5c6079ad7f9e",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "a563caa7-a37c-4678-9593-2898330ede84"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$state.context",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "194767f4-cef8-4c78-89ad-839fedc2df88",
+          "name": "Query Inventory Details",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"inventoryNumber\": $state.context.REQUEST.inventoryNumber,\n  \"masterInventoryNumber\": $state.context.REQUEST.masterInventoryNumber\n}",
+            "nextNodes": [
+              "4fa1aad1-c094-44d8-aa32-f8c68da57c53"
+            ],
+            "query": "query Query($inventoryNumber: String!, $masterInventoryNumber: String!) {\n  inventory(where: {number:{_eq:$inventoryNumber} active:{_eq:true}}) {\n    edges {\n      node {\n        id\n\t\t\t\tactive\n        barcode\n        number\n        trackingNumber\n        location {\n          id\n          name\n          locationType {\n            id\n            name\n            \n            quarantine\n          }\n        }\n        inventoryStatus {\n          id\n          name\n          active\n          suspect\n          mergePrevent\n          movePrevent\n          splitPrevent\n        }\n        quantity {\n          value\n          unitId\n        }\n        weightUnit {\n          id\n          code\n        }\n        grossWeight\n        netWeight\n        tareWeight\n        masterInventory {\n          id\n          number\n          masterInventoryStatus {\n            id\n            name\n            active\n            mergePrevent\n            movePrevent\n            \n          }\n        }\n        productStrategyProcess {\n          id\n          code          \n          unitWeight\n          productStrategy {\n            id\n            code\n            name\n            product {\n              id\n              code\n              name\n            }\n          }\n        }\n      }\n    }\n  }\n  productionSetupMaterial(where:{inventory:{number:{_eq:$inventoryNumber}}}) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  masterInventory(where:{number:{_eq:$masterInventoryNumber}}) {\n    edges {\n      node {\n        id\n        number\n      }\n    }\n  }  \n  transactionType(where:{inventoryAdjustment:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+          "name": "Adjust the Inventory",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"updatePayload\": {\n    \"update\": {\n      \"masterInventoryId\": ($.masterInventory.edges.node.id) ? $.masterInventory.edges.node.id : null\n    },\n    \"where\": {\n      \"id\": $state.context.QUERY.inventory.edges.node.id\n    }\n  }\n}",
+            "nextNodes": [
+              "fb753029-9883-4c48-8589-4f4a8685f2c8"
+            ],
+            "mutation": "mutation createUpdateInventory($updatePayload:[InventoryUpdatePayloadInput!]!){\n  updateInventory(payload:$updatePayload){\n    id\n    number\n    productStrategyProcessId\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+          "name": "Save REQUEST",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "194767f4-cef8-4c78-89ad-839fedc2df88"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "a563caa7-a37c-4678-9593-2898330ede84",
+          "name": "Validate JSON Request",
+          "type": "validate",
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "REQUEST": {
+                  "type": "object",
+                  "properties": {
+                    "inventoryNumber": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "number"
+                        },
+                        "unitId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unitId"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "inventoryNumber",
+                    "masterInventoryNumber"
+                  ]
+                }
+              },
+              "required": [
+                "REQUEST"
+              ]
+            },
+            "nextNodes": [
+              "3df8a45a-ae85-4877-88f8-27c243df8c45"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "0d654fe3-6c39-483e-a571-98d1097dda2d",
+          "name": "Loaded to Workcenter",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is loaded to workcenter (\" & $.productionSetupMaterial.edges.node.productionSetup.workcenter.name & \") and cannot be split.  Please unload it first.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "fab231f5-7784-4265-9e3f-04d86e1aa3ff",
+          "name": "Inventory not found",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $state.context.REQUEST.fromInventory.number & \") was not found or is it not active.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+          "name": "Validate Query Data",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Inventory Not Found",
+                "nextNodes": [
+                  "fab231f5-7784-4265-9e3f-04d86e1aa3ff"
+                ],
+                "transform": "$count($.inventory.edges.node)=0"
+              },
+              {
+                "name": "Inventory Loaded",
+                "transform": "$count($.productionSetupMaterial.edges.node)>0",
+                "nextNodes": [
+                  "0d654fe3-6c39-483e-a571-98d1097dda2d"
+                ]
+              },
+              {
+                "name": "Master Inventory Not Found",
+                "nextNodes": [
+                  "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f"
+                ],
+                "transform": "$not($isNilOrEmpty($state.context.REQUEST.masterInventoryNumber))\nand\n$count($.masterInventory.edges.node)=0"
+              },
+              {
+                "name": "Passed",
+                "transform": "true",
+                "nextNodes": [
+                  "c447a12b-4604-40ed-a6ff-4adce9e9540e"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+          "name": "Save QUERY",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"QUERY\": $\n}",
+            "nextNodes": [
+              "8f1af509-d101-4f8f-903d-263b865fe7e1"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+          "name": "Save CONTAINERS",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "be7dc552-b0a8-4e45-8e43-562dc2a507f3"
+            ],
+            "transform": "{\n  \"CONTAINERS\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+          "name": "Create Inventory Transaction",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  {\n    \"payload\": [\n      {\n        \"create\": {\n          \"transactionTypeId\": $state.context.QUERY.transactionType.edges.node.id,\n             \"customData\": $state.claims,\n\n          \"sourceQuantity\": {\n            \"value\": $state.context.QUERY.inventory.edges.node.quantity.value,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"sourceLocationId\": $state.context.QUERY.inventory.edges.node.location.id,\n          \"sourceInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"sourceInventoryStatusId\": $state.context.QUERY.inventory.edges.node.inventoryStatus.id,      \n          \"sourceProductStrategyProcessId\": $state.context.QUERY.inventory.edges.node.productStrategyProcess.id,\n          \"sourceMasterInventoryId\": $state.context.QUERY.inventory.edges.node.masterInventory.id,\n\n          \"destinationQuantity\": {\n            \"value\": $state.context.QUERY.inventory.edges.node.quantity.value,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"destinationLocationId\": $state.context.QUERY.inventory.edges.node.location.id,\n          \"destinationInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"destinationInventoryStatusId\": $state.context.QUERY.inventory.edges.node.inventoryStatus.id,\n          \"destinationProductStrategyProcessId\": $state.context.QUERY.inventory.edges.node.productStrategyProcess.id,\n          \"destinationMasterInventoryId\": $state.context.QUERY.masterInventory.edges.node.id\n\n        }\n      }\n    ]\n  }\n)",
+            "mutation": "mutation($payload: [InventoryTransactionCreatePayloadInput!]! ){\n  createInventoryTransaction(payload: $payload){\n    id\n    sourceInventoryId\n    destinationInventoryId\n  }\n}",
+            "nextNodes": [
+              "54d74de0-e2b9-4a59-95b6-95c421049a18"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+          "name": "Save TRANSACTIONS",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0"
+            ],
+            "transform": "{\n  \"TRANSACTIONS\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f",
+          "name": "Master Inventory Not Found",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Master Inventory (\" & $state.context.REQUEST.masterInventoryNumber & \") was not found in the system.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.4"
+    },
+    "diagram": {
+      "id": "clyhh0vpd099a018g3lyx8usv",
+      "offsetX": -950.3,
+      "offsetY": -136.93,
+      "zoom": 73.33,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "dafc0068-1109-4014-8d97-1b3be933509a",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "040931de-4124-42b5-a694-744a727ff41a": {
+              "points": [
+                {
+                  "id": "9a517423-b519-476c-9ae2-db96fc71c8e5",
+                  "type": "point",
+                  "x": 239,
+                  "y": 404.73
+                },
+                {
+                  "id": "a20f484d-3fd9-4ed6-940d-d768c080b526",
+                  "type": "point",
+                  "x": 290,
+                  "y": 469.73
+                }
+              ],
+              "id": "040931de-4124-42b5-a694-744a727ff41a",
+              "type": "default",
+              "source": "f6ca4901-b5b5-4bf4-8289-5c6079ad7f9e",
+              "sourcePort": "clewy60fj007g356d30uas6jn",
+              "target": "a563caa7-a37c-4678-9593-2898330ede84",
+              "targetPort": "clewy60fs0092356dildb3tu0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "585372e6-09d0-4379-b252-4026097c9e2f": {
+              "points": [
+                {
+                  "id": "064b8a2d-787b-4dfa-ac2f-a5d2792228f5",
+                  "type": "point",
+                  "x": 864.75,
+                  "y": 469.73
+                },
+                {
+                  "id": "6418f8e1-0029-4f8d-ad84-7845c64beaf6",
+                  "type": "point",
+                  "x": 905,
+                  "y": 469.73
+                }
+              ],
+              "id": "585372e6-09d0-4379-b252-4026097c9e2f",
+              "type": "default",
+              "source": "194767f4-cef8-4c78-89ad-839fedc2df88",
+              "sourcePort": "clewy60fm0084356d99kodp2z",
+              "target": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+              "targetPort": "clewy60g300aq356dby5vf0jd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "737ffa36-08a5-4bed-8384-c8e5a93fc68f": {
+              "points": [
+                {
+                  "id": "a545db5c-a1e9-4c9e-aa96-acd5bd296694",
+                  "type": "point",
+                  "x": 1604,
+                  "y": 659.73
+                },
+                {
+                  "id": "a409b641-13f1-4f8c-a831-ab84f3e21170",
+                  "type": "point",
+                  "x": 1670,
+                  "y": 659.73
+                }
+              ],
+              "id": "737ffa36-08a5-4bed-8384-c8e5a93fc68f",
+              "type": "default",
+              "source": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+              "sourcePort": "clewy60fo008g356dssfcba2i",
+              "target": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+              "targetPort": "clewy60g700b8356dhsibc3u0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b7464668-31d7-4fd8-9857-b6b849c2b3df": {
+              "points": [
+                {
+                  "id": "a827acd0-83eb-4850-8281-dcbd5d338c41",
+                  "type": "point",
+                  "x": 654,
+                  "y": 469.73
+                },
+                {
+                  "id": "01de0129-8156-4669-a592-dd73010855b7",
+                  "type": "point",
+                  "x": 695,
+                  "y": 469.73
+                }
+              ],
+              "id": "b7464668-31d7-4fd8-9857-b6b849c2b3df",
+              "type": "default",
+              "source": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+              "sourcePort": "clewy60fq008s356dofqd34fr",
+              "target": "194767f4-cef8-4c78-89ad-839fedc2df88",
+              "targetPort": "clewy60fm0082356dp9e6653w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "cf2df972-d59a-454a-bf94-302493f38501": {
+              "points": [
+                {
+                  "id": "07a1cb04-5568-4bea-86e6-7dcd267faf8a",
+                  "type": "point",
+                  "x": 460.13,
+                  "y": 469.73
+                },
+                {
+                  "id": "faad0e05-e861-40e5-b198-22899603512a",
+                  "type": "point",
+                  "x": 500,
+                  "y": 469.73
+                }
+              ],
+              "id": "cf2df972-d59a-454a-bf94-302493f38501",
+              "type": "default",
+              "source": "a563caa7-a37c-4678-9593-2898330ede84",
+              "sourcePort": "clewy60fs0094356djsbzbz34",
+              "target": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+              "targetPort": "clewy60fq008q356dqftmb4dg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6e4f4e3e-6c92-4685-bf8a-00c167a677a3": {
+              "points": [
+                {
+                  "id": "7825eca5-6835-4e29-bb96-a4ac111ae827",
+                  "type": "point",
+                  "x": 1349.36,
+                  "y": 469.73
+                },
+                {
+                  "id": "5a73be82-9d36-47fb-806f-00ff14e35aa5",
+                  "type": "point",
+                  "x": 1440,
+                  "y": 384.73
+                }
+              ],
+              "id": "6e4f4e3e-6c92-4685-bf8a-00c167a677a3",
+              "type": "default",
+              "source": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "sourcePort": "clewy60g100a8356di3aadjzp",
+              "target": "fab231f5-7784-4265-9e3f-04d86e1aa3ff",
+              "targetPort": "clewy60fy009g356dncf9tbxl",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d8b3dbe9-0b3b-4d7f-8d1a-1b6d5b0477ba": {
+              "points": [
+                {
+                  "id": "5ddfd163-9a9b-4126-92b7-42d3e7c25a6a",
+                  "type": "point",
+                  "x": 1349.36,
+                  "y": 494.89
+                },
+                {
+                  "id": "30faabfd-87ed-44f6-8eae-02656c9dad9e",
+                  "type": "point",
+                  "x": 1440,
+                  "y": 449.73
+                }
+              ],
+              "id": "d8b3dbe9-0b3b-4d7f-8d1a-1b6d5b0477ba",
+              "type": "default",
+              "source": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "sourcePort": "clewy60g100aa356dk53n82by",
+              "target": "0d654fe3-6c39-483e-a571-98d1097dda2d",
+              "targetPort": "clewy60fv009a356dve30osx8",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0ce528ae-d99f-4c86-9aff-3726ebe72529": {
+              "points": [
+                {
+                  "id": "2900c71e-db76-4285-b080-fb7f86bc0536",
+                  "type": "point",
+                  "x": 1349.36,
+                  "y": 520.05
+                },
+                {
+                  "id": "8087918c-61c3-4f2a-ae42-d26a991a74da",
+                  "type": "point",
+                  "x": 1440,
+                  "y": 519.73
+                }
+              ],
+              "id": "0ce528ae-d99f-4c86-9aff-3726ebe72529",
+              "type": "default",
+              "source": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "sourcePort": "clewy60g100ac356dgj4v8zk8",
+              "target": "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f",
+              "targetPort": "clewy60gd00c4356d0in1w6as",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "55484a25-8842-4e56-aa08-d809d6a0b4f1": {
+              "points": [
+                {
+                  "id": "25423299-4f3e-44ca-ad2d-30d254e6c079",
+                  "type": "point",
+                  "x": 1349.36,
+                  "y": 545.2
+                },
+                {
+                  "id": "0ff88f0f-7ec9-455d-a280-be4b318ea900",
+                  "type": "point",
+                  "x": 1450,
+                  "y": 659.73
+                }
+              ],
+              "id": "55484a25-8842-4e56-aa08-d809d6a0b4f1",
+              "type": "default",
+              "source": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "sourcePort": "clewy60g100ag356dotk3vk4a",
+              "target": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+              "targetPort": "clewy60fo008e356djzbvrvoy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2d41014f-dd0f-42e2-bad4-9c53283d9b29": {
+              "points": [
+                {
+                  "id": "9553c726-90ea-49da-a11f-07739dcead84",
+                  "type": "point",
+                  "x": 1059,
+                  "y": 469.73
+                },
+                {
+                  "id": "955c3d2a-1aaa-4a30-90e2-5cd896117e14",
+                  "type": "point",
+                  "x": 1110,
+                  "y": 469.73
+                }
+              ],
+              "id": "2d41014f-dd0f-42e2-bad4-9c53283d9b29",
+              "type": "default",
+              "source": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+              "sourcePort": "clewy60g300as356dmmkou793",
+              "target": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "targetPort": "clewy60g100a6356d8t02ddpt",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0976f2bd-d897-4741-852a-f9f1fd6ddbef": {
+              "points": [
+                {
+                  "id": "f0c3174e-bbd2-4918-b036-724d2066dcbc",
+                  "type": "point",
+                  "x": 254.52,
+                  "y": 554.73
+                },
+                {
+                  "id": "8c5223d3-4539-4dde-b527-6494fb209c32",
+                  "type": "point",
+                  "x": 290,
+                  "y": 469.73
+                }
+              ],
+              "id": "0976f2bd-d897-4741-852a-f9f1fd6ddbef",
+              "type": "default",
+              "source": "21e4dfe6-ec5e-42f9-9bee-42ae8acd1ff2",
+              "sourcePort": "clewy60g500ay356dd4alumdu",
+              "target": "a563caa7-a37c-4678-9593-2898330ede84",
+              "targetPort": "clewy60fs0092356dildb3tu0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6d21de00-2ab6-4ee0-960e-9208437ce7cb": {
+              "points": [
+                {
+                  "id": "fa00a8cf-1a94-498a-9367-aa06e8ad7dd4",
+                  "type": "point",
+                  "x": 1824,
+                  "y": 659.73
+                },
+                {
+                  "id": "f4ce3e35-3876-484d-8433-66ceaa10171d",
+                  "type": "point",
+                  "x": 1895,
+                  "y": 659.73
+                }
+              ],
+              "id": "6d21de00-2ab6-4ee0-960e-9208437ce7cb",
+              "type": "default",
+              "source": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+              "sourcePort": "clewy60g700ba356d6qt2ced6",
+              "target": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+              "targetPort": "clewy60g900bk356duihunt5a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "895e8954-a473-4d4e-9ae4-065692766e1b": {
+              "points": [
+                {
+                  "id": "854c42b9-a35a-4eac-b389-f8ec347987c3",
+                  "type": "point",
+                  "x": 2095.31,
+                  "y": 659.73
+                },
+                {
+                  "id": "25d38987-61f4-43d9-ada3-e03f931155e9",
+                  "type": "point",
+                  "x": 2165,
+                  "y": 659.73
+                }
+              ],
+              "id": "895e8954-a473-4d4e-9ae4-065692766e1b",
+              "type": "default",
+              "source": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+              "sourcePort": "clewy60g900bm356dco15lqbs",
+              "target": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+              "targetPort": "clewy60gb00bw356dwg5nxidp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "bbb0a6b5-6f47-4182-8b86-d04c2bf4b9c9": {
+              "points": [
+                {
+                  "id": "4d07ef8a-7df6-4c1a-8f4b-f15bd371a99a",
+                  "type": "point",
+                  "x": 2327.37,
+                  "y": 659.73
+                },
+                {
+                  "id": "8359ff2d-fd39-49df-8464-a7bc40e9fbc3",
+                  "type": "point",
+                  "x": 2395,
+                  "y": 659.73
+                }
+              ],
+              "id": "bbb0a6b5-6f47-4182-8b86-d04c2bf4b9c9",
+              "type": "default",
+              "source": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+              "sourcePort": "clewy60gb00by356dqy458ms5",
+              "target": "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0",
+              "targetPort": "clewy60fl007q356dpp4sikkv",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "58932447-f93d-43c8-a6da-c68bd20d0c95": {
+              "points": [
+                {
+                  "id": "30e9bd25-e736-4aaa-a248-947d8a474e8e",
+                  "type": "point",
+                  "x": 248.98,
+                  "y": 624.73
+                },
+                {
+                  "id": "c43c351a-d4bb-4bca-827e-1ec357d47d1a",
+                  "type": "point",
+                  "x": 290,
+                  "y": 469.73
+                }
+              ],
+              "id": "58932447-f93d-43c8-a6da-c68bd20d0c95",
+              "type": "default",
+              "selected": false,
+              "source": "dc7a199a-b4ac-46ef-8f90-e6f7de75de6e",
+              "sourcePort": "clxxe2jwa010q356heg6c2ldm",
+              "target": "a563caa7-a37c-4678-9593-2898330ede84",
+              "targetPort": "clewy60fs0092356dildb3tu0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "105c342f-2830-43f6-ae69-3221a9fc97e0",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "f6ca4901-b5b5-4bf4-8289-5c6079ad7f9e": {
+              "id": "f6ca4901-b5b5-4bf4-8289-5c6079ad7f9e",
+              "type": "request",
+              "selected": false,
+              "x": 85,
+              "y": 365,
+              "ports": [
+                {
+                  "id": "clewy60fj007g356d30uas6jn",
+                  "type": "default",
+                  "x": 231,
+                  "y": 396.73,
+                  "name": "clewy60fj007h356duir0zn6w",
+                  "parentNode": "f6ca4901-b5b5-4bf4-8289-5c6079ad7f9e",
+                  "links": [
+                    "040931de-4124-42b5-a694-744a727ff41a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "a563caa7-a37c-4678-9593-2898330ede84"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request",
+              "note": "Request from screen or flow."
+            },
+            "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0": {
+              "id": "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0",
+              "type": "response",
+              "selected": false,
+              "x": 2395,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clewy60fl007q356dpp4sikkv",
+                  "type": "default",
+                  "x": 2387,
+                  "y": 651.73,
+                  "name": "clewy60fl007r356d1dqele1v",
+                  "parentNode": "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0",
+                  "links": [
+                    "bbb0a6b5-6f47-4182-8b86-d04c2bf4b9c9"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clewy60fl007s356d1bi3w4ec",
+                  "type": "default",
+                  "x": 2540.98,
+                  "y": 651.73,
+                  "name": "clewy60fl007t356d2elxrzt4",
+                  "parentNode": "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$state.context",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response",
+              "note": "Respond to the process that requested a split."
+            },
+            "194767f4-cef8-4c78-89ad-839fedc2df88": {
+              "id": "194767f4-cef8-4c78-89ad-839fedc2df88",
+              "type": "query",
+              "selected": false,
+              "x": 695,
+              "y": 430,
+              "ports": [
+                {
+                  "id": "clewy60fm0082356dp9e6653w",
+                  "type": "default",
+                  "x": 687,
+                  "y": 461.73,
+                  "name": "clewy60fm0083356dixfkh78d",
+                  "parentNode": "194767f4-cef8-4c78-89ad-839fedc2df88",
+                  "links": [
+                    "b7464668-31d7-4fd8-9857-b6b849c2b3df"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60fm0084356d99kodp2z",
+                  "type": "default",
+                  "x": 856.75,
+                  "y": 461.73,
+                  "name": "clewy60fm0085356dslxb3j19",
+                  "parentNode": "194767f4-cef8-4c78-89ad-839fedc2df88",
+                  "links": [
+                    "585372e6-09d0-4379-b252-4026097c9e2f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"inventoryNumber\": $state.context.REQUEST.inventoryNumber,\n  \"masterInventoryNumber\": $state.context.REQUEST.masterInventoryNumber\n}",
+                "nextNodes": [
+                  "4fa1aad1-c094-44d8-aa32-f8c68da57c53"
+                ],
+                "query": "query Query($inventoryNumber: String!, $masterInventoryNumber: String!) {\n  inventory(where: {number:{_eq:$inventoryNumber} active:{_eq:true}}) {\n    edges {\n      node {\n        id\n\t\t\t\tactive\n        barcode\n        number\n        trackingNumber\n        location {\n          id\n          name\n          locationType {\n            id\n            name\n            \n            quarantine\n          }\n        }\n        inventoryStatus {\n          id\n          name\n          active\n          suspect\n          mergePrevent\n          movePrevent\n          splitPrevent\n        }\n        quantity {\n          value\n          unitId\n        }\n        weightUnit {\n          id\n          code\n        }\n        grossWeight\n        netWeight\n        tareWeight\n        masterInventory {\n          id\n          number\n          masterInventoryStatus {\n            id\n            name\n            active\n            mergePrevent\n            movePrevent\n            \n          }\n        }\n        productStrategyProcess {\n          id\n          code          \n          unitWeight\n          productStrategy {\n            id\n            code\n            name\n            product {\n              id\n              code\n              name\n            }\n          }\n        }\n      }\n    }\n  }\n  productionSetupMaterial(where:{inventory:{number:{_eq:$inventoryNumber}}}) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  masterInventory(where:{number:{_eq:$masterInventoryNumber}}) {\n    edges {\n      node {\n        id\n        number\n      }\n    }\n  }  \n  transactionType(where:{inventoryAdjustment:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query Inventory Details",
+              "note": "Query Inventory, location, and production setup materials."
+            },
+            "c447a12b-4604-40ed-a6ff-4adce9e9540e": {
+              "id": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+              "type": "mutate",
+              "selected": true,
+              "x": 1450,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clewy60fo008e356djzbvrvoy",
+                  "type": "default",
+                  "x": 1442,
+                  "y": 651.73,
+                  "name": "clewy60fo008f356dh4egk92p",
+                  "parentNode": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+                  "links": [
+                    "55484a25-8842-4e56-aa08-d809d6a0b4f1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60fo008g356dssfcba2i",
+                  "type": "default",
+                  "x": 1596,
+                  "y": 651.73,
+                  "name": "clewy60fo008h356dfzt8mbfh",
+                  "parentNode": "c447a12b-4604-40ed-a6ff-4adce9e9540e",
+                  "links": [
+                    "737ffa36-08a5-4bed-8384-c8e5a93fc68f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"updatePayload\": {\n    \"update\": {\n      \"masterInventoryId\": ($.masterInventory.edges.node.id) ? $.masterInventory.edges.node.id : null\n    },\n    \"where\": {\n      \"id\": $state.context.QUERY.inventory.edges.node.id\n    }\n  }\n}",
+                "nextNodes": [
+                  "fb753029-9883-4c48-8589-4f4a8685f2c8"
+                ],
+                "mutation": "mutation createUpdateInventory($updatePayload:[InventoryUpdatePayloadInput!]!){\n  updateInventory(payload:$updatePayload){\n    id\n    number\n    productStrategyProcessId\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Adjust the Inventory",
+              "note": "Mutation to modify the inventory record."
+            },
+            "3df8a45a-ae85-4877-88f8-27c243df8c45": {
+              "id": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+              "type": "setContext",
+              "selected": false,
+              "x": 500,
+              "y": 430,
+              "ports": [
+                {
+                  "id": "clewy60fq008q356dqftmb4dg",
+                  "type": "default",
+                  "x": 492,
+                  "y": 461.73,
+                  "name": "clewy60fq008r356djs9whpft",
+                  "parentNode": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+                  "links": [
+                    "cf2df972-d59a-454a-bf94-302493f38501"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60fq008s356dofqd34fr",
+                  "type": "default",
+                  "x": 646,
+                  "y": 461.73,
+                  "name": "clewy60fq008t356d8gyza1ne",
+                  "parentNode": "3df8a45a-ae85-4877-88f8-27c243df8c45",
+                  "links": [
+                    "b7464668-31d7-4fd8-9857-b6b849c2b3df"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "194767f4-cef8-4c78-89ad-839fedc2df88"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save REQUEST",
+              "note": "Save the REQUEST to memory."
+            },
+            "a563caa7-a37c-4678-9593-2898330ede84": {
+              "id": "a563caa7-a37c-4678-9593-2898330ede84",
+              "type": "validate",
+              "selected": false,
+              "x": 290,
+              "y": 430,
+              "ports": [
+                {
+                  "id": "clewy60fs0092356dildb3tu0",
+                  "type": "default",
+                  "x": 282,
+                  "y": 461.73,
+                  "name": "clewy60fs0093356djafatxl3",
+                  "parentNode": "a563caa7-a37c-4678-9593-2898330ede84",
+                  "links": [
+                    "040931de-4124-42b5-a694-744a727ff41a",
+                    "0976f2bd-d897-4741-852a-f9f1fd6ddbef",
+                    "58932447-f93d-43c8-a6da-c68bd20d0c95"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60fs0094356djsbzbz34",
+                  "type": "default",
+                  "x": 452.12,
+                  "y": 461.73,
+                  "name": "clewy60fs0095356dws1xxgsh",
+                  "parentNode": "a563caa7-a37c-4678-9593-2898330ede84",
+                  "links": [
+                    "cf2df972-d59a-454a-bf94-302493f38501"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "REQUEST": {
+                      "type": "object",
+                      "properties": {
+                        "inventoryNumber": {
+                          "type": "string"
+                        },
+                        "quantity": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": "number"
+                            },
+                            "unitId": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "unitId"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "inventoryNumber",
+                        "masterInventoryNumber"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "REQUEST"
+                  ]
+                },
+                "nextNodes": [
+                  "3df8a45a-ae85-4877-88f8-27c243df8c45"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Validate JSON Request",
+              "note": "JSON Validation of the request object."
+            },
+            "0d654fe3-6c39-483e-a571-98d1097dda2d": {
+              "id": "0d654fe3-6c39-483e-a571-98d1097dda2d",
+              "type": "throwError",
+              "selected": false,
+              "x": 1440,
+              "y": 410,
+              "ports": [
+                {
+                  "id": "clewy60fv009a356dve30osx8",
+                  "type": "default",
+                  "x": 1432,
+                  "y": 441.73,
+                  "name": "clewy60fv009b356dlnj7jvph",
+                  "parentNode": "0d654fe3-6c39-483e-a571-98d1097dda2d",
+                  "links": [
+                    "d8b3dbe9-0b3b-4d7f-8d1a-1b6d5b0477ba"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is loaded to workcenter (\" & $.productionSetupMaterial.edges.node.productionSetup.workcenter.name & \") and cannot be split.  Please unload it first.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Loaded to Workcenter",
+              "note": "Inventory cannot be loaded in a work center."
+            },
+            "fab231f5-7784-4265-9e3f-04d86e1aa3ff": {
+              "id": "fab231f5-7784-4265-9e3f-04d86e1aa3ff",
+              "type": "throwError",
+              "selected": false,
+              "x": 1440,
+              "y": 345,
+              "ports": [
+                {
+                  "id": "clewy60fy009g356dncf9tbxl",
+                  "type": "default",
+                  "x": 1432,
+                  "y": 376.73,
+                  "name": "clewy60fy009h356d47w9bpnu",
+                  "parentNode": "fab231f5-7784-4265-9e3f-04d86e1aa3ff",
+                  "links": [
+                    "6e4f4e3e-6c92-4685-bf8a-00c167a677a3"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $state.context.REQUEST.fromInventory.number & \") was not found or is it not active.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Inventory not found",
+              "note": "Inventory must exist in Fuuz and be active."
+            },
+            "8f1af509-d101-4f8f-903d-263b865fe7e1": {
+              "id": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+              "type": "switch",
+              "selected": false,
+              "x": 1110,
+              "y": 430,
+              "ports": [
+                {
+                  "id": "clewy60g100a6356d8t02ddpt",
+                  "type": "default",
+                  "x": 1102,
+                  "y": 461.73,
+                  "name": "clewy60g100a7356dz1jje0xi",
+                  "parentNode": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+                  "links": [
+                    "2d41014f-dd0f-42e2-bad4-9c53283d9b29"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60g100a8356di3aadjzp",
+                  "type": "default",
+                  "x": 1341.36,
+                  "y": 461.73,
+                  "name": "clewy60g100a9356dqx0pki35",
+                  "parentNode": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+                  "links": [
+                    "6e4f4e3e-6c92-4685-bf8a-00c167a677a3"
+                  ],
+                  "in": false,
+                  "groupName": "Inventory Not Found",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clewy60g100aa356dk53n82by",
+                  "type": "default",
+                  "x": 1341.36,
+                  "y": 486.89,
+                  "name": "clewy60g100ab356dl0j0hrtj",
+                  "parentNode": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+                  "links": [
+                    "d8b3dbe9-0b3b-4d7f-8d1a-1b6d5b0477ba"
+                  ],
+                  "in": false,
+                  "groupName": "Inventory Loaded",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clewy60g100ac356dgj4v8zk8",
+                  "type": "default",
+                  "x": 1341.36,
+                  "y": 512.05,
+                  "name": "clewy60g100ad356dkvfth51b",
+                  "parentNode": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+                  "links": [
+                    "0ce528ae-d99f-4c86-9aff-3726ebe72529"
+                  ],
+                  "in": false,
+                  "groupName": "Master Inventory Not Found",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clewy60g100ag356dotk3vk4a",
+                  "type": "default",
+                  "x": 1341.36,
+                  "y": 537.2,
+                  "name": "clewy60g100ah356djorpg7jq",
+                  "parentNode": "8f1af509-d101-4f8f-903d-263b865fe7e1",
+                  "links": [
+                    "55484a25-8842-4e56-aa08-d809d6a0b4f1"
+                  ],
+                  "in": false,
+                  "groupName": "Passed",
+                  "groupIndex": 3,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Inventory Not Found",
+                    "nextNodes": [
+                      "fab231f5-7784-4265-9e3f-04d86e1aa3ff"
+                    ],
+                    "transform": "$count($.inventory.edges.node)=0"
+                  },
+                  {
+                    "name": "Inventory Loaded",
+                    "transform": "$count($.productionSetupMaterial.edges.node)>0",
+                    "nextNodes": [
+                      "0d654fe3-6c39-483e-a571-98d1097dda2d"
+                    ]
+                  },
+                  {
+                    "name": "Master Inventory Not Found",
+                    "nextNodes": [
+                      "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f"
+                    ],
+                    "transform": "$not($isNilOrEmpty($state.context.REQUEST.masterInventoryNumber))\nand\n$count($.masterInventory.edges.node)=0"
+                  },
+                  {
+                    "name": "Passed",
+                    "transform": "true",
+                    "nextNodes": [
+                      "c447a12b-4604-40ed-a6ff-4adce9e9540e"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Validate Query Data",
+              "note": "Validate all conditions in a single spot."
+            },
+            "4fa1aad1-c094-44d8-aa32-f8c68da57c53": {
+              "id": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 905,
+              "y": 430,
+              "ports": [
+                {
+                  "id": "clewy60g300aq356dby5vf0jd",
+                  "type": "default",
+                  "x": 897,
+                  "y": 461.73,
+                  "name": "clewy60g300ar356d9rjjlwjh",
+                  "parentNode": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+                  "links": [
+                    "585372e6-09d0-4379-b252-4026097c9e2f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60g300as356dmmkou793",
+                  "type": "default",
+                  "x": 1051,
+                  "y": 461.73,
+                  "name": "clewy60g300at356dswcq01lh",
+                  "parentNode": "4fa1aad1-c094-44d8-aa32-f8c68da57c53",
+                  "links": [
+                    "2d41014f-dd0f-42e2-bad4-9c53283d9b29"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"QUERY\": $\n}",
+                "nextNodes": [
+                  "8f1af509-d101-4f8f-903d-263b865fe7e1"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save QUERY",
+              "note": "Save the QUERY results to memory."
+            },
+            "21e4dfe6-ec5e-42f9-9bee-42ae8acd1ff2": {
+              "id": "21e4dfe6-ec5e-42f9-9bee-42ae8acd1ff2",
+              "type": "debugSource",
+              "selected": false,
+              "x": 55,
+              "y": 515,
+              "ports": [
+                {
+                  "id": "clewy60g500ay356dd4alumdu",
+                  "type": "default",
+                  "x": 246.52,
+                  "y": 546.73,
+                  "name": "clewy60g500az356dqhlqrcfz",
+                  "parentNode": "21e4dfe6-ec5e-42f9-9bee-42ae8acd1ff2",
+                  "links": [
+                    "0976f2bd-d897-4741-852a-f9f1fd6ddbef"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "inventoryNumber": "VCF00001524",
+                    "masterInventoryNumber": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "a563caa7-a37c-4678-9593-2898330ede84"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "VCF00000962 adjust master",
+              "note": "Sample request"
+            },
+            "fb753029-9883-4c48-8589-4f4a8685f2c8": {
+              "id": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1670,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clewy60g700b8356dhsibc3u0",
+                  "type": "default",
+                  "x": 1662,
+                  "y": 651.73,
+                  "name": "clewy60g700b9356djh7y3nso",
+                  "parentNode": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+                  "links": [
+                    "737ffa36-08a5-4bed-8384-c8e5a93fc68f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60g700ba356d6qt2ced6",
+                  "type": "default",
+                  "x": 1816,
+                  "y": 651.73,
+                  "name": "clewy60g700bb356dtam3z8l0",
+                  "parentNode": "fb753029-9883-4c48-8589-4f4a8685f2c8",
+                  "links": [
+                    "6d21de00-2ab6-4ee0-960e-9208437ce7cb"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "be7dc552-b0a8-4e45-8e43-562dc2a507f3"
+                ],
+                "transform": "{\n  \"CONTAINERS\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save CONTAINERS",
+              "note": "Save the results of inventory mutation to memory."
+            },
+            "be7dc552-b0a8-4e45-8e43-562dc2a507f3": {
+              "id": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+              "type": "mutate",
+              "selected": false,
+              "x": 1895,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clewy60g900bk356duihunt5a",
+                  "type": "default",
+                  "x": 1887,
+                  "y": 651.73,
+                  "name": "clewy60g900bl356dok3wgw3h",
+                  "parentNode": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+                  "links": [
+                    "6d21de00-2ab6-4ee0-960e-9208437ce7cb"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60g900bm356dco15lqbs",
+                  "type": "default",
+                  "x": 2087.31,
+                  "y": 651.73,
+                  "name": "clewy60g900bn356dd1l0pxf3",
+                  "parentNode": "be7dc552-b0a8-4e45-8e43-562dc2a507f3",
+                  "links": [
+                    "895e8954-a473-4d4e-9ae4-065692766e1b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  {\n    \"payload\": [\n      {\n        \"create\": {\n          \"transactionTypeId\": $state.context.QUERY.transactionType.edges.node.id,\n             \"customData\": $state.claims,\n\n          \"sourceQuantity\": {\n            \"value\": $state.context.QUERY.inventory.edges.node.quantity.value,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"sourceLocationId\": $state.context.QUERY.inventory.edges.node.location.id,\n          \"sourceInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"sourceInventoryStatusId\": $state.context.QUERY.inventory.edges.node.inventoryStatus.id,      \n          \"sourceProductStrategyProcessId\": $state.context.QUERY.inventory.edges.node.productStrategyProcess.id,\n          \"sourceMasterInventoryId\": $state.context.QUERY.inventory.edges.node.masterInventory.id,\n\n          \"destinationQuantity\": {\n            \"value\": $state.context.QUERY.inventory.edges.node.quantity.value,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"destinationLocationId\": $state.context.QUERY.inventory.edges.node.location.id,\n          \"destinationInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"destinationInventoryStatusId\": $state.context.QUERY.inventory.edges.node.inventoryStatus.id,\n          \"destinationProductStrategyProcessId\": $state.context.QUERY.inventory.edges.node.productStrategyProcess.id,\n          \"destinationMasterInventoryId\": $state.context.QUERY.masterInventory.edges.node.id\n\n        }\n      }\n    ]\n  }\n)",
+                "mutation": "mutation($payload: [InventoryTransactionCreatePayloadInput!]! ){\n  createInventoryTransaction(payload: $payload){\n    id\n    sourceInventoryId\n    destinationInventoryId\n  }\n}",
+                "nextNodes": [
+                  "54d74de0-e2b9-4a59-95b6-95c421049a18"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Create Inventory Transaction",
+              "note": "Create inventory depletion records for traceability."
+            },
+            "54d74de0-e2b9-4a59-95b6-95c421049a18": {
+              "id": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 2165,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clewy60gb00bw356dwg5nxidp",
+                  "type": "default",
+                  "x": 2157,
+                  "y": 651.73,
+                  "name": "clewy60gb00bx356doywo489p",
+                  "parentNode": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+                  "links": [
+                    "895e8954-a473-4d4e-9ae4-065692766e1b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clewy60gb00by356dqy458ms5",
+                  "type": "default",
+                  "x": 2319.37,
+                  "y": 651.73,
+                  "name": "clewy60gb00bz356dfn25rftq",
+                  "parentNode": "54d74de0-e2b9-4a59-95b6-95c421049a18",
+                  "links": [
+                    "bbb0a6b5-6f47-4182-8b86-d04c2bf4b9c9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "e312b996-b6b4-4c34-a87c-8ffdb72fbbe0"
+                ],
+                "transform": "{\n  \"TRANSACTIONS\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save TRANSACTIONS",
+              "note": "Save the depletion results to memory."
+            },
+            "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f": {
+              "id": "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f",
+              "type": "throwError",
+              "selected": false,
+              "x": 1440,
+              "y": 480,
+              "ports": [
+                {
+                  "id": "clewy60gd00c4356d0in1w6as",
+                  "type": "default",
+                  "x": 1432,
+                  "y": 511.73,
+                  "name": "clewy60gd00c5356d5k8ztdo0",
+                  "parentNode": "8b78352e-bc9b-4e6e-aaa2-eaa253c7ed6f",
+                  "links": [
+                    "0ce528ae-d99f-4c86-9aff-3726ebe72529"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Master Inventory (\" & $state.context.REQUEST.masterInventoryNumber & \") was not found in the system.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Master Inventory Not Found",
+              "note": "Master Inventory was not found."
+            },
+            "dc7a199a-b4ac-46ef-8f90-e6f7de75de6e": {
+              "id": "dc7a199a-b4ac-46ef-8f90-e6f7de75de6e",
+              "type": "debugSource",
+              "selected": false,
+              "x": 95,
+              "y": 585,
+              "ports": [
+                {
+                  "id": "clxxe2jwa010q356heg6c2ldm",
+                  "type": "default",
+                  "x": 240.98,
+                  "y": 616.73,
+                  "name": "clxxe2jwa010r356h2s51z81n",
+                  "parentNode": "dc7a199a-b4ac-46ef-8f90-e6f7de75de6e",
+                  "links": [
+                    "58932447-f93d-43c8-a6da-c68bd20d0c95"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "inventoryNumber": "S0000000230",
+                    "masterInventoryNumber": "mm1"
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "a563caa7-a37c-4678-9593-2898330ede84"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Adjust Master Inventory in Fuuz",
+      "type": "System",
+      "version": "0.0.4",
+      "walkthrough": {
+        "steps": [],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

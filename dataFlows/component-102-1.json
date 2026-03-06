@@ -1,0 +1,1522 @@
+{
+  "header": {
+    "id": "receivingFunctions",
+    "name": "Receiving Functions",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "inventory"
+  },
+  "version": {
+    "id": "clz8weu000h5v018uf2mhba32",
+    "number": "0.0.14",
+    "description": "updates JSONata Format node",
+    "dataFlowId": "receivingFunctions",
+    "flow": {
+      "id": "clz8weu000h5v018uf2mhba32",
+      "name": "Receiving Functions",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "95522b75-e594-41d7-87ac-92be8b86746c",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "7cde6baa-4f26-4a09-b754-0d010ac4c22d"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+          "name": "Save Req To Context",
+          "type": "setContext",
+          "data": {
+            "transform": "$",
+            "nextNodes": [
+              "dd59298d-043c-453d-b84a-9df6fa92e189"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "dd59298d-043c-453d-b84a-9df6fa92e189",
+          "name": "Route On ACTION Field",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "RECEIVE",
+                "transform": "REQUEST.ACTION=\"REC\"",
+                "nextNodes": [
+                  "08540a35-44a0-4ac3-9303-2fa838554fac"
+                ]
+              },
+              {
+                "transform": "true",
+                "name": "NO ACTION",
+                "nextNodes": [
+                  "1e708342-0914-4344-93be-4c7ef638bf7b"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+          "name": "Mutate:MASTER,REC,LINES,PO,LINES,INV ",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation(\n  $payloadCM: [MasterInventoryCreatePayloadInput!]!,\n  $payloadCR: [ReceiptCreatePayloadInput!]!,\n  $payloadCRL: [ReceiptLineCreatePayloadInput!]!,\n  $payloadURL:[ReceiptLineUpdatePayloadInput!]!,\n  $payloadPOL:[PurchaseOrderLineUpdatePayloadInput!]!,\n  $payloadPO:[PurchaseOrderUpdatePayloadInput!]!,\n\n  $payloadI:[InventoryCreatePayloadInput!]!\n\n)\n{\n  createMasterInventory(payload:$payloadCM){id}\n  createReceipt(payload:$payloadCR){id}\n  createReceiptLine(payload: $payloadCRL){id}\n  updateReceiptLine(payload:$payloadURL){id}\n  updatePurchaseOrderLine(payload:$payloadPOL){id}\n  updatePurchaseOrder(payload:$payloadPO){id}\n\n  inv:createInventory(payload:$payloadI){id,number}\n  \n}",
+            "nextNodes": [
+              "05a9c462-2997-4c7f-8f29-8d0208dbe593"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "7cde6baa-4f26-4a09-b754-0d010ac4c22d",
+          "name": "Request Log",
+          "type": "log",
+          "data": {
+            "messageTransform": "\"REQ\"",
+            "level": "Debug",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "05a9c462-2997-4c7f-8f29-8d0208dbe593",
+          "name": "Response: SUCCESS",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"SUCCESS\":true,\n  \"MESSAGE\": \"PO #\"\n    & $state.context.REQUEST.DATA.number\n    & \" received successfully\",\n  \"DATA\": inv\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1e708342-0914-4344-93be-4c7ef638bf7b",
+          "name": "Response: FAIL",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"SUCCESS\":false,\n  \"MESSAGE\": \"No action provided!\"\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "08540a35-44a0-4ac3-9303-2fa838554fac",
+          "name": "JSONata: FORMAT PAYLOADS",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $C := $state.context;\n  $R := $C.REQUEST.DATA;\n  $L := $C.LOCAL;\n  $lines := $L.purchaseOrder.lines;\n  $r := $L.purchaseOrder.receipts.edges.node; \n  $id := $cuid();\n  $m := (\n    $s :=  $sift($R.lines,function($v, $k) {$v.newMaster});\n    $each($s, function($v, $k) {(\n      $mid := $cuid();\n      {\n        \"lineid\": $k,\n        \"id\": $mid\n      }\n      )\n    })\n  );\n  $p := { \n    \"CR\": $isNilOrEmpty($r.id)  ? {\n          \"create\": {\n            \"id\": $id,\n            \"locationId\": $R.locationId,\n            \"purchaseOrderId\": $R.id,\n            \"statusId\": $C.DEFAULT.receiptStatusId,\n            \"shipper\": $R.shipmentNumber\n\n          }\n        }  : [],\n        \n    \"PO\": [{\n      \"update\": {\n        \"shipmentNumber\": $R.shipmentNumber,\n        \"purchaseOrderStatusId\": \"Partially Received\"\n      },\"where\": {\n        \"id\": $R.id\n      }\n    }],\n    \n    \"CM\": [$m.{\n      \"create\": {\n        \"id\":id,\n        \"masterInventoryStatusId\": \"Receiving\",\n        \"locationId\": $R.locationId\n      }\n    }],\n    \n    \"L\":$lines.(\n      $rlid := $cuid();\n      $line := $;\n      $unit := pendingQuantity.unitId;\n      $l := $lookup($R.lines, $line.id);\n      $qty := $L.lineQty[id=$line.id];\n      {\n        \"CRL\": $isNilOrEmpty(receiptLines.edges.node.id) ? {\n          \"create\": {\n            \"id\": $rlid,\n            \"receiptId\": $coalesce([$r.id,$id]),\n            \"licensePlates\": $l.containers,\n            \"lotNumber\": $l.lot,\n            \"quantityPerLicensePlate\": {\n              \"value\":  $l.qtyPer,\n              \"unitId\": $unit\n            },\n            \"quantity\": {\n              \"value\": $l.qtyPer * $l.containers,\n              \"unitId\": $unit\n            },\n            \"purchaseOrderLineId\": $line.id,\n            \"statusId\": $C.DEFAULT.receiptStatusId\n          }\n        } : [],\n        \n        \"URL\": [receiptLines.edges[0].node.{\n          \"update\": {\n            \"quantity\":  quantity.{\n              \"value\": $l.qtyPer * $l.containers + value,\n              \"unitId\": unitId\n            }\n          },\n          \"where\": {\n            \"id\":id\n          }\n        }],\n        \n        \"POL\": {\n          \"update\": {\n            \"balanceQuantity\": {\n              \"value\": $qty.balance,\n              \"unitId\":$unit\n            },\n            \"pendingQuantity\": {\n              \"value\":$qty.pending,\n              \"unitId\": $unit\n            },\n            \"purchaseOrderLineStatusId\": $qty.balance <= 0 ? \"Pending Confirmation\" : \"Partially Received\"\n          }, \n          \"where\": {\n            \"id\":id\n          }\n        },\n        \n        \"I\": $line.product.productTypeId != \"OthCharge\" ? [1..$l.containers].{\n          \"create\": {\n            \"active\":false,\n            \"productStrategyProcessId\":$line.productStrategyProcess.id,\n            \"productId\":$line.product.id,\n            \"locationId\": $R.locationId,\n            \"quantity\": { \n              \"value\": $l.qtyPer,\n              \"unitId\":$unit\n            },\n            \"receiptLineId\":$isNilOrEmpty($line.receiptLines.edges.node.id) ? $rlid :$line.receiptLines.edges[0].node.id ,\n            \"inventoryStatusId\":  $C.DEFAULT.inventoryStatusId,\n            \"inventoryTypeId\": \"Raw Material\",\n            \"barcode\":\"\",\n            \"grossWeight\":0,\n            \"supplierId\":$L.purchaseOrder.supplierId,\n            \"netWeight\":0,\n            \"tareWeight\":0,\n            \"masterInventoryId\": $l.newMaster ? $m[lineid=$line.id].id : $l.master.id\n          }\n        } : []\n      }\n    )\n  };\n\n  {\n    \"payloadPO\": [$p.PO],\n    \"payloadCR\": [$p.CR],\n    \"payloadCRL\": [$p.L.CRL],\n    \"payloadURL\": [$p.L.URL],\n    \"payloadPOL\": [$p.L.POL],\n    \"payloadI\": [$p.L.I],\n    \"payloadCM\": [$p.CM]\n  }\n\n)\n    \n    \n\n\n",
+            "nextNodes": [
+              "d05ef167-ece5-411b-aef4-7b2229ad3d73"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.13"
+    },
+    "diagram": {
+      "id": "clz8weu000h5v018uf2mhba32",
+      "offsetX": 18.19,
+      "offsetY": -117.19,
+      "zoom": 72.67,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "d212dc55-7e6d-42af-84dc-7d9780dc1532",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "1e43741f-59b3-495d-9c39-6676e1f2ebda": {
+              "points": [
+                {
+                  "id": "be6ff91e-09f3-451f-9a42-f2e0012fe7db",
+                  "type": "point",
+                  "x": 394,
+                  "y": 349.73
+                },
+                {
+                  "id": "3345462f-22b8-4d0c-9bc9-f94516500dfa",
+                  "type": "point",
+                  "x": 245,
+                  "y": 434.73
+                }
+              ],
+              "id": "1e43741f-59b3-495d-9c39-6676e1f2ebda",
+              "type": "default",
+              "selected": false,
+              "source": "95522b75-e594-41d7-87ac-92be8b86746c",
+              "sourcePort": "clskbgotf000f356mss13a9h1",
+              "target": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "targetPort": "clskbhgst000j356m40qxjqq0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ed0f02cd-d044-472b-9335-ef8943d19e17": {
+              "points": [
+                {
+                  "id": "ffb414da-f319-4a12-b718-2ee5631b438d",
+                  "type": "point",
+                  "x": 401.19,
+                  "y": 434.73
+                },
+                {
+                  "id": "dd5cdbe1-4e16-4add-9ce4-5f050f6cdcff",
+                  "type": "point",
+                  "x": 445,
+                  "y": 439.73
+                }
+              ],
+              "id": "ed0f02cd-d044-472b-9335-ef8943d19e17",
+              "type": "default",
+              "selected": false,
+              "source": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "sourcePort": "clskbhgst000l356m3651vvzh",
+              "target": "dd59298d-043c-453d-b84a-9df6fa92e189",
+              "targetPort": "clskbhpri000s356m5wrzcn4n",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "713ee0b3-eaca-4e43-8002-77edc6a50206": {
+              "points": [
+                {
+                  "id": "0d2ef679-813c-4c16-a5fc-6f47ea96b5ec",
+                  "type": "point",
+                  "x": 394,
+                  "y": 349.73
+                },
+                {
+                  "id": "f4fc9f82-23d7-42d0-8732-85e42b0ba4a6",
+                  "type": "point",
+                  "x": 245,
+                  "y": 269.73
+                }
+              ],
+              "id": "713ee0b3-eaca-4e43-8002-77edc6a50206",
+              "type": "default",
+              "selected": false,
+              "source": "95522b75-e594-41d7-87ac-92be8b86746c",
+              "sourcePort": "clskbgotf000f356mss13a9h1",
+              "target": "7cde6baa-4f26-4a09-b754-0d010ac4c22d",
+              "targetPort": "clskc6p7g004y356mok9yajqs",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "684e930f-a8c8-4aee-b15c-56bb5be6d0c2": {
+              "points": [
+                {
+                  "id": "033dd770-fb79-49f7-b486-2be3d5d10d4b",
+                  "type": "point",
+                  "x": 193.98,
+                  "y": 434.73
+                },
+                {
+                  "id": "7f8c86d1-9367-467b-9775-99b0198d1398",
+                  "type": "point",
+                  "x": 245,
+                  "y": 434.73
+                }
+              ],
+              "id": "684e930f-a8c8-4aee-b15c-56bb5be6d0c2",
+              "type": "default",
+              "selected": false,
+              "source": "3c5146c2-94b9-45eb-bd63-4d775b429688",
+              "sourcePort": "clskc8nep0091356mvd72274g",
+              "target": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "targetPort": "clskbhgst000j356m40qxjqq0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "32693336-70ce-4fb8-9db0-1363402bf83b": {
+              "points": [
+                {
+                  "id": "ab3b44fb-445d-41ff-b91b-4079264f7af4",
+                  "type": "point",
+                  "x": 1194.16,
+                  "y": 439.73
+                },
+                {
+                  "id": "7d6da63c-b0cd-44df-a629-e018aac20c27",
+                  "type": "point",
+                  "x": 1250,
+                  "y": 439.73
+                }
+              ],
+              "id": "32693336-70ce-4fb8-9db0-1363402bf83b",
+              "type": "default",
+              "selected": false,
+              "source": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+              "sourcePort": "clskbipxb002l356mggc6f64n",
+              "target": "05a9c462-2997-4c7f-8f29-8d0208dbe593",
+              "targetPort": "clskc7k35006z356micjhfyv9",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d66f1ee7-3759-443a-b3aa-d7727fa1737e": {
+              "points": [
+                {
+                  "id": "b9292741-daf6-48b2-982c-82ff5c2c4b43",
+                  "type": "point",
+                  "x": 614.81,
+                  "y": 464.89
+                },
+                {
+                  "id": "16f64b6f-f0e7-4afc-85d6-442b9ee5001f",
+                  "type": "point",
+                  "x": 670,
+                  "y": 524.73
+                }
+              ],
+              "id": "d66f1ee7-3759-443a-b3aa-d7727fa1737e",
+              "type": "default",
+              "selected": false,
+              "source": "dd59298d-043c-453d-b84a-9df6fa92e189",
+              "sourcePort": "clt8q6hxq0021356m3nyhkki4",
+              "target": "1e708342-0914-4344-93be-4c7ef638bf7b",
+              "targetPort": "cltd4exls0036356m2hjrw6s9",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0a7701e4-a7a0-46e7-9330-1734a2237da0": {
+              "points": [
+                {
+                  "id": "4af68e8c-39a5-4d61-bd59-b96588e147a1",
+                  "type": "point",
+                  "x": 193.98,
+                  "y": 504.73
+                },
+                {
+                  "id": "7971a8e4-7312-4b26-a62e-14e467c0ad54",
+                  "type": "point",
+                  "x": 245,
+                  "y": 434.73
+                }
+              ],
+              "id": "0a7701e4-a7a0-46e7-9330-1734a2237da0",
+              "type": "default",
+              "selected": false,
+              "source": "ce9a264f-02a0-4e81-ad15-7c265a951ed0",
+              "sourcePort": "clz8o0gup002o356hig8puk41",
+              "target": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "targetPort": "clskbhgst000j356m40qxjqq0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "bfd7b7eb-f935-4dca-b811-71959105b89b": {
+              "points": [
+                {
+                  "id": "df3a7d46-9955-4625-ba61-6e6897dfc076",
+                  "type": "point",
+                  "x": 193.98,
+                  "y": 604.73
+                },
+                {
+                  "id": "5787e86d-b700-45d9-bf16-e3c6c90240d2",
+                  "type": "point",
+                  "x": 245,
+                  "y": 434.73
+                }
+              ],
+              "id": "bfd7b7eb-f935-4dca-b811-71959105b89b",
+              "type": "default",
+              "selected": false,
+              "source": "6174d919-0d74-4712-bc91-766c899d8bbe",
+              "sourcePort": "clz8rovuz00mp356h2j2vtpdy",
+              "target": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "targetPort": "clskbhgst000j356m40qxjqq0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f3fda686-e06c-46b9-a4a2-b058f830a523": {
+              "points": [
+                {
+                  "id": "179769f0-d3be-427d-a17c-9aacec3ac293",
+                  "type": "point",
+                  "x": 614.81,
+                  "y": 439.73
+                },
+                {
+                  "id": "0c5edeaf-3352-414f-9443-ba80f29ac006",
+                  "type": "point",
+                  "x": 655,
+                  "y": 439.73
+                }
+              ],
+              "id": "f3fda686-e06c-46b9-a4a2-b058f830a523",
+              "type": "default",
+              "selected": false,
+              "source": "dd59298d-043c-453d-b84a-9df6fa92e189",
+              "sourcePort": "clskbhtg3000z356mufsdmzs6",
+              "target": "08540a35-44a0-4ac3-9303-2fa838554fac",
+              "targetPort": "clz8s0igf00nz356hpezlp304",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "dcdd8f65-5473-47ac-8938-d42d1d094eb7": {
+              "points": [
+                {
+                  "id": "350b235d-8da1-4a3f-8dfc-3c5fe510dcd3",
+                  "type": "point",
+                  "x": 863.56,
+                  "y": 439.73
+                },
+                {
+                  "id": "bb913cf3-49fe-4697-817e-3602fa2056f6",
+                  "type": "point",
+                  "x": 925,
+                  "y": 439.73
+                }
+              ],
+              "id": "dcdd8f65-5473-47ac-8938-d42d1d094eb7",
+              "type": "default",
+              "selected": false,
+              "source": "08540a35-44a0-4ac3-9303-2fa838554fac",
+              "sourcePort": "clz8s0igf00o1356hx97er98w",
+              "target": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+              "targetPort": "clskbipxb002j356mjdt35776",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "e7271c19-0f69-4e1f-a634-d3ec3ee6d7cc",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "95522b75-e594-41d7-87ac-92be8b86746c": {
+              "id": "95522b75-e594-41d7-87ac-92be8b86746c",
+              "type": "request",
+              "selected": false,
+              "x": 240,
+              "y": 310,
+              "ports": [
+                {
+                  "id": "clskbgotf000f356mss13a9h1",
+                  "type": "default",
+                  "x": 386,
+                  "y": 341.73,
+                  "name": "clskbgotf000g356malib0f22",
+                  "parentNode": "95522b75-e594-41d7-87ac-92be8b86746c",
+                  "links": [
+                    "1e43741f-59b3-495d-9c39-6676e1f2ebda",
+                    "713ee0b3-eaca-4e43-8002-77edc6a50206"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+                  "7cde6baa-4f26-4a09-b754-0d010ac4c22d"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "1bb5793a-bace-4f7b-94f8-80529d09be4b": {
+              "id": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+              "type": "setContext",
+              "selected": false,
+              "x": 245,
+              "y": 395,
+              "ports": [
+                {
+                  "id": "clskbhgst000j356m40qxjqq0",
+                  "type": "default",
+                  "x": 237,
+                  "y": 426.73,
+                  "name": "clskbhgst000k356mmolg24aj",
+                  "parentNode": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+                  "links": [
+                    "1e43741f-59b3-495d-9c39-6676e1f2ebda",
+                    "684e930f-a8c8-4aee-b15c-56bb5be6d0c2",
+                    "0a7701e4-a7a0-46e7-9330-1734a2237da0",
+                    "bfd7b7eb-f935-4dca-b811-71959105b89b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clskbhgst000l356m3651vvzh",
+                  "type": "default",
+                  "x": 393.19,
+                  "y": 426.73,
+                  "name": "clskbhgst000m356m67567s1k",
+                  "parentNode": "1bb5793a-bace-4f7b-94f8-80529d09be4b",
+                  "links": [
+                    "ed0f02cd-d044-472b-9335-ef8943d19e17"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$",
+                "nextNodes": [
+                  "dd59298d-043c-453d-b84a-9df6fa92e189"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Save Req To Context"
+            },
+            "dd59298d-043c-453d-b84a-9df6fa92e189": {
+              "id": "dd59298d-043c-453d-b84a-9df6fa92e189",
+              "type": "switch",
+              "selected": false,
+              "x": 445,
+              "y": 400,
+              "ports": [
+                {
+                  "id": "clskbhpri000s356m5wrzcn4n",
+                  "type": "default",
+                  "x": 437,
+                  "y": 431.73,
+                  "name": "clskbhpri000t356m8yhipn37",
+                  "parentNode": "dd59298d-043c-453d-b84a-9df6fa92e189",
+                  "links": [
+                    "ed0f02cd-d044-472b-9335-ef8943d19e17"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clskbhtg3000z356mufsdmzs6",
+                  "type": "default",
+                  "x": 606.81,
+                  "y": 431.73,
+                  "name": "clskbhtg30010356msbu9i8t5",
+                  "parentNode": "dd59298d-043c-453d-b84a-9df6fa92e189",
+                  "links": [
+                    "f3fda686-e06c-46b9-a4a2-b058f830a523"
+                  ],
+                  "in": false,
+                  "groupName": "RECEIVE",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clt8q6hxq0021356m3nyhkki4",
+                  "type": "default",
+                  "x": 606.81,
+                  "y": 456.89,
+                  "name": "clt8q6hxq0022356msztgk97u",
+                  "parentNode": "dd59298d-043c-453d-b84a-9df6fa92e189",
+                  "links": [
+                    "d66f1ee7-3759-443a-b3aa-d7727fa1737e"
+                  ],
+                  "in": false,
+                  "groupName": "NO ACTION",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "RECEIVE",
+                    "transform": "REQUEST.ACTION=\"REC\"",
+                    "nextNodes": [
+                      "08540a35-44a0-4ac3-9303-2fa838554fac"
+                    ]
+                  },
+                  {
+                    "transform": "true",
+                    "name": "NO ACTION",
+                    "nextNodes": [
+                      "1e708342-0914-4344-93be-4c7ef638bf7b"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route On ACTION Field"
+            },
+            "d05ef167-ece5-411b-aef4-7b2229ad3d73": {
+              "id": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+              "type": "mutate",
+              "selected": false,
+              "x": 925,
+              "y": 400,
+              "ports": [
+                {
+                  "id": "clskbipxb002j356mjdt35776",
+                  "type": "default",
+                  "x": 917,
+                  "y": 431.73,
+                  "name": "clskbipxb002k356mufoakq0h",
+                  "parentNode": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+                  "links": [
+                    "dcdd8f65-5473-47ac-8938-d42d1d094eb7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clskbipxb002l356mggc6f64n",
+                  "type": "default",
+                  "x": 1186.16,
+                  "y": 431.73,
+                  "name": "clskbipxb002m356m2ix3x5ad",
+                  "parentNode": "d05ef167-ece5-411b-aef4-7b2229ad3d73",
+                  "links": [
+                    "32693336-70ce-4fb8-9db0-1363402bf83b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation(\n  $payloadCM: [MasterInventoryCreatePayloadInput!]!,\n  $payloadCR: [ReceiptCreatePayloadInput!]!,\n  $payloadCRL: [ReceiptLineCreatePayloadInput!]!,\n  $payloadURL:[ReceiptLineUpdatePayloadInput!]!,\n  $payloadPOL:[PurchaseOrderLineUpdatePayloadInput!]!,\n  $payloadPO:[PurchaseOrderUpdatePayloadInput!]!,\n\n  $payloadI:[InventoryCreatePayloadInput!]!\n\n)\n{\n  createMasterInventory(payload:$payloadCM){id}\n  createReceipt(payload:$payloadCR){id}\n  createReceiptLine(payload: $payloadCRL){id}\n  updateReceiptLine(payload:$payloadURL){id}\n  updatePurchaseOrderLine(payload:$payloadPOL){id}\n  updatePurchaseOrder(payload:$payloadPO){id}\n\n  inv:createInventory(payload:$payloadI){id,number}\n  \n}",
+                "nextNodes": [
+                  "05a9c462-2997-4c7f-8f29-8d0208dbe593"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate:MASTER,REC,LINES,PO,LINES,INV "
+            },
+            "7cde6baa-4f26-4a09-b754-0d010ac4c22d": {
+              "id": "7cde6baa-4f26-4a09-b754-0d010ac4c22d",
+              "type": "log",
+              "selected": false,
+              "x": 245,
+              "y": 230,
+              "ports": [
+                {
+                  "id": "clskc6p7g004y356mok9yajqs",
+                  "type": "default",
+                  "x": 237,
+                  "y": 261.73,
+                  "name": "clskc6p7g004z356ml512mh2w",
+                  "parentNode": "7cde6baa-4f26-4a09-b754-0d010ac4c22d",
+                  "links": [
+                    "713ee0b3-eaca-4e43-8002-77edc6a50206"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clskc6p7g0050356mz73j6a5k",
+                  "type": "default",
+                  "x": 391,
+                  "y": 261.73,
+                  "name": "clskc6p7g0051356mp9hou20s",
+                  "parentNode": "7cde6baa-4f26-4a09-b754-0d010ac4c22d",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"REQ\"",
+                "level": "Debug",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request Log",
+              "note": "Logs inbound request"
+            },
+            "05a9c462-2997-4c7f-8f29-8d0208dbe593": {
+              "id": "05a9c462-2997-4c7f-8f29-8d0208dbe593",
+              "type": "response",
+              "selected": false,
+              "x": 1250,
+              "y": 400,
+              "ports": [
+                {
+                  "id": "clskc7k35006z356micjhfyv9",
+                  "type": "default",
+                  "x": 1242,
+                  "y": 431.73,
+                  "name": "clskc7k350070356m97ecoqju",
+                  "parentNode": "05a9c462-2997-4c7f-8f29-8d0208dbe593",
+                  "links": [
+                    "32693336-70ce-4fb8-9db0-1363402bf83b"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clskc7k350071356munwjiop0",
+                  "type": "default",
+                  "x": 1398.33,
+                  "y": 431.73,
+                  "name": "clskc7k350072356mm4w0lkdl",
+                  "parentNode": "05a9c462-2997-4c7f-8f29-8d0208dbe593",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"SUCCESS\":true,\n  \"MESSAGE\": \"PO #\"\n    & $state.context.REQUEST.DATA.number\n    & \" received successfully\",\n  \"DATA\": inv\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response: SUCCESS",
+              "note": "Returns Success true, with Message and Inventory created"
+            },
+            "3c5146c2-94b9-45eb-bd63-4d775b429688": {
+              "id": "3c5146c2-94b9-45eb-bd63-4d775b429688",
+              "type": "debugSource",
+              "selected": false,
+              "x": 40,
+              "y": 395,
+              "ports": [
+                {
+                  "id": "clskc8nep0091356mvd72274g",
+                  "type": "default",
+                  "x": 185.98,
+                  "y": 426.73,
+                  "name": "clskc8nep0092356mv43ujl9x",
+                  "parentNode": "3c5146c2-94b9-45eb-bd63-4d775b429688",
+                  "links": [
+                    "684e930f-a8c8-4aee-b15c-56bb5be6d0c2"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "id": "clrjmx25f0026013zbs4ick3b",
+                      "number": "000003",
+                      "supplier": {
+                        "name": "S-001"
+                      },
+                      "time": "2024-02-04T04:51:58.129Z",
+                      "shipmentNumber": "555",
+                      "lines": {
+                        "clrjn01nx0029013z97e0hlas": {
+                          "lot": "123",
+                          "containers": 1,
+                          "qtyPer": 1,
+                          "master": {
+                            "id": "clqbwails001s015nfkfug907",
+                            "label": "M1",
+                            "number": "M1"
+                          }
+                        },
+                        "clrjn0xm7002a013z0oncapl3": {
+                          "lot": "234",
+                          "containers": 1,
+                          "qtyPer": 200
+                        },
+                        "cls2bn8zv003s015iblft6u2i": {
+                          "lot": "345",
+                          "containers": 1,
+                          "qtyPer": 10
+                        },
+                        "cls2bwx8l002k018m8ifh1vtv": {
+                          "lot": "456",
+                          "containers": 2,
+                          "qtyPer": 10
+                        }
+                      },
+                      "purchaseOrderId": "clrjmx25f0026013zbs4ick3b",
+                      "locationId": "ASM"
+                    },
+                    "ACTION": "REC"
+                  },
+                  "LOCAL": {
+                    "purchaseOrder": {
+                      "number": "000003",
+                      "facilityId": null,
+                      "purchaseOrderStatusId": "Pending Receipt",
+                      "supplierId": "closxqjtnb1pz01bn3l2u7x57",
+                      "receipts": {
+                        "edges": []
+                      },
+                      "lines": [
+                        {
+                          "id": "clrjn01nx0029013z97e0hlas",
+                          "code": null,
+                          "balanceQuantity": {
+                            "value": 100,
+                            "unitId": "1"
+                          },
+                          "pendingQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "quantity": {
+                            "value": 100,
+                            "unitId": "1"
+                          },
+                          "receivedQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "productId": "clqvw46ak001s01907n7t3w2k",
+                          "purchaseOrderLineStatusId": "Pending Receipt",
+                          "productStrategyProcess": {
+                            "id": "clqvx0rm40003019aa65hap08",
+                            "productStrategy": {
+                              "inventoryUnitId": "1"
+                            }
+                          },
+                          "receiptLines": {
+                            "edges": []
+                          }
+                        },
+                        {
+                          "id": "clrjn0xm7002a013z0oncapl3",
+                          "code": null,
+                          "balanceQuantity": {
+                            "value": 200,
+                            "unitId": "1"
+                          },
+                          "pendingQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "quantity": {
+                            "value": 200,
+                            "unitId": "1"
+                          },
+                          "receivedQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "productId": "clqzma9et000t014z1gbsfwsv",
+                          "purchaseOrderLineStatusId": "Pending Receipt",
+                          "productStrategyProcess": {
+                            "id": "clqzml9c1000g010ycit600us",
+                            "productStrategy": {
+                              "inventoryUnitId": "1"
+                            }
+                          },
+                          "receiptLines": {
+                            "edges": []
+                          }
+                        },
+                        {
+                          "id": "cls2bn8zv003s015iblft6u2i",
+                          "code": "3",
+                          "balanceQuantity": {
+                            "value": 10,
+                            "unitId": "ea"
+                          },
+                          "pendingQuantity": {
+                            "value": 0,
+                            "unitId": "ea"
+                          },
+                          "quantity": {
+                            "value": 10,
+                            "unitId": "ea"
+                          },
+                          "receivedQuantity": {
+                            "value": 0,
+                            "unitId": "ea"
+                          },
+                          "productId": "clqvw46ak001s01907n7t3w2k",
+                          "purchaseOrderLineStatusId": "Pending Receipt",
+                          "productStrategyProcess": {
+                            "id": "clqvx0rm40003019aa65hap08",
+                            "productStrategy": {
+                              "inventoryUnitId": "1"
+                            }
+                          },
+                          "receiptLines": {
+                            "edges": []
+                          }
+                        },
+                        {
+                          "id": "cls2bwx8l002k018m8ifh1vtv",
+                          "code": "4",
+                          "balanceQuantity": {
+                            "value": 21,
+                            "unitId": "1"
+                          },
+                          "pendingQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "quantity": {
+                            "value": 21,
+                            "unitId": "1"
+                          },
+                          "receivedQuantity": {
+                            "value": 0,
+                            "unitId": "1"
+                          },
+                          "productId": "clqvw46ak001s01907n7t3w2k",
+                          "purchaseOrderLineStatusId": "Pending Receipt",
+                          "productStrategyProcess": {
+                            "id": "clqvx0rm40003019aa65hap08",
+                            "productStrategy": {
+                              "inventoryUnitId": "1"
+                            }
+                          },
+                          "receiptLines": {
+                            "edges": []
+                          }
+                        }
+                      ]
+                    },
+                    "lineQty": [
+                      {
+                        "id": "clrjn01nx0029013z97e0hlas",
+                        "code": null,
+                        "success": true,
+                        "pending": 1,
+                        "balance": 99,
+                        "exceeded": 0,
+                        "unitId": "1"
+                      },
+                      {
+                        "id": "clrjn0xm7002a013z0oncapl3",
+                        "code": null,
+                        "success": true,
+                        "pending": 200,
+                        "balance": 0,
+                        "exceeded": 0,
+                        "unitId": "1"
+                      },
+                      {
+                        "id": "cls2bn8zv003s015iblft6u2i",
+                        "code": "3",
+                        "success": true,
+                        "pending": 10,
+                        "balance": 0,
+                        "exceeded": 0,
+                        "unitId": "ea"
+                      },
+                      {
+                        "id": "cls2bwx8l002k018m8ifh1vtv",
+                        "code": "4",
+                        "success": true,
+                        "pending": 20,
+                        "balance": 1,
+                        "exceeded": 0,
+                        "unitId": "1"
+                      }
+                    ]
+                  },
+                  "DEFAULT": {
+                    "inventoryStatusId": "Receiving",
+                    "receiptStatusId": "Pending"
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "1bb5793a-bace-4f7b-94f8-80529d09be4b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "1e708342-0914-4344-93be-4c7ef638bf7b": {
+              "id": "1e708342-0914-4344-93be-4c7ef638bf7b",
+              "type": "response",
+              "selected": false,
+              "x": 670,
+              "y": 485,
+              "ports": [
+                {
+                  "id": "cltd4exls0036356m2hjrw6s9",
+                  "type": "default",
+                  "x": 662,
+                  "y": 516.73,
+                  "name": "cltd4exls0037356m4ji1abhi",
+                  "parentNode": "1e708342-0914-4344-93be-4c7ef638bf7b",
+                  "links": [
+                    "d66f1ee7-3759-443a-b3aa-d7727fa1737e"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cltd4exls0038356m174ayr1x",
+                  "type": "default",
+                  "x": 815.98,
+                  "y": 516.73,
+                  "name": "cltd4exls0039356mjfaaq6c6",
+                  "parentNode": "1e708342-0914-4344-93be-4c7ef638bf7b",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"SUCCESS\":false,\n  \"MESSAGE\": \"No action provided!\"\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response: FAIL"
+            },
+            "ce9a264f-02a0-4e81-ad15-7c265a951ed0": {
+              "id": "ce9a264f-02a0-4e81-ad15-7c265a951ed0",
+              "type": "debugSource",
+              "selected": false,
+              "x": 40,
+              "y": 465,
+              "ports": [
+                {
+                  "id": "clz8o0gup002o356hig8puk41",
+                  "type": "default",
+                  "x": 185.98,
+                  "y": 496.73,
+                  "name": "clz8o0guq002p356hj77is4xd",
+                  "parentNode": "ce9a264f-02a0-4e81-ad15-7c265a951ed0",
+                  "links": [
+                    "0a7701e4-a7a0-46e7-9330-1734a2237da0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "id": "clz8idi5g001z07750iemhtwk",
+                      "number": "000001",
+                      "supplier": {
+                        "name": "supplier1"
+                      },
+                      "time": "2024-07-30T15:05:30.385Z",
+                      "shipmentNumber": "shipment#2",
+                      "lines": {
+                        "clz8ifhpv002507759jxkf668": {
+                          "lot": "LOT#123",
+                          "containers": 2,
+                          "qtyPer": 500
+                        }
+                      },
+                      "purchaseOrderId": "clz8idi5g001z07750iemhtwk",
+                      "locationId": "clz8fs1yb000g07759cxl10iv-DEFAULT-RECEIVING"
+                    },
+                    "ACTION": "REC"
+                  },
+                  "LOCAL": {
+                    "purchaseOrder": {
+                      "number": "000001",
+                      "facilityId": "clz8fs1yb000g07759cxl10iv",
+                      "purchaseOrderStatusId": "Partially Received",
+                      "supplierId": "clz8id5wh001w07756vs8cp4v",
+                      "receipts": {
+                        "edges": [
+                          {
+                            "node": {
+                              "id": "clz8jw1fm000407h321uu5cy7"
+                            }
+                          }
+                        ]
+                      },
+                      "outsourceWorkOrderProcesses": {
+                        "edges": []
+                      },
+                      "lines": {
+                        "edges": [
+                          {
+                            "node": {
+                              "id": "clz8ifhpv002507759jxkf668",
+                              "code": "000001-02",
+                              "balanceQuantity": {
+                                "value": 0,
+                                "unitId": "pc"
+                              },
+                              "pendingQuantity": {
+                                "value": 1000,
+                                "unitId": "pc"
+                              },
+                              "quantity": {
+                                "value": 1000,
+                                "unitId": "pc"
+                              },
+                              "receivedQuantity": {
+                                "value": 0,
+                                "unitId": "pc"
+                              },
+                              "product": {
+                                "id": "clz8foh07000c0775aocs3gjr",
+                                "productTypeId": "InvtPart"
+                              },
+                              "purchaseOrderLineStatusId": "Partially Received",
+                              "productStrategyProcess": {
+                                "id": "clz8iahdy001q0775gwugb0ou",
+                                "productStrategy": {
+                                  "inventoryUnitId": null
+                                },
+                                "lotControl": null
+                              },
+                              "receiptLines": {
+                                "edges": [
+                                  {
+                                    "node": {
+                                      "id": "clz8jw1fn000507h3d31wcy30",
+                                      "quantity": {
+                                        "value": 1000,
+                                        "unitId": "pc"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "lineQty": {
+                      "id": "clz8ifhpv002507759jxkf668",
+                      "code": "000001-02",
+                      "success": false,
+                      "pending": 2000,
+                      "balance": -1000,
+                      "exceeded": 1000,
+                      "unitId": "pc"
+                    }
+                  },
+                  "DEFAULT": {
+                    "inventoryStatusId": "Receiving",
+                    "receiptStatusId": "Pending"
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "1bb5793a-bace-4f7b-94f8-80529d09be4b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "6174d919-0d74-4712-bc91-766c899d8bbe": {
+              "id": "6174d919-0d74-4712-bc91-766c899d8bbe",
+              "type": "debugSource",
+              "selected": false,
+              "x": 40,
+              "y": 565,
+              "ports": [
+                {
+                  "id": "clz8rovuz00mp356h2j2vtpdy",
+                  "type": "default",
+                  "x": 185.98,
+                  "y": 596.73,
+                  "name": "clz8rovuz00mq356hs25219ni",
+                  "parentNode": "6174d919-0d74-4712-bc91-766c899d8bbe",
+                  "links": [
+                    "bfd7b7eb-f935-4dca-b811-71959105b89b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "id": "clz8rm7my006707756v2bho4w",
+                      "number": "000002",
+                      "supplier": {
+                        "name": "supplier1"
+                      },
+                      "time": "2024-07-30T18:42:49.682Z",
+                      "shipmentNumber": "PO2",
+                      "lines": {
+                        "clz8rmm9w006a0775h3ov75g7": {
+                          "containers": 5,
+                          "qtyPer": 50
+                        }
+                      },
+                      "purchaseOrderId": "clz8rm7my006707756v2bho4w",
+                      "locationId": "clz8fs1yb000g07759cxl10iv-DEFAULT-RECEIVING"
+                    },
+                    "ACTION": "REC"
+                  },
+                  "LOCAL": {
+                    "purchaseOrder": {
+                      "number": "000002",
+                      "facilityId": "clz8fs1yb000g07759cxl10iv",
+                      "purchaseOrderStatusId": "Pending Receipt",
+                      "supplierId": "clz8id5wh001w07756vs8cp4v",
+                      "receipts": {
+                        "edges": []
+                      },
+                      "outsourceWorkOrderProcesses": {
+                        "edges": []
+                      },
+                      "lines": {
+                        "id": "clz8rmm9w006a0775h3ov75g7",
+                        "code": "000002-01",
+                        "balanceQuantity": {
+                          "value": 500,
+                          "unitId": "pc"
+                        },
+                        "pendingQuantity": {
+                          "value": 0,
+                          "unitId": "pc"
+                        },
+                        "quantity": {
+                          "value": 500,
+                          "unitId": "pc"
+                        },
+                        "receivedQuantity": {
+                          "value": 0,
+                          "unitId": "pc"
+                        },
+                        "product": {
+                          "id": "clz8foh07000c0775aocs3gjr",
+                          "productTypeId": "InvtPart"
+                        },
+                        "purchaseOrderLineStatusId": "Pending Receipt",
+                        "productStrategyProcess": {
+                          "id": "clz8iahdy001q0775gwugb0ou",
+                          "productStrategy": {
+                            "inventoryUnitId": null
+                          },
+                          "lotControl": null
+                        },
+                        "receiptLines": {
+                          "edges": []
+                        }
+                      }
+                    },
+                    "lineQty": {
+                      "id": "clz8rmm9w006a0775h3ov75g7",
+                      "code": "000002-01",
+                      "success": true,
+                      "pending": 250,
+                      "balance": 250,
+                      "exceeded": 0,
+                      "unitId": "pc"
+                    }
+                  },
+                  "DEFAULT": {
+                    "inventoryStatusId": "Receiving",
+                    "receiptStatusId": "Pending"
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "1bb5793a-bace-4f7b-94f8-80529d09be4b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "08540a35-44a0-4ac3-9303-2fa838554fac": {
+              "id": "08540a35-44a0-4ac3-9303-2fa838554fac",
+              "type": "transform",
+              "selected": true,
+              "x": 655,
+              "y": 400,
+              "ports": [
+                {
+                  "id": "clz8s0igf00nz356hpezlp304",
+                  "type": "default",
+                  "x": 647,
+                  "y": 431.73,
+                  "name": "clz8s0igf00o0356hzdszuf1u",
+                  "parentNode": "08540a35-44a0-4ac3-9303-2fa838554fac",
+                  "links": [
+                    "f3fda686-e06c-46b9-a4a2-b058f830a523"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clz8s0igf00o1356hx97er98w",
+                  "type": "default",
+                  "x": 855.56,
+                  "y": 431.73,
+                  "name": "clz8s0igf00o2356hqip1oek0",
+                  "parentNode": "08540a35-44a0-4ac3-9303-2fa838554fac",
+                  "links": [
+                    "dcdd8f65-5473-47ac-8938-d42d1d094eb7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $C := $state.context;\n  $R := $C.REQUEST.DATA;\n  $L := $C.LOCAL;\n  $lines := $L.purchaseOrder.lines;\n  $r := $L.purchaseOrder.receipts.edges.node; \n  $id := $cuid();\n  $m := (\n    $s :=  $sift($R.lines,function($v, $k) {$v.newMaster});\n    $each($s, function($v, $k) {(\n      $mid := $cuid();\n      {\n        \"lineid\": $k,\n        \"id\": $mid\n      }\n      )\n    })\n  );\n  $p := { \n    \"CR\": $isNilOrEmpty($r.id)  ? {\n          \"create\": {\n            \"id\": $id,\n            \"locationId\": $R.locationId,\n            \"purchaseOrderId\": $R.id,\n            \"statusId\": $C.DEFAULT.receiptStatusId,\n            \"shipper\": $R.shipmentNumber\n\n          }\n        }  : [],\n        \n    \"PO\": [{\n      \"update\": {\n        \"shipmentNumber\": $R.shipmentNumber,\n        \"purchaseOrderStatusId\": \"Partially Received\"\n      },\"where\": {\n        \"id\": $R.id\n      }\n    }],\n    \n    \"CM\": [$m.{\n      \"create\": {\n        \"id\":id,\n        \"masterInventoryStatusId\": \"Receiving\",\n        \"locationId\": $R.locationId\n      }\n    }],\n    \n    \"L\":$lines.(\n      $rlid := $cuid();\n      $line := $;\n      $unit := pendingQuantity.unitId;\n      $l := $lookup($R.lines, $line.id);\n      $qty := $L.lineQty[id=$line.id];\n      {\n        \"CRL\": $isNilOrEmpty(receiptLines.edges.node.id) ? {\n          \"create\": {\n            \"id\": $rlid,\n            \"receiptId\": $coalesce([$r.id,$id]),\n            \"licensePlates\": $l.containers,\n            \"lotNumber\": $l.lot,\n            \"quantityPerLicensePlate\": {\n              \"value\":  $l.qtyPer,\n              \"unitId\": $unit\n            },\n            \"quantity\": {\n              \"value\": $l.qtyPer * $l.containers,\n              \"unitId\": $unit\n            },\n            \"purchaseOrderLineId\": $line.id,\n            \"statusId\": $C.DEFAULT.receiptStatusId\n          }\n        } : [],\n        \n        \"URL\": [receiptLines.edges[0].node.{\n          \"update\": {\n            \"quantity\":  quantity.{\n              \"value\": $l.qtyPer * $l.containers + value,\n              \"unitId\": unitId\n            }\n          },\n          \"where\": {\n            \"id\":id\n          }\n        }],\n        \n        \"POL\": {\n          \"update\": {\n            \"balanceQuantity\": {\n              \"value\": $qty.balance,\n              \"unitId\":$unit\n            },\n            \"pendingQuantity\": {\n              \"value\":$qty.pending,\n              \"unitId\": $unit\n            },\n            \"purchaseOrderLineStatusId\": $qty.balance <= 0 ? \"Pending Confirmation\" : \"Partially Received\"\n          }, \n          \"where\": {\n            \"id\":id\n          }\n        },\n        \n        \"I\": $line.product.productTypeId != \"OthCharge\" ? [1..$l.containers].{\n          \"create\": {\n            \"active\":false,\n            \"productStrategyProcessId\":$line.productStrategyProcess.id,\n            \"productId\":$line.product.id,\n            \"locationId\": $R.locationId,\n            \"quantity\": { \n              \"value\": $l.qtyPer,\n              \"unitId\":$unit\n            },\n            \"receiptLineId\":$isNilOrEmpty($line.receiptLines.edges.node.id) ? $rlid :$line.receiptLines.edges[0].node.id ,\n            \"inventoryStatusId\":  $C.DEFAULT.inventoryStatusId,\n            \"inventoryTypeId\": \"Raw Material\",\n            \"barcode\":\"\",\n            \"grossWeight\":0,\n            \"supplierId\":$L.purchaseOrder.supplierId,\n            \"netWeight\":0,\n            \"tareWeight\":0,\n            \"masterInventoryId\": $l.newMaster ? $m[lineid=$line.id].id : $l.master.id\n          }\n        } : []\n      }\n    )\n  };\n\n  {\n    \"payloadPO\": [$p.PO],\n    \"payloadCR\": [$p.CR],\n    \"payloadCRL\": [$p.L.CRL],\n    \"payloadURL\": [$p.L.URL],\n    \"payloadPOL\": [$p.L.POL],\n    \"payloadI\": [$p.L.I],\n    \"payloadCM\": [$p.CM]\n  }\n\n)\n    \n    \n\n\n",
+                "nextNodes": [
+                  "d05ef167-ece5-411b-aef4-7b2229ad3d73"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata: FORMAT PAYLOADS"
+            }
+          }
+        }
+      ],
+      "name": "Receiving Functions",
+      "type": "System",
+      "version": "0.0.13",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

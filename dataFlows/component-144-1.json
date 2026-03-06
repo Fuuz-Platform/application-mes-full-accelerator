@@ -1,0 +1,617 @@
+{
+  "header": {
+    "id": "createDistributionGroupsAndProcesses",
+    "name": "Create distribution groups and processes",
+    "description": "Used on the Work Order Management to create  distribuitons for Work Order Processes and by pass scheduling.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cm97kmnqb00ch01662hep43ql",
+    "number": "0.0.12",
+    "description": "",
+    "dataFlowId": "createDistributionGroupsAndProcesses",
+    "flow": {
+      "id": "cm97kmnqb00ch01662hep43ql",
+      "name": "Create distribution groups and processes",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "1345d154-2905-48e1-9d55-c204795e33da",
+          "name": "Query Workorder",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "$",
+            "query": "query Query($workorderId: String!) {\n  workOrder(where: {id: {_eq: $workorderId}}) {\n    edges {\n      node {\n        id\n        number\n        priority\n        originalQuantity\n        quantity\n        integrated\n        description\n        externalId\n        actualFinishAt\n        actualStartAt\n        earliestStartAt\n        promiseAt\n        scheduledFinishAt\n        scheduledStartAt\n        transactionAt\n        customData\n        integrationData\n        workOrderStatusId\n        workOrderTypeId\n        facilityId\n        kanbanRackId\n        maintenanceChecklistId\n        outsourcePurchaseOrderId\n        outsourceSalesOrderId\n        outsourceTransferOrderId\n        productId\n        productStrategyId\n        workOrderCategoryId\n        workOrderGroupId\n        workOrderPriorityId\n        workOrderProcesses {\n          edges {\n            node {\n              id\n              code\n              standardPositions\n              standardWorkcenters\n              cycleTime\n              distributionPercentage\n              idealRate\n              leadTime\n              minimumProductionRunTime\n              originalQuantity\n              percentToStart\n              productionOffalAllowed\n              productionOperators\n              quantity\n              quantityToStart\n              quotedRate\n              setupOffalAllowed\n              setupOperators\n              setupRate\n              standardRate\n              timeToStart\n              transitTimeAfter\n              transitTimeBefore\n              unitPerCycle\n              unitWeight\n              active\n              allowMixedLots\n              autoTriggerDependency\n              defaultDistribution\n              final\n              finishedGood\n              generatePurchaseOrder\n              maintenance\n              optional\n              rawMaterial\n              requireReceipt\n              transferSerial\n              useSupplierLabel\n              useWorkcenterRates\n              wip\n              description\n              externalId\n              note\n              order\n              customData\n              integrationData\n              processId\n              workOrderId\n              workOrderProcessStatusId\n              controlPanelId\n              documentDesignId\n              lotControlId\n              outsourcePurchaseOrderId\n              outsourceTransferOrderId\n              productStrategyId\n              productStrategyProcessId\n              productionTypeId\n              putAwayLocationId\n              weightUnitId\n              workcenterId\n              productStrategyProcess {\n                coproductBoms: assemblyBoms(where: {bomTypeId: {_eq: \"CoProduct\"}, active: {_eq: true}}) {\n                  edges {\n                    node {\n                      id\n                      componentProduct {\n                        id\n                        name\n                      }\n                      componentProductStrategyId\n                      assemblyProductStrategyProcessId\n                      componentProductStrategyProcess {\n                        id\n                        unitPerCycle\n                        process {\n                          code\n                        }\n                      }\n                      order\n                      active\n                      unitPerCycle\n                      useOnWorkOrder\n                      buildWorkOrder\n                      standardUsage\n                      minimumUsage\n                      maximumUsage\n                      bomTypeId\n                      fixedLaborUsage\n                      fixedMachineUsage\n                      fixedMaterialUsage\n                      laborUsage\n                      machineUsage\n                      consumptionModeId\n                      externalId\n                      reference\n                    }\n                  }\n                }\n                byproductBoms: assemblyBoms(where: {bomTypeId: {_eq: \"ByProduct\"}, active: {_eq: true}}) {\n                  edges {\n                    node {\n                      id\n                      componentProduct {\n                        id\n                        name\n                      }\n                      componentProductStrategyId\n                      assemblyProductStrategyProcessId\n                      componentProductStrategyProcess {\n                        id\n                        unitPerCycle\n                        process {\n                          code\n                        }\n                      }\n                      unitPerCycle\n                      order\n                      active\n                      useOnWorkOrder\n                      standardUsage\n                      minimumUsage\n                      maximumUsage\n                      bomTypeId\n                      fixedLaborUsage\n                      fixedMachineUsage\n                      fixedMaterialUsage\n                      laborUsage\n                      machineUsage\n                      consumptionModeId\n                      externalId\n                      reference\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "297a3f61-1d0c-4732-aeb4-e636e4ae8178"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+          "name": "Prepare Payload",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $calculateEstimatedTime := function(\n    $standardRate,\n    $quantity,\n    $setupRate,\n    $productionTypeId,\n    $transitTimeAfter,\n    $transitTimeBefore,\n    $leadTime\n  ) {\n    (\n      $standardRate := $coalesce([$standardRate, 0]);\n      $setupRate := $coalesce([$setupRate, 0]);\n      $quantity := $coalesce([$quantity, 0]);\n      $transitTimeAfter := $coalesce([$transitTimeAfter, 0]);\n      $transitTimeBefore := $coalesce([$transitTimeBefore, 0]);\n      $leadTime := $coalesce([$leadTime, 0]);\n      $internalTime := $standardRate = 0 or $quantity = 0\n        ? 0\n        : ($quantity / $standardRate) * 3600000 + $setupRate;\n      $outsideProcessingTime := $leadTime + $transitTimeBefore\n        + $transitTimeAfter;\n      $productionTypeId = \"Outside Processor\"\n        ? $outsideProcessingTime\n        : $internalTime\n    )};\n    \n  $calculateUsage := function($boms, $usageType){(\n    $calculatedUsages := $boms.(\n\t\t\t$outputRate := $coalesce([\n        unitPerCycle,\n        componentProductStrategyProcess.unitPerCycle,\n        1\n      ]);\n      \n      $usage := $lookup($, $usageType);\n      $coalesce([$usage, standardUsage, 1]) * $outputRate;\n\t\t\t\t\t\n    );\n    \n    $count($calculatedUsages) > 0? $sum($calculatedUsages) : 0;\n  \n  )};\n  \n  $backwardsSchedule := function($dueDate, $records){(\n    $reduce(\n      $records^(>order),\n      function($acc, $crr, $i){(\n        $startingEndDate := $moment($i = 0? $dueDate : $acc[$i -1].scheduledStartAt);\n        \n        \n        $latestStartAt := $startingEndDate.clone().subtract($crr.estimatedTime, \"ms\" );\n        \n        $newValue := $merge([\n          $crr,\n          { \"scheduledStartAt\": $latestStartAt.format(), \"scheduledFinishAt\": $startingEndDate.format()}\n        ]);\n        \n        $append($acc, [$omit($newValue, \"order\")]);\n        \n      )},\n      []\n    )~>$reverse\n  )};\n  \n  \n  $workorder := workOrder.edges.node;\n  $isNilOrEmpty($workorder.promiseAt)? $throw(\"A due date is required to schedule a workorder.\");\n  $isNilOrEmpty($workorder.workOrderProcesses.edges)? $throw(\"Workorder requires processes.\");\n  $payload := $workorder.workOrderProcesses.edges.node.(\n  \n    $coProducts := productStrategyProcess.coproductBoms.edges.node;\n    $byProducts := productStrategyProcess.byproductBoms.edges.node;\n    \n    $distributionGroupPayload := {\n        \"id\": id,\n        \"balanceQuantity\": quantity,\n        \"cycleTime\": $coalesce([cycleTime, 0]),\n        \"estimatedTime\": $calculateEstimatedTime(standardRate, quantity, setupRate, productionTypeId, transitTimeAfter, transitTimeBefore, leadTime),\n        \"percentComplete\": 0,\n        \"producedQuantity\": 0,\n        \"productionOperators\": $coalesce([productionOperators, 1]),\n        \"quotedRate\": $coalesce([quotedRate,0]), \n        \"requiredQuantity\": quantity,\n        \"scrappedQuantity\": 0,\n        \"setupOperators\": $coalesce([setupOperators, 0]),\n        \"setupRate\": $coalesce([setupRate, 0]),\n        \"standardRate\": $coalesce([standardRate, 0]),\n        \"allowDistributionUnload\": false,\n        \"parallelPositions\": $count($byProducts) > 0 or $count($coProducts) > 0,\n        \"requireParallelOutput\": true,\n        \"sequential\": false,\n        \"singleSetupRate\": true,\n        \"static\": $count($coProducts) != 0 or $count($byProducts) != 0,\n        \"groupId\": code,\n        \"workOrderProcessDistributionStatusId\": \"New\",\n        \"workcenterId\":workcenterId,\n        \"order\": order\n      };\n      \n    $materialUsage := $calculateUsage($coProducts, \"standardUsage\") + $calculateUsage($byProducts, \"standardUsage\");\n    $machineUsage := $calculateUsage($coProducts, \"machineUsage\") + $calculateUsage($byProducts, \"machineUsage\");\n    $laborUsage := $calculateUsage($coProducts, \"laborUsage\") + $calculateUsage($byProducts, \"laborUsage\");\n    \n    $distributionPayload := $distributionGroupPayload.(\n     $merge([\n\t\t\t\t\t$omit(\n\t\t\t\t\t\t$,\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t\"id\",\n\t\t\t\t\t\t\t\"static\",\n\t\t\t\t\t\t\t\"groupId\",\n\t\t\t\t\t\t\t\"static\",\n\t\t\t\t\t\t\t\"allowDistributionUnload\",\n\t\t\t\t\t\t\t\"parallelPositions\",\n\t\t\t\t\t\t\t\"requireParallelOutput\",\n\t\t\t\t\t\t\t\"sequential\",\n\t\t\t\t\t\t\t\"singleSetupRate\"\n\t\t\t\t\t\t]\n\t\t\t\t\t),\n\t\t\t\t\t{\n\t\t\t\t\t\t\"id\": id,\n\t\t\t\t\t\t\"dispatchSequence\": 0,\n\t\t\t\t\t\t\"materialUsage\": $materialUsage > 1 ? 0 : (1 - $materialUsage),\n\t\t\t\t\t\t\"machineUsage\": $machineUsage > 1 ? 0 : (1 - $machineUsage),\n\t\t\t\t\t\t\"laborUsage\": $laborUsage > 1 ? 0 : (1 - $laborUsage),\n\t\t\t\t\t\t\"leadingProduct\": true,\n\t\t\t\t\t\t\"distributionGroupId\": id,\n\t\t\t\t\t\t\"workOrderProcessId\": id,\n\t\t\t\t\t\t\"workOrderId\": $workorder.id,\n\t\t\t\t\t\t\"virtual\": $materialUsage >= 1\n\t\t\t\t\t}\n\t\t\t\t])  \n    );\n    \n    {\n      \"distributionGroupPayload\": $distributionGroupPayload,\n      \"distributionPayload\": $distributionPayload\n    }\n  );\n  \n  $scheduledDistributions := $backwardsSchedule($workorder.promiseAt,$payload.distributionPayload); \n  \n  {\n    \"workorderPayload\":[\n      {\n        \"where\": {\"id\": $workorder.id  },\n        \"update\":{ \n          \"scheduledStartAt\": $scheduledDistributions[0].scheduledStartAt, \n          \"scheduledFinishAt\": $scheduledDistributions[-1].scheduledFinishAt\n          }\n      }\n    ],\n    \"distributionGroupPayload\":  $backwardsSchedule($workorder.promiseAt,$payload.distributionGroupPayload).{\"create\": $},\n    \"distributionPayload\":  $scheduledDistributions.{\"create\": $}\n  }\n)",
+            "nextNodes": [
+              "05038dc0-f0a8-48a2-93a5-88c91f32ef4f"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+          "name": "Create Distributions and Distributions Group",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation (\n  $distributionGroupPayload: [WorkOrderProcessDistributionGroupCreatePayloadInput!]!, \n  $distributionPayload: [WorkOrderProcessDistributionCreatePayloadInput!]!,\n  $workorderPayload: [WorkOrderUpdatePayloadInput!]!\n){\n  createWorkOrderProcessDistributionGroup(payload: $distributionGroupPayload){ id }\n  createWorkOrderProcessDistribution(payload: $distributionPayload){ id  workOrderProcessId}\n  updateWorkOrder(payload: $workorderPayload){ id }\n}",
+            "nextNodes": [
+              "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b3c8700a-0771-4656-9307-20185771c08e",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "1345d154-2905-48e1-9d55-c204795e33da"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.11"
+    },
+    "diagram": {
+      "id": "cm97kmnqb00ch01662hep43ql",
+      "offsetX": -51.36,
+      "offsetY": 193.77,
+      "zoom": 75.8,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "75a94719-a823-4a9a-8e59-ec33ca60798d",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "5967657e-c691-4809-9c87-3240ebc53099": {
+              "points": [
+                {
+                  "id": "21956f8f-5da2-4425-8066-5e6301ccea47",
+                  "type": "point",
+                  "x": 323.98,
+                  "y": 219.73
+                },
+                {
+                  "id": "f1516c00-c59c-442b-825a-7a59dc25feb9",
+                  "type": "point",
+                  "x": 370,
+                  "y": 214.73
+                }
+              ],
+              "id": "5967657e-c691-4809-9c87-3240ebc53099",
+              "type": "default",
+              "selected": false,
+              "source": "d80de856-359f-4531-854e-8e3af5f34945",
+              "sourcePort": "clzbjhjeu0008356h87qm6dk8",
+              "target": "1345d154-2905-48e1-9d55-c204795e33da",
+              "targetPort": "clzbjj93y000d356hosuznmwq",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "53b75caf-7bae-4bac-ad4d-8db0df2e4789": {
+              "points": [
+                {
+                  "id": "ca620b49-ca06-492d-9554-c22e9f4f25d2",
+                  "type": "point",
+                  "x": 524,
+                  "y": 214.73
+                },
+                {
+                  "id": "130bebf6-1826-44b0-819b-150d250bd4ee",
+                  "type": "point",
+                  "x": 550,
+                  "y": 214.73
+                }
+              ],
+              "id": "53b75caf-7bae-4bac-ad4d-8db0df2e4789",
+              "type": "default",
+              "selected": false,
+              "source": "1345d154-2905-48e1-9d55-c204795e33da",
+              "sourcePort": "clzbjj93y000f356h3xrvec4v",
+              "target": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+              "targetPort": "clzbjpz5y0015356hi9clcz5p",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c5245f3b-2db3-4ff7-9e2e-1fad0de7261b": {
+              "points": [
+                {
+                  "id": "6c0ae87b-c1cd-4d90-8346-1c8791449d12",
+                  "type": "point",
+                  "x": 704,
+                  "y": 214.73
+                },
+                {
+                  "id": "3554dd3d-4369-4a03-ae05-9a0051e6d44a",
+                  "type": "point",
+                  "x": 745,
+                  "y": 214.73
+                }
+              ],
+              "id": "c5245f3b-2db3-4ff7-9e2e-1fad0de7261b",
+              "type": "default",
+              "selected": false,
+              "source": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+              "sourcePort": "clzbjpz5y0017356hic7qmvat",
+              "target": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+              "targetPort": "clzbntbnk00zk356hnm6v6iqo",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f0e9d15d-d973-413b-aa66-cc5d6cf591c7": {
+              "points": [
+                {
+                  "id": "6a48a4b7-93b8-451e-8ffe-7499caf0570d",
+                  "type": "point",
+                  "x": 1029.06,
+                  "y": 214.73
+                },
+                {
+                  "id": "b10e7ccc-633b-4e6d-a304-386be7c4566b",
+                  "type": "point",
+                  "x": 1065,
+                  "y": 214.73
+                }
+              ],
+              "id": "f0e9d15d-d973-413b-aa66-cc5d6cf591c7",
+              "type": "default",
+              "selected": false,
+              "source": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+              "sourcePort": "clzbntbnl00zm356hl0z2fhx6",
+              "target": "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b",
+              "targetPort": "clzbny8os011c356hbhiugdmq",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "475d11b9-6269-48f6-929f-66114afcf58d": {
+              "points": [
+                {
+                  "id": "7f4af0d0-68a2-4293-84e3-4ce714bacde5",
+                  "type": "point",
+                  "x": 324,
+                  "y": 149.73
+                },
+                {
+                  "id": "eaebea8d-5182-4144-8b78-fc7a1b7db511",
+                  "type": "point",
+                  "x": 370,
+                  "y": 214.73
+                }
+              ],
+              "id": "475d11b9-6269-48f6-929f-66114afcf58d",
+              "type": "default",
+              "selected": false,
+              "source": "b3c8700a-0771-4656-9307-20185771c08e",
+              "sourcePort": "clzbny84n011a356hu0w3cqdf",
+              "target": "1345d154-2905-48e1-9d55-c204795e33da",
+              "targetPort": "clzbjj93y000d356hosuznmwq",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "c5979467-f077-400d-a24e-d19b5a6aad90",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "d80de856-359f-4531-854e-8e3af5f34945": {
+              "id": "d80de856-359f-4531-854e-8e3af5f34945",
+              "type": "debugSource",
+              "selected": false,
+              "x": 170,
+              "y": 180,
+              "ports": [
+                {
+                  "id": "clzbjhjeu0008356h87qm6dk8",
+                  "type": "default",
+                  "x": 315.98,
+                  "y": 211.73,
+                  "name": "clzbjhjeu0009356h3e80ncae",
+                  "parentNode": "d80de856-359f-4531-854e-8e3af5f34945",
+                  "links": [
+                    "5967657e-c691-4809-9c87-3240ebc53099"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "workorderId": "clzmvvq3x07la019ff8cbb6qr"
+                },
+                "context": {},
+                "nextNodes": [
+                  "1345d154-2905-48e1-9d55-c204795e33da"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "1345d154-2905-48e1-9d55-c204795e33da": {
+              "id": "1345d154-2905-48e1-9d55-c204795e33da",
+              "type": "query",
+              "selected": false,
+              "x": 370,
+              "y": 175,
+              "ports": [
+                {
+                  "id": "clzbjj93y000d356hosuznmwq",
+                  "type": "default",
+                  "x": 362,
+                  "y": 206.73,
+                  "name": "clzbjj93y000e356hde9tf5gl",
+                  "parentNode": "1345d154-2905-48e1-9d55-c204795e33da",
+                  "links": [
+                    "5967657e-c691-4809-9c87-3240ebc53099",
+                    "475d11b9-6269-48f6-929f-66114afcf58d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clzbjj93y000f356h3xrvec4v",
+                  "type": "default",
+                  "x": 516,
+                  "y": 206.73,
+                  "name": "clzbjj93y000g356hr6m47ri7",
+                  "parentNode": "1345d154-2905-48e1-9d55-c204795e33da",
+                  "links": [
+                    "53b75caf-7bae-4bac-ad4d-8db0df2e4789"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "$",
+                "query": "query Query($workorderId: String!) {\n  workOrder(where: {id: {_eq: $workorderId}}) {\n    edges {\n      node {\n        id\n        number\n        priority\n        originalQuantity\n        quantity\n        integrated\n        description\n        externalId\n        actualFinishAt\n        actualStartAt\n        earliestStartAt\n        promiseAt\n        scheduledFinishAt\n        scheduledStartAt\n        transactionAt\n        customData\n        integrationData\n        workOrderStatusId\n        workOrderTypeId\n        facilityId\n        kanbanRackId\n        maintenanceChecklistId\n        outsourcePurchaseOrderId\n        outsourceSalesOrderId\n        outsourceTransferOrderId\n        productId\n        productStrategyId\n        workOrderCategoryId\n        workOrderGroupId\n        workOrderPriorityId\n        workOrderProcesses {\n          edges {\n            node {\n              id\n              code\n              standardPositions\n              standardWorkcenters\n              cycleTime\n              distributionPercentage\n              idealRate\n              leadTime\n              minimumProductionRunTime\n              originalQuantity\n              percentToStart\n              productionOffalAllowed\n              productionOperators\n              quantity\n              quantityToStart\n              quotedRate\n              setupOffalAllowed\n              setupOperators\n              setupRate\n              standardRate\n              timeToStart\n              transitTimeAfter\n              transitTimeBefore\n              unitPerCycle\n              unitWeight\n              active\n              allowMixedLots\n              autoTriggerDependency\n              defaultDistribution\n              final\n              finishedGood\n              generatePurchaseOrder\n              maintenance\n              optional\n              rawMaterial\n              requireReceipt\n              transferSerial\n              useSupplierLabel\n              useWorkcenterRates\n              wip\n              description\n              externalId\n              note\n              order\n              customData\n              integrationData\n              processId\n              workOrderId\n              workOrderProcessStatusId\n              controlPanelId\n              documentDesignId\n              lotControlId\n              outsourcePurchaseOrderId\n              outsourceTransferOrderId\n              productStrategyId\n              productStrategyProcessId\n              productionTypeId\n              putAwayLocationId\n              weightUnitId\n              workcenterId\n              productStrategyProcess {\n                coproductBoms: assemblyBoms(where: {bomTypeId: {_eq: \"CoProduct\"}, active: {_eq: true}}) {\n                  edges {\n                    node {\n                      id\n                      componentProduct {\n                        id\n                        name\n                      }\n                      componentProductStrategyId\n                      assemblyProductStrategyProcessId\n                      componentProductStrategyProcess {\n                        id\n                        unitPerCycle\n                        process {\n                          code\n                        }\n                      }\n                      order\n                      active\n                      unitPerCycle\n                      useOnWorkOrder\n                      buildWorkOrder\n                      standardUsage\n                      minimumUsage\n                      maximumUsage\n                      bomTypeId\n                      fixedLaborUsage\n                      fixedMachineUsage\n                      fixedMaterialUsage\n                      laborUsage\n                      machineUsage\n                      consumptionModeId\n                      externalId\n                      reference\n                    }\n                  }\n                }\n                byproductBoms: assemblyBoms(where: {bomTypeId: {_eq: \"ByProduct\"}, active: {_eq: true}}) {\n                  edges {\n                    node {\n                      id\n                      componentProduct {\n                        id\n                        name\n                      }\n                      componentProductStrategyId\n                      assemblyProductStrategyProcessId\n                      componentProductStrategyProcess {\n                        id\n                        unitPerCycle\n                        process {\n                          code\n                        }\n                      }\n                      unitPerCycle\n                      order\n                      active\n                      useOnWorkOrder\n                      standardUsage\n                      minimumUsage\n                      maximumUsage\n                      bomTypeId\n                      fixedLaborUsage\n                      fixedMachineUsage\n                      fixedMaterialUsage\n                      laborUsage\n                      machineUsage\n                      consumptionModeId\n                      externalId\n                      reference\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "297a3f61-1d0c-4732-aeb4-e636e4ae8178"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Workorder"
+            },
+            "297a3f61-1d0c-4732-aeb4-e636e4ae8178": {
+              "id": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+              "type": "transform",
+              "selected": false,
+              "x": 550,
+              "y": 175,
+              "ports": [
+                {
+                  "id": "clzbjpz5y0015356hi9clcz5p",
+                  "type": "default",
+                  "x": 542,
+                  "y": 206.73,
+                  "name": "clzbjpz5y0016356hajh360x0",
+                  "parentNode": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+                  "links": [
+                    "53b75caf-7bae-4bac-ad4d-8db0df2e4789"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clzbjpz5y0017356hic7qmvat",
+                  "type": "default",
+                  "x": 696,
+                  "y": 206.73,
+                  "name": "clzbjpz5y0018356h1ybc5ypu",
+                  "parentNode": "297a3f61-1d0c-4732-aeb4-e636e4ae8178",
+                  "links": [
+                    "c5245f3b-2db3-4ff7-9e2e-1fad0de7261b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $calculateEstimatedTime := function(\n    $standardRate,\n    $quantity,\n    $setupRate,\n    $productionTypeId,\n    $transitTimeAfter,\n    $transitTimeBefore,\n    $leadTime\n  ) {\n    (\n      $standardRate := $coalesce([$standardRate, 0]);\n      $setupRate := $coalesce([$setupRate, 0]);\n      $quantity := $coalesce([$quantity, 0]);\n      $transitTimeAfter := $coalesce([$transitTimeAfter, 0]);\n      $transitTimeBefore := $coalesce([$transitTimeBefore, 0]);\n      $leadTime := $coalesce([$leadTime, 0]);\n      $internalTime := $standardRate = 0 or $quantity = 0\n        ? 0\n        : ($quantity / $standardRate) * 3600000 + $setupRate;\n      $outsideProcessingTime := $leadTime + $transitTimeBefore\n        + $transitTimeAfter;\n      $productionTypeId = \"Outside Processor\"\n        ? $outsideProcessingTime\n        : $internalTime\n    )};\n    \n  $calculateUsage := function($boms, $usageType){(\n    $calculatedUsages := $boms.(\n\t\t\t$outputRate := $coalesce([\n        unitPerCycle,\n        componentProductStrategyProcess.unitPerCycle,\n        1\n      ]);\n      \n      $usage := $lookup($, $usageType);\n      $coalesce([$usage, standardUsage, 1]) * $outputRate;\n\t\t\t\t\t\n    );\n    \n    $count($calculatedUsages) > 0? $sum($calculatedUsages) : 0;\n  \n  )};\n  \n  $backwardsSchedule := function($dueDate, $records){(\n    $reduce(\n      $records^(>order),\n      function($acc, $crr, $i){(\n        $startingEndDate := $moment($i = 0? $dueDate : $acc[$i -1].scheduledStartAt);\n        \n        \n        $latestStartAt := $startingEndDate.clone().subtract($crr.estimatedTime, \"ms\" );\n        \n        $newValue := $merge([\n          $crr,\n          { \"scheduledStartAt\": $latestStartAt.format(), \"scheduledFinishAt\": $startingEndDate.format()}\n        ]);\n        \n        $append($acc, [$omit($newValue, \"order\")]);\n        \n      )},\n      []\n    )~>$reverse\n  )};\n  \n  \n  $workorder := workOrder.edges.node;\n  $isNilOrEmpty($workorder.promiseAt)? $throw(\"A due date is required to schedule a workorder.\");\n  $isNilOrEmpty($workorder.workOrderProcesses.edges)? $throw(\"Workorder requires processes.\");\n  $payload := $workorder.workOrderProcesses.edges.node.(\n  \n    $coProducts := productStrategyProcess.coproductBoms.edges.node;\n    $byProducts := productStrategyProcess.byproductBoms.edges.node;\n    \n    $distributionGroupPayload := {\n        \"id\": id,\n        \"balanceQuantity\": quantity,\n        \"cycleTime\": $coalesce([cycleTime, 0]),\n        \"estimatedTime\": $calculateEstimatedTime(standardRate, quantity, setupRate, productionTypeId, transitTimeAfter, transitTimeBefore, leadTime),\n        \"percentComplete\": 0,\n        \"producedQuantity\": 0,\n        \"productionOperators\": $coalesce([productionOperators, 1]),\n        \"quotedRate\": $coalesce([quotedRate,0]), \n        \"requiredQuantity\": quantity,\n        \"scrappedQuantity\": 0,\n        \"setupOperators\": $coalesce([setupOperators, 0]),\n        \"setupRate\": $coalesce([setupRate, 0]),\n        \"standardRate\": $coalesce([standardRate, 0]),\n        \"allowDistributionUnload\": false,\n        \"parallelPositions\": $count($byProducts) > 0 or $count($coProducts) > 0,\n        \"requireParallelOutput\": true,\n        \"sequential\": false,\n        \"singleSetupRate\": true,\n        \"static\": $count($coProducts) != 0 or $count($byProducts) != 0,\n        \"groupId\": code,\n        \"workOrderProcessDistributionStatusId\": \"New\",\n        \"workcenterId\":workcenterId,\n        \"order\": order\n      };\n      \n    $materialUsage := $calculateUsage($coProducts, \"standardUsage\") + $calculateUsage($byProducts, \"standardUsage\");\n    $machineUsage := $calculateUsage($coProducts, \"machineUsage\") + $calculateUsage($byProducts, \"machineUsage\");\n    $laborUsage := $calculateUsage($coProducts, \"laborUsage\") + $calculateUsage($byProducts, \"laborUsage\");\n    \n    $distributionPayload := $distributionGroupPayload.(\n     $merge([\n\t\t\t\t\t$omit(\n\t\t\t\t\t\t$,\n\t\t\t\t\t\t[\n\t\t\t\t\t\t\t\"id\",\n\t\t\t\t\t\t\t\"static\",\n\t\t\t\t\t\t\t\"groupId\",\n\t\t\t\t\t\t\t\"static\",\n\t\t\t\t\t\t\t\"allowDistributionUnload\",\n\t\t\t\t\t\t\t\"parallelPositions\",\n\t\t\t\t\t\t\t\"requireParallelOutput\",\n\t\t\t\t\t\t\t\"sequential\",\n\t\t\t\t\t\t\t\"singleSetupRate\"\n\t\t\t\t\t\t]\n\t\t\t\t\t),\n\t\t\t\t\t{\n\t\t\t\t\t\t\"id\": id,\n\t\t\t\t\t\t\"dispatchSequence\": 0,\n\t\t\t\t\t\t\"materialUsage\": $materialUsage > 1 ? 0 : (1 - $materialUsage),\n\t\t\t\t\t\t\"machineUsage\": $machineUsage > 1 ? 0 : (1 - $machineUsage),\n\t\t\t\t\t\t\"laborUsage\": $laborUsage > 1 ? 0 : (1 - $laborUsage),\n\t\t\t\t\t\t\"leadingProduct\": true,\n\t\t\t\t\t\t\"distributionGroupId\": id,\n\t\t\t\t\t\t\"workOrderProcessId\": id,\n\t\t\t\t\t\t\"workOrderId\": $workorder.id,\n\t\t\t\t\t\t\"virtual\": $materialUsage >= 1\n\t\t\t\t\t}\n\t\t\t\t])  \n    );\n    \n    {\n      \"distributionGroupPayload\": $distributionGroupPayload,\n      \"distributionPayload\": $distributionPayload\n    }\n  );\n  \n  $scheduledDistributions := $backwardsSchedule($workorder.promiseAt,$payload.distributionPayload); \n  \n  {\n    \"workorderPayload\":[\n      {\n        \"where\": {\"id\": $workorder.id  },\n        \"update\":{ \n          \"scheduledStartAt\": $scheduledDistributions[0].scheduledStartAt, \n          \"scheduledFinishAt\": $scheduledDistributions[-1].scheduledFinishAt\n          }\n      }\n    ],\n    \"distributionGroupPayload\":  $backwardsSchedule($workorder.promiseAt,$payload.distributionGroupPayload).{\"create\": $},\n    \"distributionPayload\":  $scheduledDistributions.{\"create\": $}\n  }\n)",
+                "nextNodes": [
+                  "05038dc0-f0a8-48a2-93a5-88c91f32ef4f"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Prepare Payload"
+            },
+            "05038dc0-f0a8-48a2-93a5-88c91f32ef4f": {
+              "id": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+              "type": "mutate",
+              "selected": true,
+              "x": 745,
+              "y": 175,
+              "ports": [
+                {
+                  "id": "clzbntbnk00zk356hnm6v6iqo",
+                  "type": "default",
+                  "x": 737,
+                  "y": 206.73,
+                  "name": "clzbntbnl00zl356hfjjddqvm",
+                  "parentNode": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+                  "links": [
+                    "c5245f3b-2db3-4ff7-9e2e-1fad0de7261b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clzbntbnl00zm356hl0z2fhx6",
+                  "type": "default",
+                  "x": 1021.06,
+                  "y": 206.73,
+                  "name": "clzbntbnl00zn356hvvuy84mn",
+                  "parentNode": "05038dc0-f0a8-48a2-93a5-88c91f32ef4f",
+                  "links": [
+                    "f0e9d15d-d973-413b-aa66-cc5d6cf591c7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation (\n  $distributionGroupPayload: [WorkOrderProcessDistributionGroupCreatePayloadInput!]!, \n  $distributionPayload: [WorkOrderProcessDistributionCreatePayloadInput!]!,\n  $workorderPayload: [WorkOrderUpdatePayloadInput!]!\n){\n  createWorkOrderProcessDistributionGroup(payload: $distributionGroupPayload){ id }\n  createWorkOrderProcessDistribution(payload: $distributionPayload){ id  workOrderProcessId}\n  updateWorkOrder(payload: $workorderPayload){ id }\n}",
+                "nextNodes": [
+                  "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create Distributions and Distributions Group"
+            },
+            "b3c8700a-0771-4656-9307-20185771c08e": {
+              "id": "b3c8700a-0771-4656-9307-20185771c08e",
+              "type": "request",
+              "selected": false,
+              "x": 170,
+              "y": 110,
+              "ports": [
+                {
+                  "id": "clzbny84n011a356hu0w3cqdf",
+                  "type": "default",
+                  "x": 316,
+                  "y": 141.73,
+                  "name": "clzbny84n011b356hgm0vtv4v",
+                  "parentNode": "b3c8700a-0771-4656-9307-20185771c08e",
+                  "links": [
+                    "475d11b9-6269-48f6-929f-66114afcf58d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "1345d154-2905-48e1-9d55-c204795e33da"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b": {
+              "id": "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b",
+              "type": "response",
+              "selected": false,
+              "x": 1065,
+              "y": 175,
+              "ports": [
+                {
+                  "id": "clzbny8os011c356hbhiugdmq",
+                  "type": "default",
+                  "x": 1057,
+                  "y": 206.73,
+                  "name": "clzbny8os011d356hi42whmxr",
+                  "parentNode": "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b",
+                  "links": [
+                    "f0e9d15d-d973-413b-aa66-cc5d6cf591c7"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clzbny8os011e356h6a34vtfg",
+                  "type": "default",
+                  "x": 1210.98,
+                  "y": 206.73,
+                  "name": "clzbny8os011f356hm6y34up6",
+                  "parentNode": "bc13bbc6-dd97-4ef3-acac-f6c304a1d19b",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            }
+          }
+        }
+      ],
+      "name": "Create distribution groups and processes",
+      "type": "System",
+      "version": "0.0.11",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

@@ -1,0 +1,1240 @@
+{
+  "header": {
+    "id": "workcenterModeChange",
+    "name": "Workcenter Mode Change",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "clru8hff40033015ke59n492e",
+    "number": "0.0.7",
+    "description": "",
+    "dataFlowId": "workcenterModeChange",
+    "flow": {
+      "id": "clru8hff40033015ke59n492e",
+      "name": "Workcenter Mode Change",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+          "name": "Store input to context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n \n    \"REQUEST\": REQUEST,\n    \"DEFAULTS\": {\n      \"transactionTypeId\": \"Mode Change\"\n    },\n    \"LOCAL\": {\n      \"time\": $now()\n    }\n  \n}",
+            "nextNodes": [
+              "67c04bc9-0a6e-40bb-a901-41578995dbc4"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+          "name": "Query Production Setup",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "(\n\n  $R := $state.context.REQUEST.DATA;\n  {\n\n    \"wherePS\": {\n      \"workcenterId\": {\n        \"_in\": [$R.workcenterId]\n      }\n    },\n    \"whereM\": {\n      \"modeId\": {\n        \"_in\": [$R.modeId]\n      },\n      \"modeGroup\": {\n        \"workcenters\":{\n          \"_some\": {\n            \"id\": {\n              \"_in\": [$R.workcenterId]\n            }\n          }\n        }\n      }\n    }\n  }\n)",
+            "query": "query($wherePS:ProductionSetupWhereInput, $whereM: ModeListWhereInput){\n  productionSetup(where: $wherePS){\n    edges{\n      node{\n        id\n        workcenter {\n          id\n          shiftGroupId\n        }\n        modeId\n        eventId\n        outputs {\n          edges {\n            node {\n              kanbanCard {\n                id\n                kanbanRack{\n                  id productStrategyProcessId\n                  productStrategy {id productId}\n                }\n                productionHistories(orderBy:{field:occurAt,direction:desc},first:1){\n                  edges{node{occurAt}}\n                }\n              }\n              workOrderDistributionGroup{\n                id\n                distributions(where: {\n                  virtual: {\n                    _eq: false\n                  }\n                }){\n                  edges {\n                    node {\n                      id\n                      laborUsage\n                      machineUsage\n                      setupOperators\n                      productionOperators\n                      workOrderProcess{\n                        id\n                        productStrategy {\n                          id productId\n                        }\n                        productStrategyProcessId\n                      }\n                      productionHistories(orderBy:{field:occurAt,direction:desc},first:1){\n                        edges{node{occurAt}}\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n  modeList(where:$whereM){\n    edges{\n      node {\n        defaultEventId\n      }\n    }\n  }\n}",
+            "nextNodes": [
+              "a406396a-9334-4363-b3e9-d0864972532e"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": true,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "40bb695e-b7a3-4b5e-a3aa-674d5b235185",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "d7bce372-8540-42ce-a6de-435a46fc90b4",
+              "15965f4f-d5b9-4893-b6be-ae8de1b36667"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": true,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"SUCCESS\": true,\n  \"MESSAGE\": \"Workcenter Mode Changed to \" & $state.context.REQUEST.DATA.modeId\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": true,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+          "name": "Route",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "NO MODE/EVENT",
+                "transform": "$isNilOrEmpty($state.context.REQUEST.DATA.modeId)\nand\n$isNilOrEmpty($state.context.REQUEST.DATA.eventId)",
+                "nextNodes": [
+                  "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+                  "bf6f444a-0667-48da-a85c-1621ca3780d0"
+                ]
+              },
+              {
+                "transform": "$.productionSetup.edges.node.modeId = $state.context.REQUEST.DATA.modeId\nand \n(\n$.productionSetup.edges.node.eventId = $state.context.REQUEST.DATA.eventId\nor\n$isNilOrEmpty($state.context.REQUEST.DATA.eventId)\n)",
+                "name": "NO CHANGE",
+                "nextNodes": [
+                  "8fa0178e-a417-484b-8de5-aa8b6501fec1"
+                ]
+              },
+              {
+                "nextNodes": [
+                  "e3a0a934-3d26-4967-89d5-b5fb63521d67"
+                ],
+                "name": "MODE CHANGE",
+                "transform": "true"
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a406396a-9334-4363-b3e9-d0864972532e",
+          "name": "Merge Context: SETUP/DEFAULT EVENT",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "dfc379cb-3f67-400f-a9b1-9af05cadcf82"
+            ],
+            "transform": "\n{\n  \"LOCAL\": {\n    \"productionSetup\": productionSetup.edges.node,\n    \"eventId\": $coalesce([$state.context.REQUEST.DATA.eventId, modeList.edges.node.defaultEventId])\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": true,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "15965f4f-d5b9-4893-b6be-ae8de1b36667",
+          "name": "Log: REQ",
+          "type": "log",
+          "data": {
+            "messageTransform": "$string($)",
+            "level": "Debug",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": true,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"SUCCESS\": false,\n  \"MESSAGE\": \"No Mode or Event Provided in Request\"\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "bf6f444a-0667-48da-a85c-1621ca3780d0",
+          "name": "Log: NO MODE",
+          "type": "log",
+          "data": {
+            "messageTransform": "\"MODE CHANGE ERROR\"",
+            "level": "Warn",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+          "name": "Mutation: SETUP/WC HISTORY",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  $R := $state.context.REQUEST.DATA;\n  $L := $state.context.LOCAL;\n  $wc := $R.workcenterId;\n  $change := $L.productionSetup.modeId != $R.modeId;\n  $m := $change ? $R.modeId : $L.productionSetup.modeId;\n  $e := $L.eventId;\n  \n  $shift := $executeTransform(\"getShift\",{ \"date\": $state.context.LOCAL.time, \"shiftGroupId\": $L.productionSetup.workcenter.shiftGroupId });\n  \n  \n  \n {\n   \"pspayload\": \n       {\n         \"where\": {\n            \"id\": $L.productionSetup.id\n          },\n          \"update\": {\n            \"modeId\": $m,\n            \"eventId\": $e\n          }\n        },\n    \"wchpayload\": {\n      \"create\": {\n        \"transactionTypeId\": $change ? \"Mode Change\" : \"Event Update\",\n        \"workcenterId\": $wc,\n        \"occurAt\":  $L.time,\n        \"creditedAt\":$shift.creditAt,\n        \"modeId\": $m,\n        \"eventId\": $e,\n        \"message\": $change ? \"Workcenter Mode Changed to \" & $m : \"Workcenter Event Update to \" & $e,\n        \"shiftId\": $shift.id\n\n      }\n    }\n  }\n)\n\n",
+            "mutation": "mutation ($pspayload:[ProductionSetupUpdatePayloadInput!]!,$wchpayload : [WorkcenterHistoryCreatePayloadInput!]!){\n  updateProductionSetup(payload:$pspayload) {\n    id\n  },\n  createWorkcenterHistory(payload : $wchpayload){\n    id\n  }\n}",
+            "nextNodes": [
+              "8fa0178e-a417-484b-8de5-aa8b6501fec1"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": true,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.7"
+    },
+    "diagram": {
+      "id": "clru8hff40033015ke59n492e",
+      "offsetX": 263.87,
+      "offsetY": 67.68,
+      "zoom": 96.12,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "7bf1414c-7066-42a8-bdb3-c5714e52884e",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "4b9bdd6e-6bbd-4dcb-9172-9fb4aae3fcb0": {
+              "points": [
+                {
+                  "id": "16520251-a04a-40b2-aa57-b3b7eaf9fbdb",
+                  "type": "point",
+                  "x": 576.02,
+                  "y": 334.18
+                },
+                {
+                  "id": "29d525ef-b9d5-49ae-a788-69a801090d3b",
+                  "type": "point",
+                  "x": 658.96,
+                  "y": 344.18
+                }
+              ],
+              "id": "4b9bdd6e-6bbd-4dcb-9172-9fb4aae3fcb0",
+              "type": "default",
+              "selected": false,
+              "source": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+              "sourcePort": "cl5mqmuoc006l356dsyparroz",
+              "target": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+              "targetPort": "cl5mqob2m00ap356dlqq56epo",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2be2c6e9-3f5f-42a4-8fc0-aac4b2331030": {
+              "points": [
+                {
+                  "id": "e4effc1e-a01a-4758-abe9-c9f906b8aaf8",
+                  "type": "point",
+                  "x": 298.97,
+                  "y": 374.18
+                },
+                {
+                  "id": "0ae7046a-605b-4d9c-b01a-029f328d24df",
+                  "type": "point",
+                  "x": 413.96,
+                  "y": 334.18
+                }
+              ],
+              "id": "2be2c6e9-3f5f-42a4-8fc0-aac4b2331030",
+              "type": "default",
+              "selected": false,
+              "source": "40bb695e-b7a3-4b5e-a3aa-674d5b235185",
+              "sourcePort": "cl5mr470j00eu356d1o5i6nhm",
+              "target": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+              "targetPort": "cl5mqmuoc006j356dawpjd4zy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "943c050f-50f7-4766-a8fa-93e34923d117": {
+              "points": [
+                {
+                  "id": "e13812f8-3c92-48b7-84d1-8a59bdca35ad",
+                  "type": "point",
+                  "x": 829.31,
+                  "y": 519.32
+                },
+                {
+                  "id": "793c5037-78c8-4715-b4a5-cb08f908670b",
+                  "type": "point",
+                  "x": 1128.96,
+                  "y": 514.18
+                }
+              ],
+              "id": "943c050f-50f7-4766-a8fa-93e34923d117",
+              "type": "default",
+              "selected": false,
+              "source": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "sourcePort": "cldw0im18006e356d3t4ndsqz",
+              "target": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+              "targetPort": "cl5mr4dxn00f0356dtyt0ffts",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3e9405bf-0fbb-49bf-a9f1-72401beb03b1": {
+              "points": [
+                {
+                  "id": "b01b139c-d5d7-48f6-b306-ba6582df1160",
+                  "type": "point",
+                  "x": 832.78,
+                  "y": 344.18
+                },
+                {
+                  "id": "8f074a50-62f7-4ab1-a6f0-2f9499eb2f53",
+                  "type": "point",
+                  "x": 633.96,
+                  "y": 414.18
+                }
+              ],
+              "id": "3e9405bf-0fbb-49bf-a9f1-72401beb03b1",
+              "type": "default",
+              "selected": false,
+              "source": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+              "sourcePort": "cl5mqob2m00ar356d5ht44acm",
+              "target": "a406396a-9334-4363-b3e9-d0864972532e",
+              "targetPort": "cldw4sxgh02xq356dve8tc1ys",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "185595e0-5be9-4666-9aee-73bb9134b438": {
+              "points": [
+                {
+                  "id": "5be7cd3f-fd79-491f-b736-7a2a2f65ea43",
+                  "type": "point",
+                  "x": 896.23,
+                  "y": 414.18
+                },
+                {
+                  "id": "d98759cc-34cd-4093-8407-bdfc741d239d",
+                  "type": "point",
+                  "x": 643.96,
+                  "y": 494.18
+                }
+              ],
+              "id": "185595e0-5be9-4666-9aee-73bb9134b438",
+              "type": "default",
+              "selected": false,
+              "source": "a406396a-9334-4363-b3e9-d0864972532e",
+              "sourcePort": "cldw4sxgh02xs356ddb4sbha4",
+              "target": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "targetPort": "cldw0hv810069356drjl46v06",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c8918efd-843d-4240-8efd-890a2edf7497": {
+              "points": [
+                {
+                  "id": "3c798ec0-ba8d-462c-94fe-7c38dbdb75c3",
+                  "type": "point",
+                  "x": 363.96,
+                  "y": 474.18
+                },
+                {
+                  "id": "4659d71a-74b0-4531-9a05-2fc3e7555899",
+                  "type": "point",
+                  "x": 298.97,
+                  "y": 374.18
+                }
+              ],
+              "id": "c8918efd-843d-4240-8efd-890a2edf7497",
+              "type": "default",
+              "selected": false,
+              "source": "15965f4f-d5b9-4893-b6be-ae8de1b36667",
+              "sourcePort": "cle6j44zq009f356dppt528ki",
+              "target": "40bb695e-b7a3-4b5e-a3aa-674d5b235185",
+              "targetPort": "cl5mr470j00eu356d1o5i6nhm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c8789610-8948-4705-9255-e232da016fa8": {
+              "points": [
+                {
+                  "id": "97fd0d5f-89bb-4804-8dfb-ac08255a2a64",
+                  "type": "point",
+                  "x": 829.31,
+                  "y": 494.18
+                },
+                {
+                  "id": "1b6f2ae8-dbfa-4d5a-b6e2-1380e71db669",
+                  "type": "point",
+                  "x": 983.96,
+                  "y": 394.18
+                }
+              ],
+              "id": "c8789610-8948-4705-9255-e232da016fa8",
+              "type": "default",
+              "selected": false,
+              "source": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "sourcePort": "cldw0nd8y009o356diqxdkz5r",
+              "target": "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+              "targetPort": "clqxfp3wk00rm356myktzt3hg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e04eba9a-2606-49c4-9f3e-bf6295a289ac": {
+              "points": [
+                {
+                  "id": "64058f60-3a2a-4a90-a319-5ba990af8b95",
+                  "type": "point",
+                  "x": 829.31,
+                  "y": 494.18
+                },
+                {
+                  "id": "46d4187c-b0c3-40e9-a3c9-c759f6a8940c",
+                  "type": "point",
+                  "x": 988.96,
+                  "y": 314.18
+                }
+              ],
+              "id": "e04eba9a-2606-49c4-9f3e-bf6295a289ac",
+              "type": "default",
+              "selected": false,
+              "source": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "sourcePort": "cldw0nd8y009o356diqxdkz5r",
+              "target": "bf6f444a-0667-48da-a85c-1621ca3780d0",
+              "targetPort": "clqxfpt5q00tt356mb7qzxp6w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9f87ff5a-af7d-4603-8d8e-88982c3ebf7c": {
+              "points": [
+                {
+                  "id": "f8ab6cbe-de75-45cf-bcf5-dc950947a739",
+                  "type": "point",
+                  "x": 829.31,
+                  "y": 544.46
+                },
+                {
+                  "id": "e178bdaf-8e54-4d23-a3c0-09af4031e322",
+                  "type": "point",
+                  "x": 868.96,
+                  "y": 569.18
+                }
+              ],
+              "id": "9f87ff5a-af7d-4603-8d8e-88982c3ebf7c",
+              "type": "default",
+              "selected": false,
+              "source": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "sourcePort": "cldw0mg61008l356dcs4bb6uc",
+              "target": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+              "targetPort": "clqxfx31w0109356mmduhtwxv",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "58b2a05e-27fd-4d53-b3fa-6fa4996ba65a": {
+              "points": [
+                {
+                  "id": "99eec09c-1dc4-4ec7-87f7-8ad2e72880a7",
+                  "type": "point",
+                  "x": 1082.34,
+                  "y": 569.18
+                },
+                {
+                  "id": "fbef0705-75b5-433f-a43d-8b6642331749",
+                  "type": "point",
+                  "x": 1128.96,
+                  "y": 514.18
+                }
+              ],
+              "id": "58b2a05e-27fd-4d53-b3fa-6fa4996ba65a",
+              "type": "default",
+              "selected": false,
+              "source": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+              "sourcePort": "clqxfx31w010b356mo1pbsgn8",
+              "target": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+              "targetPort": "cl5mr4dxn00f0356dtyt0ffts",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "67c495ac-6760-4254-bc85-83f0eddb8c58": {
+              "points": [
+                {
+                  "id": "8755be4e-f70a-43cd-a6f4-c5e06336fb12",
+                  "type": "point",
+                  "x": 308.97,
+                  "y": 284.18
+                },
+                {
+                  "id": "70eb10a2-4b66-41ee-9de4-e91424206882",
+                  "type": "point",
+                  "x": 413.96,
+                  "y": 334.18
+                }
+              ],
+              "id": "67c495ac-6760-4254-bc85-83f0eddb8c58",
+              "type": "default",
+              "selected": false,
+              "source": "31c9a2bc-56f9-489f-a261-03f21cb1eb9b",
+              "sourcePort": "clqxeth5q005t356m3y8c9u92",
+              "target": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+              "targetPort": "cl5mqmuoc006j356dawpjd4zy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "887e8ede-27a2-4896-9ee7-c80cb132eb79",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "d7bce372-8540-42ce-a6de-435a46fc90b4": {
+              "id": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 415,
+              "y": 295,
+              "ports": [
+                {
+                  "id": "cl5mqmuoc006j356dawpjd4zy",
+                  "type": "default",
+                  "x": 406.48,
+                  "y": 326.7,
+                  "name": "cl5mqmuoc006k356dby9xavgz",
+                  "parentNode": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+                  "links": [
+                    "2be2c6e9-3f5f-42a4-8fc0-aac4b2331030",
+                    "67c495ac-6760-4254-bc85-83f0eddb8c58"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl5mqmuoc006l356dsyparroz",
+                  "type": "default",
+                  "x": 568.54,
+                  "y": 326.7,
+                  "name": "cl5mqmuoc006m356dam5vlw97",
+                  "parentNode": "d7bce372-8540-42ce-a6de-435a46fc90b4",
+                  "links": [
+                    "4b9bdd6e-6bbd-4dcb-9172-9fb4aae3fcb0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n \n    \"REQUEST\": REQUEST,\n    \"DEFAULTS\": {\n      \"transactionTypeId\": \"Mode Change\"\n    },\n    \"LOCAL\": {\n      \"time\": $now()\n    }\n  \n}",
+                "nextNodes": [
+                  "67c04bc9-0a6e-40bb-a901-41578995dbc4"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Store input to context"
+            },
+            "67c04bc9-0a6e-40bb-a901-41578995dbc4": {
+              "id": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+              "type": "query",
+              "selected": false,
+              "x": 660,
+              "y": 305,
+              "ports": [
+                {
+                  "id": "cl5mqob2m00ap356dlqq56epo",
+                  "type": "default",
+                  "x": 651.48,
+                  "y": 336.7,
+                  "name": "cl5mqob2m00aq356d3p5qan88",
+                  "parentNode": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+                  "links": [
+                    "4b9bdd6e-6bbd-4dcb-9172-9fb4aae3fcb0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl5mqob2m00ar356d5ht44acm",
+                  "type": "default",
+                  "x": 825.3,
+                  "y": 336.7,
+                  "name": "cl5mqob2m00as356d6asbfjqq",
+                  "parentNode": "67c04bc9-0a6e-40bb-a901-41578995dbc4",
+                  "links": [
+                    "3e9405bf-0fbb-49bf-a9f1-72401beb03b1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "(\n\n  $R := $state.context.REQUEST.DATA;\n  {\n\n    \"wherePS\": {\n      \"workcenterId\": {\n        \"_in\": [$R.workcenterId]\n      }\n    },\n    \"whereM\": {\n      \"modeId\": {\n        \"_in\": [$R.modeId]\n      },\n      \"modeGroup\": {\n        \"workcenters\":{\n          \"_some\": {\n            \"id\": {\n              \"_in\": [$R.workcenterId]\n            }\n          }\n        }\n      }\n    }\n  }\n)",
+                "query": "query($wherePS:ProductionSetupWhereInput, $whereM: ModeListWhereInput){\n  productionSetup(where: $wherePS){\n    edges{\n      node{\n        id\n        workcenter {\n          id\n          shiftGroupId\n        }\n        modeId\n        eventId\n        outputs {\n          edges {\n            node {\n              kanbanCard {\n                id\n                kanbanRack{\n                  id productStrategyProcessId\n                  productStrategy {id productId}\n                }\n                productionHistories(orderBy:{field:occurAt,direction:desc},first:1){\n                  edges{node{occurAt}}\n                }\n              }\n              workOrderDistributionGroup{\n                id\n                distributions(where: {\n                  virtual: {\n                    _eq: false\n                  }\n                }){\n                  edges {\n                    node {\n                      id\n                      laborUsage\n                      machineUsage\n                      setupOperators\n                      productionOperators\n                      workOrderProcess{\n                        id\n                        productStrategy {\n                          id productId\n                        }\n                        productStrategyProcessId\n                      }\n                      productionHistories(orderBy:{field:occurAt,direction:desc},first:1){\n                        edges{node{occurAt}}\n                      }\n                    }\n                  }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n  modeList(where:$whereM){\n    edges{\n      node {\n        defaultEventId\n      }\n    }\n  }\n}",
+                "nextNodes": [
+                  "a406396a-9334-4363-b3e9-d0864972532e"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": true,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query Production Setup"
+            },
+            "40bb695e-b7a3-4b5e-a3aa-674d5b235185": {
+              "id": "40bb695e-b7a3-4b5e-a3aa-674d5b235185",
+              "type": "request",
+              "selected": false,
+              "x": 145,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "cl5mr470j00eu356d1o5i6nhm",
+                  "type": "default",
+                  "x": 291.49,
+                  "y": 366.7,
+                  "name": "cl5mr470j00ev356dbi01iave",
+                  "parentNode": "40bb695e-b7a3-4b5e-a3aa-674d5b235185",
+                  "links": [
+                    "2be2c6e9-3f5f-42a4-8fc0-aac4b2331030",
+                    "c8918efd-843d-4240-8efd-890a2edf7497"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "d7bce372-8540-42ce-a6de-435a46fc90b4",
+                  "15965f4f-d5b9-4893-b6be-ae8de1b36667"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": true,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request"
+            },
+            "8fa0178e-a417-484b-8de5-aa8b6501fec1": {
+              "id": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+              "type": "response",
+              "selected": false,
+              "x": 1130,
+              "y": 475,
+              "ports": [
+                {
+                  "id": "cl5mr4dxn00f0356dtyt0ffts",
+                  "type": "default",
+                  "x": 1121.48,
+                  "y": 506.7,
+                  "name": "cl5mr4dxn00f1356detupr5b6",
+                  "parentNode": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+                  "links": [
+                    "943c050f-50f7-4766-a8fa-93e34923d117",
+                    "58b2a05e-27fd-4d53-b3fa-6fa4996ba65a"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cl5mr4dxn00f2356d5c86vbkp",
+                  "type": "default",
+                  "x": 1276.49,
+                  "y": 506.7,
+                  "name": "cl5mr4dxn00f3356dorx8m92q",
+                  "parentNode": "8fa0178e-a417-484b-8de5-aa8b6501fec1",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"SUCCESS\": true,\n  \"MESSAGE\": \"Workcenter Mode Changed to \" & $state.context.REQUEST.DATA.modeId\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": true,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response"
+            },
+            "dfc379cb-3f67-400f-a9b1-9af05cadcf82": {
+              "id": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+              "type": "switch",
+              "selected": false,
+              "x": 645,
+              "y": 455,
+              "ports": [
+                {
+                  "id": "cldw0hv810069356drjl46v06",
+                  "type": "default",
+                  "x": 636.48,
+                  "y": 486.7,
+                  "name": "cldw0hv81006a356dbyh9fl1b",
+                  "parentNode": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+                  "links": [
+                    "185595e0-5be9-4666-9aee-73bb9134b438"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldw0im18006e356d3t4ndsqz",
+                  "type": "default",
+                  "x": 821.83,
+                  "y": 511.84,
+                  "name": "cldw0im18006f356d4cptqia6",
+                  "parentNode": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+                  "links": [
+                    "943c050f-50f7-4766-a8fa-93e34923d117"
+                  ],
+                  "in": false,
+                  "groupName": "NO CHANGE",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "cldw0mg61008l356dcs4bb6uc",
+                  "type": "default",
+                  "x": 821.83,
+                  "y": 536.98,
+                  "name": "cldw0mg61008m356dkffvsbku",
+                  "parentNode": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+                  "links": [
+                    "9f87ff5a-af7d-4603-8d8e-88982c3ebf7c"
+                  ],
+                  "in": false,
+                  "groupName": "MODE CHANGE",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "cldw0nd8y009o356diqxdkz5r",
+                  "type": "default",
+                  "x": 821.83,
+                  "y": 486.7,
+                  "name": "cldw0nd8y009p356djyq47kgb",
+                  "parentNode": "dfc379cb-3f67-400f-a9b1-9af05cadcf82",
+                  "links": [
+                    "c8789610-8948-4705-9255-e232da016fa8",
+                    "e04eba9a-2606-49c4-9f3e-bf6295a289ac"
+                  ],
+                  "in": false,
+                  "groupName": "NO MODE/EVENT",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "NO MODE/EVENT",
+                    "transform": "$isNilOrEmpty($state.context.REQUEST.DATA.modeId)\nand\n$isNilOrEmpty($state.context.REQUEST.DATA.eventId)",
+                    "nextNodes": [
+                      "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+                      "bf6f444a-0667-48da-a85c-1621ca3780d0"
+                    ]
+                  },
+                  {
+                    "transform": "$.productionSetup.edges.node.modeId = $state.context.REQUEST.DATA.modeId\nand \n(\n$.productionSetup.edges.node.eventId = $state.context.REQUEST.DATA.eventId\nor\n$isNilOrEmpty($state.context.REQUEST.DATA.eventId)\n)",
+                    "name": "NO CHANGE",
+                    "nextNodes": [
+                      "8fa0178e-a417-484b-8de5-aa8b6501fec1"
+                    ]
+                  },
+                  {
+                    "nextNodes": [
+                      "e3a0a934-3d26-4967-89d5-b5fb63521d67"
+                    ],
+                    "name": "MODE CHANGE",
+                    "transform": "true"
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route"
+            },
+            "a406396a-9334-4363-b3e9-d0864972532e": {
+              "id": "a406396a-9334-4363-b3e9-d0864972532e",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 635,
+              "y": 375,
+              "ports": [
+                {
+                  "id": "cldw4sxgh02xq356dve8tc1ys",
+                  "type": "default",
+                  "x": 626.48,
+                  "y": 406.7,
+                  "name": "cldw4sxgh02xr356dtu94ov11",
+                  "parentNode": "a406396a-9334-4363-b3e9-d0864972532e",
+                  "links": [
+                    "3e9405bf-0fbb-49bf-a9f1-72401beb03b1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldw4sxgh02xs356ddb4sbha4",
+                  "type": "default",
+                  "x": 888.75,
+                  "y": 406.7,
+                  "name": "cldw4sxgh02xt356du2k976y5",
+                  "parentNode": "a406396a-9334-4363-b3e9-d0864972532e",
+                  "links": [
+                    "185595e0-5be9-4666-9aee-73bb9134b438"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "dfc379cb-3f67-400f-a9b1-9af05cadcf82"
+                ],
+                "transform": "\n{\n  \"LOCAL\": {\n    \"productionSetup\": productionSetup.edges.node,\n    \"eventId\": $coalesce([$state.context.REQUEST.DATA.eventId, modeList.edges.node.defaultEventId])\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": true,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context: SETUP/DEFAULT EVENT"
+            },
+            "15965f4f-d5b9-4893-b6be-ae8de1b36667": {
+              "id": "15965f4f-d5b9-4893-b6be-ae8de1b36667",
+              "type": "log",
+              "selected": false,
+              "x": 365,
+              "y": 435,
+              "ports": [
+                {
+                  "id": "cle6j44zq009f356dppt528ki",
+                  "type": "default",
+                  "x": 356.48,
+                  "y": 466.7,
+                  "name": "cle6j44zq009g356dieauuxhh",
+                  "parentNode": "15965f4f-d5b9-4893-b6be-ae8de1b36667",
+                  "links": [
+                    "c8918efd-843d-4240-8efd-890a2edf7497"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cle6j44zq009h356dh879a0ay",
+                  "type": "default",
+                  "x": 511.48,
+                  "y": 466.7,
+                  "name": "cle6j44zq009i356dldpq4xfq",
+                  "parentNode": "15965f4f-d5b9-4893-b6be-ae8de1b36667",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "$string($)",
+                "level": "Debug",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": true,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log: REQ"
+            },
+            "31c9a2bc-56f9-489f-a261-03f21cb1eb9b": {
+              "id": "31c9a2bc-56f9-489f-a261-03f21cb1eb9b",
+              "type": "debugSource",
+              "selected": false,
+              "x": 155,
+              "y": 245,
+              "ports": [
+                {
+                  "id": "clqxeth5q005t356m3y8c9u92",
+                  "type": "default",
+                  "x": 301.49,
+                  "y": 276.7,
+                  "name": "clqxeth5q005u356mkcreklot",
+                  "parentNode": "31c9a2bc-56f9-489f-a261-03f21cb1eb9b",
+                  "links": [
+                    "67c495ac-6760-4254-bc85-83f0eddb8c58"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "modeId": "Production",
+                      "eventId": null,
+                      "workcenterId": "closqifuqfyw701bn7x699j1b"
+                    }
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d7bce372-8540-42ce-a6de-435a46fc90b4"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "6b5c1abb-6f6f-4554-8658-2335bd4beb7d": {
+              "id": "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+              "type": "response",
+              "selected": false,
+              "x": 985,
+              "y": 355,
+              "ports": [
+                {
+                  "id": "clqxfp3wk00rm356myktzt3hg",
+                  "type": "default",
+                  "x": 976.48,
+                  "y": 386.7,
+                  "name": "clqxfp3wk00rn356mggx97ybr",
+                  "parentNode": "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+                  "links": [
+                    "c8789610-8948-4705-9255-e232da016fa8"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clqxfp3wk00ro356m2a6ylk66",
+                  "type": "default",
+                  "x": 1131.49,
+                  "y": 386.7,
+                  "name": "clqxfp3wk00rp356mnxdk881f",
+                  "parentNode": "6b5c1abb-6f6f-4554-8658-2335bd4beb7d",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"SUCCESS\": false,\n  \"MESSAGE\": \"No Mode or Event Provided in Request\"\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "bf6f444a-0667-48da-a85c-1621ca3780d0": {
+              "id": "bf6f444a-0667-48da-a85c-1621ca3780d0",
+              "type": "log",
+              "selected": false,
+              "x": 990,
+              "y": 275,
+              "ports": [
+                {
+                  "id": "clqxfpt5q00tt356mb7qzxp6w",
+                  "type": "default",
+                  "x": 981.48,
+                  "y": 306.7,
+                  "name": "clqxfpt5q00tu356m67agjyjl",
+                  "parentNode": "bf6f444a-0667-48da-a85c-1621ca3780d0",
+                  "links": [
+                    "e04eba9a-2606-49c4-9f3e-bf6295a289ac"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxfpt5q00tv356m6web5l1f",
+                  "type": "default",
+                  "x": 1136.48,
+                  "y": 306.7,
+                  "name": "clqxfpt5q00tw356mp5qcdsp1",
+                  "parentNode": "bf6f444a-0667-48da-a85c-1621ca3780d0",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"MODE CHANGE ERROR\"",
+                "level": "Warn",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log: NO MODE"
+            },
+            "e3a0a934-3d26-4967-89d5-b5fb63521d67": {
+              "id": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+              "type": "mutate",
+              "selected": true,
+              "x": 870,
+              "y": 530,
+              "ports": [
+                {
+                  "id": "clqxfx31w0109356mmduhtwxv",
+                  "type": "default",
+                  "x": 861.48,
+                  "y": 561.7,
+                  "name": "clqxfx31w010a356m1w2u7n6f",
+                  "parentNode": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+                  "links": [
+                    "9f87ff5a-af7d-4603-8d8e-88982c3ebf7c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxfx31w010b356mo1pbsgn8",
+                  "type": "default",
+                  "x": 1074.86,
+                  "y": 561.7,
+                  "name": "clqxfx31w010c356m98fokgi4",
+                  "parentNode": "e3a0a934-3d26-4967-89d5-b5fb63521d67",
+                  "links": [
+                    "58b2a05e-27fd-4d53-b3fa-6fa4996ba65a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  $R := $state.context.REQUEST.DATA;\n  $L := $state.context.LOCAL;\n  $wc := $R.workcenterId;\n  $change := $L.productionSetup.modeId != $R.modeId;\n  $m := $change ? $R.modeId : $L.productionSetup.modeId;\n  $e := $L.eventId;\n  \n  $shift := $executeTransform(\"getShift\",{ \"date\": $state.context.LOCAL.time, \"shiftGroupId\": $L.productionSetup.workcenter.shiftGroupId });\n  \n  \n  \n {\n   \"pspayload\": \n       {\n         \"where\": {\n            \"id\": $L.productionSetup.id\n          },\n          \"update\": {\n            \"modeId\": $m,\n            \"eventId\": $e\n          }\n        },\n    \"wchpayload\": {\n      \"create\": {\n        \"transactionTypeId\": $change ? \"Mode Change\" : \"Event Update\",\n        \"workcenterId\": $wc,\n        \"occurAt\":  $L.time,\n        \"creditedAt\":$shift.creditAt,\n        \"modeId\": $m,\n        \"eventId\": $e,\n        \"message\": $change ? \"Workcenter Mode Changed to \" & $m : \"Workcenter Event Update to \" & $e,\n        \"shiftId\": $shift.id\n\n      }\n    }\n  }\n)\n\n",
+                "mutation": "mutation ($pspayload:[ProductionSetupUpdatePayloadInput!]!,$wchpayload : [WorkcenterHistoryCreatePayloadInput!]!){\n  updateProductionSetup(payload:$pspayload) {\n    id\n  },\n  createWorkcenterHistory(payload : $wchpayload){\n    id\n  }\n}",
+                "nextNodes": [
+                  "8fa0178e-a417-484b-8de5-aa8b6501fec1"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": true,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Mutation: SETUP/WC HISTORY",
+              "note": "Update Production Setup with the Mode "
+            }
+          }
+        }
+      ],
+      "name": "Workcenter Mode Change",
+      "type": "System",
+      "version": "0.0.7",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

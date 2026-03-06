@@ -1,0 +1,43 @@
+{
+  "header": {
+    "id": "qualitySubjectListCombinations",
+    "name": "qualitySubjectListCombinations",
+    "description": "",
+    "active": true,
+    "deprecated": false
+  },
+  "version": {
+    "id": "cm7tnpgkx007c3j6jyym68mzr",
+    "number": "0.0.3",
+    "description": null,
+    "savedTransformId": "qualitySubjectListCombinations",
+    "scriptLanguageId": "JSONata",
+    "transform": "( \n  $subjectsInput := $$.subjects;\n  $subjectKeys := [\"productId\",\"processId\", \"productProcessId\", \"workcenterId\", \"lotControlId\"];\n\n  $subjectListCombinations := [\n    [\"productId\"],\n    [\"productId\", \"processId\"],\n    [\"productId\", \"workcenterId\"],\n    [\"productId\", \"processId\", \"workcenterId\"],\n    [\"processId\"],\n    [\"processId\", \"workcenterId\"],\n    [\"workcenterId\"],\n    [\"productProcessId\"],\n    [\"productProcessId\", \"workcenterId\"],\n    [\"lotControlId\"]\n  ];\n\n  $conditions := ( \n    $map($subjectListCombinations, function($combination) {\n      {\n        \"_and\": \n          [\n            $map($subjectKeys, function($key) {\n\n                {\n                  $key: $key in $combination and $isNotNilOrEmpty($lookup($subjectsInput, $key)) ? \n                    {\n                        \"_eq\": $lookup($subjectsInput, $key)\n                    } :\n                    {\n                        \"_isNull\": true\n                    } \n                }\n              } \n            ),\n            {\n              \"usable\":{\n                \"_eq\": true\n              }\n            }\n          ]\n      }\n    }) ~> $uniqBy(function($v){$v._and.**}) ~> $filter(function($v){$not($count($v._and.**._isNull) = 5)})\n  );\n\n  {\n      \"where\": {\n          \"_or\": $conditions\n      }\n  };\n)",
+    "inputSchema": {
+      "writeOnly": false,
+      "readOnly": false,
+      "deprecated": false,
+      "examples": [],
+      "minProperties": 1,
+      "maxProperties": 5,
+      "inputProps": {},
+      "type": "object",
+      "properties": {
+        "subjects": {
+          "type": "object",
+          "properties": {
+            "productId": {},
+            "processId": {},
+            "productProcessId": {},
+            "workcenterId": {},
+            "lotControlId": {}
+          }
+        }
+      },
+      "required": [
+        "subjects"
+      ]
+    },
+    "outputSchema": {}
+  }
+}

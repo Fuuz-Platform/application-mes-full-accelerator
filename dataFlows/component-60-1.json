@@ -1,0 +1,728 @@
+{
+  "header": {
+    "id": "inventoryDetailWebFlow",
+    "name": "Inventory Detail Web Flow",
+    "description": "Used in the Inventory Details Form",
+    "active": true,
+    "dataFlowTypeId": "Screen",
+    "moduleId": "inventory"
+  },
+  "version": {
+    "id": "clyhhvuuc09qm0198d9485vep",
+    "number": "0.0.9",
+    "description": "Adjusting any nodes mutating \"Inventory Transaction\"\n\nAdded field Custom Data\n\nSet CustomData to hold Claims as a value, This is done to add the userId to the record of each inventory. ",
+    "dataFlowId": "inventoryDetailWebFlow",
+    "flow": {
+      "id": "clyhhvuuc09qm0198d9485vep",
+      "name": "Inventory Detail Web Flow",
+      "type": "Screen",
+      "nodes": [
+        {
+          "id": "b2616394-a662-490f-8bb1-97a92ac7b762",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+              "3b016b0e-49a0-4fac-89e2-8a068be2cc72"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e5c75a90-5168-4295-a396-8d0067362284",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "5160a381-7737-47c4-abec-a745a48cac56",
+          "name": "Save Form Data: FORM1",
+          "type": "saveFormData",
+          "data": {
+            "screenElementTransform": "\"Form1\"",
+            "nextNodes": [
+              "e5c75a90-5168-4295-a396-8d0067362284"
+            ],
+            "saveAllTransform": "true"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+          "name": "Query: INV",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  }\n}",
+            "query": "query Query($where: InventoryWhereInput, $orderBy: [InventoryOrderByInput!], $first: Int, $after: String) {\n  inventory(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        number\n        active\n        quantity {\n          value\n          unitId\n        }\n        inventoryStatusId\n        locationId\n        lotId\n        masterInventoryId\n        productId\n        productStrategyProcessId\n        workOrderId\n        workOrderProcessId\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "f4fb2ae1-eaac-42a2-b26a-c94d88542948"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+          "name": "Mutate: INV TRX",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  $F :=  $components.Form1.data; \n  $inv := inventory.edges.node;\n\n  {\n    \"payload\": $inv.(\n      $id := id;\n      {\n        \"create\": $inv.{\n          \"sourceQuantity\": quantity,\n          \"customData\": $state.claims,\n          \"destinationQuantity\": {\n            \"value\":$F.quantity.value,\n            \"unitId\": quantity.unitId\n          },\n          \"sourceInventoryId\":id,\n          \"destinationInventoryId\":id,\n          \"sourceLocationId\": locationId,\n          \"destinationLocationId\": $F.location.id,\n          \"sourceInventoryStatusId\": inventoryStatusId,\n          \"destinationInventoryStatusId\": $F.inventoryStatus.id,\n          \"sourceLotId\": lotId,\n          \"destinationLotId\": $F.lot.id,\n          \"sourceProductId\":productId,\n          \"destinationProductId\":$F.product.id,\n          \"sourceProductStrategyProcessId\":productStrategyProcessId,\n          \"destinationProductStrategyProcessId\":$F.productStrategyProcess.id,\n          \"sourceWorkOrderProcessId\": workOrderProcessId,\n          \"destinationWorkOrderProcessId\": $F.workOrderProcess.id,\n          \"sourceMasterInventoryId\":masterInventory.id,\n           \"destinationMasterInventoryId\":$F.masterInventory.id, \n          \"statusId\":\"Review\",\n          \"adjustmentCodeId\": \"Manual\",\n          \"transactionTypeId\": \"InventoryAdminAdjustment\"\n        }\n      }\n    )\n  }\n\n)",
+            "mutation": "mutation Mutation($payload: [InventoryTransactionCreatePayloadInput!]!) {\n  createInventoryTransaction(payload: $payload) {\n    id\n  }\n}\n",
+            "nextNodes": [
+              "5160a381-7737-47c4-abec-a745a48cac56"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "3b016b0e-49a0-4fac-89e2-8a068be2cc72",
+          "name": "Execute Flow",
+          "type": "executeFlow",
+          "data": {
+            "flowId": "webFlowLog",
+            "payloadTransform": "{\n  \"FLOW\": \"Inventory Detail Web Flow\",\n  \"STATE\": $state,\n  \"$\":$\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.8"
+    },
+    "diagram": {
+      "id": "clyhhvuuc09qm0198d9485vep",
+      "offsetX": -185.02,
+      "offsetY": -242.57,
+      "zoom": 105.66,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "e361c652-eb3b-4bf3-aceb-422f74c20c08",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "e5e2081f-f3b4-4720-a1a6-12add1b059da": {
+              "points": [
+                {
+                  "id": "58f47385-de74-440b-9250-12e8fe090d4a",
+                  "type": "point",
+                  "x": 334,
+                  "y": 569.73
+                },
+                {
+                  "id": "d4f99e2d-af77-4016-b70e-e1f9c30a3edc",
+                  "type": "point",
+                  "x": 365,
+                  "y": 564.73
+                }
+              ],
+              "id": "e5e2081f-f3b4-4720-a1a6-12add1b059da",
+              "type": "default",
+              "selected": false,
+              "source": "b2616394-a662-490f-8bb1-97a92ac7b762",
+              "sourcePort": "clvmsq0dr0042356nietpoz73",
+              "target": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+              "targetPort": "clvmsqkbm004e356n16fmn26w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0d589f57-31e4-4c9c-980e-b925e72f457e": {
+              "points": [
+                {
+                  "id": "9541ce8c-39cb-42e6-8c44-7e311ed6261c",
+                  "type": "point",
+                  "x": 961.44,
+                  "y": 569.73
+                },
+                {
+                  "id": "a7b2a13f-50e9-40f9-9892-0e827354b41e",
+                  "type": "point",
+                  "x": 1020,
+                  "y": 569.73
+                }
+              ],
+              "id": "0d589f57-31e4-4c9c-980e-b925e72f457e",
+              "type": "default",
+              "selected": false,
+              "source": "5160a381-7737-47c4-abec-a745a48cac56",
+              "sourcePort": "clvmsq6vz004a356nalvkettj",
+              "target": "e5c75a90-5168-4295-a396-8d0067362284",
+              "targetPort": "clvmsq1ar0044356ndhdkal6a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "490c4d85-58cb-4930-a6a4-ef3cc4e579ea": {
+              "points": [
+                {
+                  "id": "75530a9a-fecd-465a-804b-19216b5c6b5f",
+                  "type": "point",
+                  "x": 719,
+                  "y": 569.73
+                },
+                {
+                  "id": "448527fd-df73-4f0f-ac93-a70e059db851",
+                  "type": "point",
+                  "x": 785,
+                  "y": 569.73
+                }
+              ],
+              "id": "490c4d85-58cb-4930-a6a4-ef3cc4e579ea",
+              "type": "default",
+              "selected": false,
+              "source": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+              "sourcePort": "clvmssckx006j356nf7lw0h13",
+              "target": "5160a381-7737-47c4-abec-a745a48cac56",
+              "targetPort": "clvmsq6vz0048356ni02esqbs",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9ca24157-d069-4a6c-a284-0f394453d48f": {
+              "points": [
+                {
+                  "id": "ae3a17fc-d956-45eb-8253-18682d7b1b14",
+                  "type": "point",
+                  "x": 519,
+                  "y": 564.73
+                },
+                {
+                  "id": "0ecd2fc9-7012-4fae-8e21-8bc9717c65a5",
+                  "type": "point",
+                  "x": 565,
+                  "y": 569.73
+                }
+              ],
+              "id": "9ca24157-d069-4a6c-a284-0f394453d48f",
+              "type": "default",
+              "selected": false,
+              "source": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+              "sourcePort": "clvmsqkbm004g356nniecs16h",
+              "target": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+              "targetPort": "clvmssckx006h356n5nlkeerc",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "770245a5-7a72-46da-a21b-8d47d2e4a9df": {
+              "points": [
+                {
+                  "id": "31cbea72-4f04-4bc4-b55c-2c16b5e9e1a4",
+                  "type": "point",
+                  "x": 334,
+                  "y": 569.73
+                },
+                {
+                  "id": "88a4fe42-bb1e-48b6-bd9d-e419ef4fc086",
+                  "type": "point",
+                  "x": 370,
+                  "y": 659.73
+                }
+              ],
+              "id": "770245a5-7a72-46da-a21b-8d47d2e4a9df",
+              "type": "default",
+              "selected": false,
+              "source": "b2616394-a662-490f-8bb1-97a92ac7b762",
+              "sourcePort": "clvmsq0dr0042356nietpoz73",
+              "target": "3b016b0e-49a0-4fac-89e2-8a068be2cc72",
+              "targetPort": "clvo1swcm00hc356nk92jw2ci",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2317747b-c038-46e7-8880-fe81a2e75ca0": {
+              "points": [
+                {
+                  "id": "47d6a7cb-e3fa-4826-9be8-c4cd24979d6e",
+                  "type": "point",
+                  "x": 328.98,
+                  "y": 494.73
+                },
+                {
+                  "id": "f3fcf741-4890-43ad-8fb7-b68fdb6a9deb",
+                  "type": "point",
+                  "x": 365,
+                  "y": 564.73
+                }
+              ],
+              "id": "2317747b-c038-46e7-8880-fe81a2e75ca0",
+              "type": "default",
+              "selected": false,
+              "source": "d514a0db-0985-4026-bdde-bca7e12b776d",
+              "sourcePort": "clvo1xl1n00l3356nrhg4mbwb",
+              "target": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+              "targetPort": "clvmsqkbm004e356n16fmn26w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "98621b96-a506-4011-9192-66dfaf61e2ca",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "b2616394-a662-490f-8bb1-97a92ac7b762": {
+              "id": "b2616394-a662-490f-8bb1-97a92ac7b762",
+              "type": "request",
+              "selected": false,
+              "x": 180,
+              "y": 530,
+              "ports": [
+                {
+                  "id": "clvmsq0dr0042356nietpoz73",
+                  "type": "default",
+                  "x": 326,
+                  "y": 561.73,
+                  "name": "clvmsq0dr0043356n9d29dmch",
+                  "parentNode": "b2616394-a662-490f-8bb1-97a92ac7b762",
+                  "links": [
+                    "e5e2081f-f3b4-4720-a1a6-12add1b059da",
+                    "770245a5-7a72-46da-a21b-8d47d2e4a9df"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+                  "3b016b0e-49a0-4fac-89e2-8a068be2cc72"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "e5c75a90-5168-4295-a396-8d0067362284": {
+              "id": "e5c75a90-5168-4295-a396-8d0067362284",
+              "type": "response",
+              "selected": false,
+              "x": 1020,
+              "y": 530,
+              "ports": [
+                {
+                  "id": "clvmsq1ar0044356ndhdkal6a",
+                  "type": "default",
+                  "x": 1012,
+                  "y": 561.73,
+                  "name": "clvmsq1ar0045356nzxocgar5",
+                  "parentNode": "e5c75a90-5168-4295-a396-8d0067362284",
+                  "links": [
+                    "0d589f57-31e4-4c9c-980e-b925e72f457e"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clvmsq1ar0046356nt6vs373w",
+                  "type": "default",
+                  "x": 1165.98,
+                  "y": 561.73,
+                  "name": "clvmsq1ar0047356nk0r994uh",
+                  "parentNode": "e5c75a90-5168-4295-a396-8d0067362284",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "5160a381-7737-47c4-abec-a745a48cac56": {
+              "id": "5160a381-7737-47c4-abec-a745a48cac56",
+              "type": "saveFormData",
+              "selected": false,
+              "x": 785,
+              "y": 530,
+              "ports": [
+                {
+                  "id": "clvmsq6vz0048356ni02esqbs",
+                  "type": "default",
+                  "x": 777,
+                  "y": 561.73,
+                  "name": "clvmsq6vz0049356n3d2j3lw8",
+                  "parentNode": "5160a381-7737-47c4-abec-a745a48cac56",
+                  "links": [
+                    "490c4d85-58cb-4930-a6a4-ef3cc4e579ea"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clvmsq6vz004a356nalvkettj",
+                  "type": "default",
+                  "x": 953.44,
+                  "y": 561.73,
+                  "name": "clvmsq6vz004b356ni425jb8y",
+                  "parentNode": "5160a381-7737-47c4-abec-a745a48cac56",
+                  "links": [
+                    "0d589f57-31e4-4c9c-980e-b925e72f457e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "screenElementTransform": "\"Form1\"",
+                "nextNodes": [
+                  "e5c75a90-5168-4295-a396-8d0067362284"
+                ],
+                "saveAllTransform": "true"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Save Form Data: FORM1"
+            },
+            "57ac0b73-6391-4bfb-94e4-5847dbbcbb50": {
+              "id": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+              "type": "query",
+              "selected": false,
+              "x": 365,
+              "y": 525,
+              "ports": [
+                {
+                  "id": "clvmsqkbm004e356n16fmn26w",
+                  "type": "default",
+                  "x": 357,
+                  "y": 556.73,
+                  "name": "clvmsqkbm004f356njxjz7lgl",
+                  "parentNode": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+                  "links": [
+                    "e5e2081f-f3b4-4720-a1a6-12add1b059da",
+                    "2317747b-c038-46e7-8880-fe81a2e75ca0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clvmsqkbm004g356nniecs16h",
+                  "type": "default",
+                  "x": 511,
+                  "y": 556.73,
+                  "name": "clvmsqkbm004h356nvig42puh",
+                  "parentNode": "57ac0b73-6391-4bfb-94e4-5847dbbcbb50",
+                  "links": [
+                    "9ca24157-d069-4a6c-a284-0f394453d48f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  }\n}",
+                "query": "query Query($where: InventoryWhereInput, $orderBy: [InventoryOrderByInput!], $first: Int, $after: String) {\n  inventory(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        number\n        active\n        quantity {\n          value\n          unitId\n        }\n        inventoryStatusId\n        locationId\n        lotId\n        masterInventoryId\n        productId\n        productStrategyProcessId\n        workOrderId\n        workOrderProcessId\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "f4fb2ae1-eaac-42a2-b26a-c94d88542948"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query: INV"
+            },
+            "f4fb2ae1-eaac-42a2-b26a-c94d88542948": {
+              "id": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+              "type": "mutate",
+              "selected": true,
+              "x": 565,
+              "y": 530,
+              "ports": [
+                {
+                  "id": "clvmssckx006h356n5nlkeerc",
+                  "type": "default",
+                  "x": 557,
+                  "y": 561.73,
+                  "name": "clvmssckx006i356nsl6h289p",
+                  "parentNode": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+                  "links": [
+                    "9ca24157-d069-4a6c-a284-0f394453d48f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clvmssckx006j356nf7lw0h13",
+                  "type": "default",
+                  "x": 711,
+                  "y": 561.73,
+                  "name": "clvmssckx006k356nevn9ze97",
+                  "parentNode": "f4fb2ae1-eaac-42a2-b26a-c94d88542948",
+                  "links": [
+                    "490c4d85-58cb-4930-a6a4-ef3cc4e579ea"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  $F :=  $components.Form1.data; \n  $inv := inventory.edges.node;\n\n  {\n    \"payload\": $inv.(\n      $id := id;\n      {\n        \"create\": $inv.{\n          \"sourceQuantity\": quantity,\n          \"customData\": $state.claims,\n          \"destinationQuantity\": {\n            \"value\":$F.quantity.value,\n            \"unitId\": quantity.unitId\n          },\n          \"sourceInventoryId\":id,\n          \"destinationInventoryId\":id,\n          \"sourceLocationId\": locationId,\n          \"destinationLocationId\": $F.location.id,\n          \"sourceInventoryStatusId\": inventoryStatusId,\n          \"destinationInventoryStatusId\": $F.inventoryStatus.id,\n          \"sourceLotId\": lotId,\n          \"destinationLotId\": $F.lot.id,\n          \"sourceProductId\":productId,\n          \"destinationProductId\":$F.product.id,\n          \"sourceProductStrategyProcessId\":productStrategyProcessId,\n          \"destinationProductStrategyProcessId\":$F.productStrategyProcess.id,\n          \"sourceWorkOrderProcessId\": workOrderProcessId,\n          \"destinationWorkOrderProcessId\": $F.workOrderProcess.id,\n          \"sourceMasterInventoryId\":masterInventory.id,\n           \"destinationMasterInventoryId\":$F.masterInventory.id, \n          \"statusId\":\"Review\",\n          \"adjustmentCodeId\": \"Manual\",\n          \"transactionTypeId\": \"InventoryAdminAdjustment\"\n        }\n      }\n    )\n  }\n\n)",
+                "mutation": "mutation Mutation($payload: [InventoryTransactionCreatePayloadInput!]!) {\n  createInventoryTransaction(payload: $payload) {\n    id\n  }\n}\n",
+                "nextNodes": [
+                  "5160a381-7737-47c4-abec-a745a48cac56"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate: INV TRX"
+            },
+            "3b016b0e-49a0-4fac-89e2-8a068be2cc72": {
+              "id": "3b016b0e-49a0-4fac-89e2-8a068be2cc72",
+              "type": "executeFlow",
+              "selected": false,
+              "x": 370,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clvo1swcm00hc356nk92jw2ci",
+                  "type": "default",
+                  "x": 362,
+                  "y": 651.73,
+                  "name": "clvo1swcm00hd356npcdnor5e",
+                  "parentNode": "3b016b0e-49a0-4fac-89e2-8a068be2cc72",
+                  "links": [
+                    "770245a5-7a72-46da-a21b-8d47d2e4a9df"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clvo1swcm00he356nsa23nqn6",
+                  "type": "default",
+                  "x": 516,
+                  "y": 651.73,
+                  "name": "clvo1swcm00hf356nvie5lwot",
+                  "parentNode": "3b016b0e-49a0-4fac-89e2-8a068be2cc72",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "flowId": "webFlowLog",
+                "payloadTransform": "{\n  \"FLOW\": \"Inventory Detail Web Flow\",\n  \"STATE\": $state,\n  \"$\":$\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Execute Flow"
+            },
+            "d514a0db-0985-4026-bdde-bca7e12b776d": {
+              "id": "d514a0db-0985-4026-bdde-bca7e12b776d",
+              "type": "debugSource",
+              "selected": false,
+              "x": 175,
+              "y": 455,
+              "ports": [
+                {
+                  "id": "clvo1xl1n00l3356nrhg4mbwb",
+                  "type": "default",
+                  "x": 320.98,
+                  "y": 486.73,
+                  "name": "clvo1xl1n00l4356nqy2cpfr4",
+                  "parentNode": "d514a0db-0985-4026-bdde-bca7e12b776d",
+                  "links": [
+                    "2317747b-c038-46e7-8880-fe81a2e75ca0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "id": "S0000000162"
+                    }
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "57ac0b73-6391-4bfb-94e4-5847dbbcbb50"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Inventory Detail Web Flow",
+      "type": "Screen",
+      "version": "0.0.8",
+      "walkthrough": {
+        "steps": [],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

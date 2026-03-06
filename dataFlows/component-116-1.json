@@ -1,0 +1,2801 @@
+{
+  "header": {
+    "id": "screenGenerationFilterCreate",
+    "name": "Screen Generation Filter Create",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "ckylwikav03ad0j8n5ov1h5im",
+    "number": "0.0.2",
+    "description": "",
+    "dataFlowId": "screenGenerationFilterCreate",
+    "flow": {
+      "id": "ckylwikav03ad0j8n5ov1h5im",
+      "name": "Screen Generation Filter Create",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "126b5944-6475-4529-9fc6-7e0757866569",
+          "name": "Get Where Model Fields",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "fec85ade-f689-4c2d-9071-a8daa52c6b16"
+            ],
+            "transform": "(\n  $whereModel := $executeTransform(\"getModelByName\", {\n    \"api\": $state.context.parameters.api,\n    \"name\":$state.context.component.model.name & \"WhereInput\"\n  });\n  \n  $fields := $whereModel ? $whereModel.fields : [];\n  \n  $filter($fields, function($v, $i, $a) {\n    $substring($v.name, 0, 1) != \"_\"\n  })\n  ~> \n  $filter(function($v, $i, $a){\n    $v.name != \"dataChanges\"\n  })\n)"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+          "name": "Broadcast",
+          "type": "broadcast",
+          "data": {
+            "nextNodes": [
+              "4502cb18-02a5-4258-aece-7ed26aa5f7dc"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+          "name": "Parse Filter Type String",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $baseTypeMatch := $match(type, /^(\\w+?)(PredicateInput|RelationWhereInput|WhereInput)$/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  {\n    \"field\": $,\n    \"baseType\": $baseType,\n    \"isRelation\": $exists($match(type, /^\\w+RelationWhereInput$/)),\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    })\n  }\n)",
+            "nextNodes": [
+              "1579af87-79de-4449-93b1-d17a39f6c2bf"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+          "name": "Filter Type",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Status Field",
+                "transform": "$match(baseType, /\\w+Status$/)",
+                "nextNodes": [
+                  "a5f75607-2d6e-4f21-bf2a-a2543006d6e5"
+                ]
+              },
+              {
+                "nextNodes": [
+                  "ef62344f-5d08-47b0-bd68-143006fd3c20"
+                ],
+                "name": "Reference",
+                "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\""
+              },
+              {
+                "name": "Else (Scalars)",
+                "transform": "true",
+                "nextNodes": [
+                  "176fdee5-2102-4d12-8519-2604456845bd"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "176fdee5-2102-4d12-8519-2604456845bd",
+          "name": "Type is Scalar",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $fieldName := field.name;\n  $dataPath := \"filter.\" & $state.context.(\n    $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n  ) & $fieldName;\n  $label := $startCase($fieldName);\n\n  $scalarMap := {\n    \"String\": {\n      \"type\": $fieldName = $state.context.component.parameterField ? 'parameter' : 'text',\n      \"parameterName\": $fieldName = $state.context.component.parameterField ? 'id' : undefined,\n      \"dataPath\": $dataPath & ($fieldName = $state.context.component.parameterField ? \"._eq\" : \"._contains\")\n    },\n    \"Email\": {\n      \"type\": 'text',\n      \"dataPath\": $dataPath & \"._contains\"\n    },\n    \"Boolean\": {\n      \"type\": 'checkbox'\n    },\n    \"DateTime\": {\n      \"type\": 'datetimeRange',\n      \"dataPath\": $dataPath\n    },\n    \"Int\": [{\n      \"name\": $fieldName & '.min',\n      \"label\": $label & ' Min',\n      \"dataPath\": $dataPath & '._gte',\n      \"type\": 'integer'\n    }, {\n      \"name\": $fieldName & '.max',\n      \"label\": $label & ' Max',\n      \"dataPath\": $dataPath & '._lte',\n      \"type\": 'integer'\n    }],\n    \"Float\": [{\n      \"name\": $fieldName & '.min',\n      \"label\": $label & ' Min',\n      \"dataPath\": $dataPath & '._gte',\n      \"type\": 'float'\n    }, {\n      \"name\": $fieldName & '.max',\n      \"label\": $label & ' Max',\n      \"dataPath\": $dataPath & '._lte',\n      \"type\": 'float'\n    }],\n    \"Measure\": [\n      {\n        \"name\": $fieldName & '.min',\n        \"label\": $label & ' Min',\n        \"dataPath\": $dataPath & '.value._gte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.max',\n        \"label\": $label & ' Max',\n        \"dataPath\": $dataPath & '.value._lte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.unit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.unit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.unit.id._in'\n        },\n        \"label\": $label & ' Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      }\n    ],\n    \"RatioMeasure\": [\n      {\n        \"name\": $fieldName & '.min',\n        \"label\": $label & ' Min',\n        \"dataPath\": $dataPath & '.numeratorValue._gte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.max',\n        \"label\": $label & ' Max',\n        \"dataPath\": $dataPath & '.numeratorValue._lte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.numeratorUnit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.numeratorUnit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.numeratorUnit.id._in'\n        },\n        \"label\": $label & ' Numerator Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      },\n      {\n        \"name\": $fieldName & '.denominatorunit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.denominatorunit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.denominatorunit.id._in'\n        },\n        \"label\": $label & ' Denominator Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      }\n    ]\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $map([$format ? $format : {}], function($v) {\n    $merge([\n      { \n        \"name\": $fieldName,\n        \"description\": field.description,\n        \"label\": $label,\n        \"type\": \"text\",\n        \"dataPath\": $dataPath & '._eq'\n      },\n      $v    \n    ])\n  })\n)",
+            "nextNodes": [
+              "ad458cb3-004b-4471-a852-3ddecc099736"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+          "name": "Type is Status",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $activeFilter := function($fields){\n    (\n      $filteredFields := $filter($fields,function($v){\n        $contains($v.name, \"active\") and $v.type = \"Boolean!\" ? true : false\n      });\n\n      $count($filteredFields) = 0 ? undefined :\n      $count($filteredFields) = 1 ? {\n        $filteredFields.name : {\n          \"_eq\": true\n        }\n      } :\n      $count($filteredFields) > 1 ? undefined\n    )\n  };\n\n  $additionalFilter := $activeFilter(baseTypeModel.fields);\n\n  {\n    \"name\": field.name,\n    \"description\": field.description,\n    \"label\": $startCase(field.name),\n    \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"type\": 'combobox',\n    \"dataPath\": field.name,\n    \"target\": {\n      \"dataPath\": \"filter.\" & \n        $state.context.(\n          $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n        ) & \n        field.name & \".id._in\"\n    },\n    \"multiselect\": true,\n    \"api\": $state.context.parameters.api,\n    \"queryType\": baseType,\n    \"additionalFilter\":  $additionalFilter\n  }\n)\n\n/* {\n  \"name\": field.name,\n  \"description\": field.description,\n  \"label\": $startCase(field.name),\n  \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"type\": 'combobox',\n  \"dataPath\": field.name,\n  \"target\": {\n    \"dataPath\": \"filter.\" & field.name & \".id._in\"\n  },\n  \"multiselect\": true,\n  \"api\": $state.context.parameters.api,\n  \"queryType\": baseType,\n  \"additionalFilter\": {\n    \"active\": {\n      \"_eq\": true\n    }\n  }\n} */",
+            "nextNodes": [
+              "ad458cb3-004b-4471-a852-3ddecc099736"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+          "name": "Type is Reference",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"name\": field.name,\n  \"description\": field.description,\n  \"label\": $startCase(field.name),\n  \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"labelPath\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"additionalFields\": baseTypeModel.metadata.mfgx.labelField,\n  \"type\": 'combobox',\n  \"dataPath\": field.name,\n  \"target\": {\n    \"dataPath\": \"filter.\" & \n      $state.context.(\n        $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n      ) & \n      $state.context.component.model.fields[name = $$.field.name].metadata.mfgx.relation.fields.from & \n      (isRelation ? '._some' : '._in')\n  },\n  \"multiselect\": true,\n  \"api\": $state.context.parameters.api,\n  \"queryType\": baseType\n}",
+            "nextNodes": [
+              "ad458cb3-004b-4471-a852-3ddecc099736"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "ad458cb3-004b-4471-a852-3ddecc099736",
+          "name": "Combine (table, filter)",
+          "type": "combine",
+          "data": {
+            "executionTimeout": 60,
+            "payloadCombinationStrategy": "index",
+            "contextCombinationStrategy": "first",
+            "nextNodes": [
+              "d5914198-e4df-42be-93e3-aa2742ee1dfb"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "dd6bf010-42a9-47cf-9556-bda1fb4ddf01",
+          "name": "Request (Filter Create)",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "14e265da-dc51-4fa5-9461-886ab3ef8af9"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+          "name": "Filter Create Module",
+          "type": "when",
+          "data": {
+            "nextNodes": [
+              "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0"
+            ],
+            "transform": "screenGeneration.module = 'filterCreate'"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab"
+            ],
+            "transform": "{\n  \"isJoinTable\": payload.component.name ~> $contains('JoinTable'),\n  \"component\": payload.component,\n  \"parameters\": payload.parameters\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+          "name": "If Join Table",
+          "type": "ifElse",
+          "data": {
+            "onFalseNextNodes": [
+              "126b5944-6475-4529-9fc6-7e0757866569"
+            ],
+            "onTrueNextNodes": [
+              "77befae3-1e1d-4d44-8594-fa75735afc43"
+            ],
+            "transform": "$state.context.isJoinTable"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "77befae3-1e1d-4d44-8594-fa75735afc43",
+          "name": "Transition",
+          "type": "echo",
+          "data": {
+            "pauseExecution": false,
+            "nextNodes": [
+              "f1cac122-598d-49fe-b85b-b10fb5995347"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+          "name": "Get Where Model Fields",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "fec85ade-f689-4c2d-9071-a8daa52c6b16"
+            ],
+            "transform": "(\n  $whereModel := $executeTransform(\"getModelByName\", {\n    \"api\": $state.context.parameters.api,\n    \"name\": type & \"WhereInput\"\n  });\n  \n  $fields := $whereModel ? $whereModel.fields : [];\n  \n  $filter($fields, function($v, $i, $a) {\n    $substring($v.name, 0, 1) != \"_\"\n  })\n  ~> \n  $filter(function($v, $i, $a){\n    $v.name != \"dataChanges\"\n  })\n)"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "f1cac122-598d-49fe-b85b-b10fb5995347",
+          "name": "Project Join Model",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $standardFields := [\n    'id',\n    'createdAt',\n    'createdByUser',\n    'createdByUserId',\n    'dataChanges',\n    'updatedAt',\n    'updatedByUser',\n    'updatedByUserId',\n    $state.context.component.parameterField\n  ];\n\n  $getFieldToExpand := function( $model) {(\n\n    $joinField := $filter($model.fields, function($v) {\n      $not($exists($standardFields[$=$v.name])) and \n      ($v.type = 'ID')\n    });\n    \n    $count($joinField) > 1 ? $throw('Cannot determine a single join field');\n    \n    $expandField := $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $joinField.name\n    ];\n    \n    $isNil($expandField) ?\n      $throw('Error generating the columns of the linked type.  \n      The field, ' & $joinField.name & ', does not realize to a type.') :\n      $expandField;\n\n  )};\n  \n  $fieldToExpand := payload.component.model \n  ~> $getFieldToExpand;\n  \n  $baseTypeMatch := $match($fieldToExpand.type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  $getBackReference := function( $model ){\n    $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $state.context.component.parameterField\n    ]\n  };\n  \n  $backReference := payload.component.model\n  ~> $getBackReference;\n  \n  {\n    \"name\": $fieldToExpand.name,\n    \"type\": $baseType,\n    \"backReference\": $backReference\n  }\n)",
+            "nextNodes": [
+              "b7119a9f-2d1a-46ba-80fe-f736f1547daa"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "ffa0ed66-959f-4505-9386-43cc1ff07935"
+            ],
+            "transform": "{\n  \"joinTablePrefix\": name,\n  \"backReference\": backReference\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+          "name": "If Join Table",
+          "type": "ifElse",
+          "data": {
+            "onFalseNextNodes": [
+              "31fd1d31-1296-4b92-92a2-fc84b51d5aec"
+            ],
+            "onTrueNextNodes": [
+              "44bc77bb-6150-4788-a201-bbe6d5ead7a7"
+            ],
+            "transform": "$state.context.isJoinTable"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+          "name": "Add filter for join table",
+          "type": "transform",
+          "data": {
+            "transform": "$append($state.context.backReference.{\n  \"type\": \"parameter\",\n  \"parameterName\": \"id\",\n  \"dataPath\": \"filter.\" & name & \".id._eq\",\n  \"name\": \"parametricField\"\n},$)",
+            "nextNodes": [
+              "31fd1d31-1296-4b92-92a2-fc84b51d5aec"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        }
+      ],
+      "version": "0.0.1"
+    },
+    "diagram": {
+      "id": "ckylwikav03ad0j8n5ov1h5im",
+      "offsetX": -16.97,
+      "offsetY": 361.46,
+      "zoom": 21.67,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "2049cb88-795a-4e68-93e9-cfc8b4291503",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "ed236b86-5944-4301-bca8-edc7c08eebda": {
+              "points": [
+                {
+                  "id": "471c8129-53af-48c4-a7c2-2bff407fd2f3",
+                  "type": "point",
+                  "x": 1466.25,
+                  "y": 655.56
+                },
+                {
+                  "id": "169daeee-4f11-4e5a-a0ca-590af2440259",
+                  "type": "point",
+                  "x": 1498,
+                  "y": 655.56
+                }
+              ],
+              "id": "ed236b86-5944-4301-bca8-edc7c08eebda",
+              "type": "default",
+              "source": "126b5944-6475-4529-9fc6-7e0757866569",
+              "sourcePort": "ckydgljc7000i3865a7wk7eow",
+              "target": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+              "targetPort": "ckydgljc8000s3865sp9d52g6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "edaecce5-a418-41ab-9e2a-ca317680397d": {
+              "points": [
+                {
+                  "id": "4b847afc-3789-4b5b-8109-ebaa81b2e9e7",
+                  "type": "point",
+                  "x": 1652,
+                  "y": 655.56
+                },
+                {
+                  "id": "1a24c580-bb4c-43d0-b25f-2096d4d76d7d",
+                  "type": "point",
+                  "x": 1683,
+                  "y": 655.56
+                }
+              ],
+              "id": "edaecce5-a418-41ab-9e2a-ca317680397d",
+              "type": "default",
+              "source": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+              "sourcePort": "ckydgljc9000u3865cv9520s8",
+              "target": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+              "targetPort": "ckydgljca00143865athz7ce4",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7f94f308-d901-4e46-a0f5-cb3f3e49109d": {
+              "points": [
+                {
+                  "id": "4fcfb048-bb69-41f7-8fef-cf2fa3bd1315",
+                  "type": "point",
+                  "x": 1853.06,
+                  "y": 655.56
+                },
+                {
+                  "id": "d7e10b4e-5a7b-4041-8ffa-d24cd9c31a40",
+                  "type": "point",
+                  "x": 1953,
+                  "y": 630.56
+                }
+              ],
+              "id": "7f94f308-d901-4e46-a0f5-cb3f3e49109d",
+              "type": "default",
+              "source": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+              "sourcePort": "ckydgljca0016386529q69kod",
+              "target": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+              "targetPort": "ckydgljcb001o3865zrw2qer6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ae8a167e-6650-4aa8-857c-7d0db2011cb6": {
+              "points": [
+                {
+                  "id": "c3b944fb-d72e-4d0e-8e6f-09dc616e8f42",
+                  "type": "point",
+                  "x": 2115.73,
+                  "y": 630.56
+                },
+                {
+                  "id": "2769abb4-bb71-4ee5-afa4-e2dd39e22d76",
+                  "type": "point",
+                  "x": 2193,
+                  "y": 775.56
+                }
+              ],
+              "id": "ae8a167e-6650-4aa8-857c-7d0db2011cb6",
+              "type": "default",
+              "source": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+              "sourcePort": "ckydgljcb001q3865j7lnp0gx",
+              "target": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+              "targetPort": "ckydgljce002g3865w8r180xn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "cf099d38-6d23-4061-a517-7fa7d0caa2c3": {
+              "points": [
+                {
+                  "id": "b64f4095-f0ed-4712-9960-7f43380117d3",
+                  "type": "point",
+                  "x": 2115.73,
+                  "y": 655.72
+                },
+                {
+                  "id": "2d3be093-b2f6-489e-a565-82420ef90a38",
+                  "type": "point",
+                  "x": 2193,
+                  "y": 640.56
+                }
+              ],
+              "id": "cf099d38-6d23-4061-a517-7fa7d0caa2c3",
+              "type": "default",
+              "source": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+              "sourcePort": "ckydgljcb001s386563sh0c5g",
+              "target": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+              "targetPort": "ckydgljcg002s3865hhhn8276",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6852eebf-9aaa-44b7-a30a-136c2fa9fcbd": {
+              "points": [
+                {
+                  "id": "636e5344-832c-47cc-b503-8494d9ac5996",
+                  "type": "point",
+                  "x": 2115.73,
+                  "y": 680.87
+                },
+                {
+                  "id": "61f0b409-7135-4c66-b469-cca6fc9defa9",
+                  "type": "point",
+                  "x": 2193,
+                  "y": 470.56
+                }
+              ],
+              "id": "6852eebf-9aaa-44b7-a30a-136c2fa9fcbd",
+              "type": "default",
+              "source": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+              "sourcePort": "ckydgljcb001u3865wcu815v9",
+              "target": "176fdee5-2102-4d12-8519-2604456845bd",
+              "targetPort": "ckydgljcd00243865byfkx1dv",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2f33afb3-f721-4907-af11-334937807a5f": {
+              "points": [
+                {
+                  "id": "3bf219da-5d11-4592-a091-65ba97c13f79",
+                  "type": "point",
+                  "x": 2347,
+                  "y": 470.56
+                },
+                {
+                  "id": "ecaf456f-d09e-42aa-b5be-602b523240c8",
+                  "type": "point",
+                  "x": 2433,
+                  "y": 710.56
+                }
+              ],
+              "id": "2f33afb3-f721-4907-af11-334937807a5f",
+              "type": "default",
+              "source": "176fdee5-2102-4d12-8519-2604456845bd",
+              "sourcePort": "ckydgljcd00263865mr3urafu",
+              "target": "ad458cb3-004b-4471-a852-3ddecc099736",
+              "targetPort": "ckydgljci00343865byb3br3e",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8602a812-3ba8-4689-83c0-8cc6a4a51409": {
+              "points": [
+                {
+                  "id": "959e6af8-05f2-4977-8df8-bd81e22f0c77",
+                  "type": "point",
+                  "x": 2347,
+                  "y": 775.56
+                },
+                {
+                  "id": "1c575354-8c48-4e08-aab8-4cbdbc5bae77",
+                  "type": "point",
+                  "x": 2433,
+                  "y": 710.56
+                }
+              ],
+              "id": "8602a812-3ba8-4689-83c0-8cc6a4a51409",
+              "type": "default",
+              "source": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+              "sourcePort": "ckydgljce002i3865iqgmqfza",
+              "target": "ad458cb3-004b-4471-a852-3ddecc099736",
+              "targetPort": "ckydgljci00343865byb3br3e",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "32ed7b5d-a1d2-4834-9188-f3a3b2667431": {
+              "points": [
+                {
+                  "id": "74d45446-b8c6-441d-b3a1-375ec6a998bd",
+                  "type": "point",
+                  "x": 2347,
+                  "y": 640.56
+                },
+                {
+                  "id": "caae3aae-6e87-47f7-955b-e64d9fcbbae2",
+                  "type": "point",
+                  "x": 2433,
+                  "y": 710.56
+                }
+              ],
+              "id": "32ed7b5d-a1d2-4834-9188-f3a3b2667431",
+              "type": "default",
+              "source": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+              "sourcePort": "ckydgljcg002u3865k1w1zzbd",
+              "target": "ad458cb3-004b-4471-a852-3ddecc099736",
+              "targetPort": "ckydgljci00343865byb3br3e",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b2c74cbf-6278-4927-bbd6-05523deccb9e": {
+              "points": [
+                {
+                  "id": "5c6a8557-5295-4d43-b72d-50d7cdf3c074",
+                  "type": "point",
+                  "x": 2595.09,
+                  "y": 710.56
+                },
+                {
+                  "id": "53ca142a-9e26-4852-943f-ad5fc43b597a",
+                  "type": "point",
+                  "x": 2643,
+                  "y": 705.56
+                }
+              ],
+              "id": "b2c74cbf-6278-4927-bbd6-05523deccb9e",
+              "type": "default",
+              "source": "ad458cb3-004b-4471-a852-3ddecc099736",
+              "sourcePort": "ckydgljci003638650dxt94fo",
+              "target": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+              "targetPort": "ckydgljd8006w3865pw6o3z86",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4b53cb25-a9c5-42e0-9cdb-aa6281cd3c6d": {
+              "points": [
+                {
+                  "id": "cabefff2-1e84-431d-9f50-1e605eb65c8d",
+                  "type": "point",
+                  "x": 509.55,
+                  "y": 655.56
+                },
+                {
+                  "id": "0e7fed2c-9c18-4a00-a7a6-ad10939e90a0",
+                  "type": "point",
+                  "x": 608,
+                  "y": 655.56
+                }
+              ],
+              "id": "4b53cb25-a9c5-42e0-9cdb-aa6281cd3c6d",
+              "type": "default",
+              "source": "dd6bf010-42a9-47cf-9556-bda1fb4ddf01",
+              "sourcePort": "ckydgljck003c38657eny473f",
+              "target": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+              "targetPort": "ckydgljcn003m3865fmtb0jdp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "94be1871-cc04-43e4-927d-991b04f25f51": {
+              "points": [
+                {
+                  "id": "0d024b31-addb-4ed4-b9e3-00f27b0cffa4",
+                  "type": "point",
+                  "x": 762.19,
+                  "y": 655.56
+                },
+                {
+                  "id": "187cd025-f846-4121-aaf7-d3b83b6cec07",
+                  "type": "point",
+                  "x": 818,
+                  "y": 655.56
+                }
+              ],
+              "id": "94be1871-cc04-43e4-927d-991b04f25f51",
+              "type": "default",
+              "source": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+              "sourcePort": "ckydgljcn003o3865bwabhsp6",
+              "target": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+              "targetPort": "ckydgljco003y3865fia6uzbp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "41ef8fa4-462f-4c25-99c3-3e0349783c39": {
+              "points": [
+                {
+                  "id": "80f07c06-1a20-4949-91a4-137c549798f9",
+                  "type": "point",
+                  "x": 972,
+                  "y": 655.56
+                },
+                {
+                  "id": "cb7dfbb4-5b98-4f46-94f0-60548133fc49",
+                  "type": "point",
+                  "x": 1018,
+                  "y": 655.56
+                }
+              ],
+              "id": "41ef8fa4-462f-4c25-99c3-3e0349783c39",
+              "type": "default",
+              "source": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+              "sourcePort": "ckydgljco00403865gp96dbie",
+              "target": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+              "targetPort": "ckydgljcx00523865405r2hfx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "60493a60-8d57-4757-aeb5-9f2354e4f872": {
+              "points": [
+                {
+                  "id": "fef02b54-a2fc-4e6c-8add-023185b28fc5",
+                  "type": "point",
+                  "x": 498.98,
+                  "y": 544.72
+                },
+                {
+                  "id": "e8dbd62b-ccb5-47ec-8c67-f4f1c8b59af3",
+                  "type": "point",
+                  "x": 608,
+                  "y": 655.56
+                }
+              ],
+              "id": "60493a60-8d57-4757-aeb5-9f2354e4f872",
+              "type": "default",
+              "source": "2d2a1651-ad04-4f28-a5f5-91166311d95e",
+              "sourcePort": "ckydgljcs004i3865fr7pefb5",
+              "target": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+              "targetPort": "ckydgljcn003m3865fmtb0jdp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8c161839-3202-4e25-85ac-0c0674a8abf4": {
+              "points": [
+                {
+                  "id": "b2625c9c-3d4c-4170-940b-5e61ffbc6137",
+                  "type": "point",
+                  "x": 506.98,
+                  "y": 765.56
+                },
+                {
+                  "id": "f5d4295e-86e7-435b-b9ba-564c9ce50ecc",
+                  "type": "point",
+                  "x": 608,
+                  "y": 655.56
+                }
+              ],
+              "id": "8c161839-3202-4e25-85ac-0c0674a8abf4",
+              "type": "default",
+              "source": "4585a01e-05ed-4513-9395-d52dfdce9a5d",
+              "sourcePort": "ckydgljcu004o3865oxut2xhf",
+              "target": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+              "targetPort": "ckydgljcn003m3865fmtb0jdp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8f7f7276-a51b-45ee-8973-e1aca68e4e4c": {
+              "points": [
+                {
+                  "id": "a8b066ba-46b6-4900-9145-7ca8d84174cf",
+                  "type": "point",
+                  "x": 1171.98,
+                  "y": 655.56
+                },
+                {
+                  "id": "55c4d54a-0939-43eb-a1cd-276b7993c219",
+                  "type": "point",
+                  "x": 963,
+                  "y": 970.56
+                }
+              ],
+              "id": "8f7f7276-a51b-45ee-8973-e1aca68e4e4c",
+              "type": "default",
+              "source": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+              "sourcePort": "ckydgljcx00543865do3zk4w6",
+              "target": "77befae3-1e1d-4d44-8594-fa75735afc43",
+              "targetPort": "ckydgljcz005g3865saeoa46t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1b083ec4-dfdb-49b5-a900-cb98bcdcf995": {
+              "points": [
+                {
+                  "id": "c1f95001-b717-458c-8376-18954f146dae",
+                  "type": "point",
+                  "x": 1171.98,
+                  "y": 680.72
+                },
+                {
+                  "id": "a10c2810-7ab1-4550-9f3f-1b58dd3ead88",
+                  "type": "point",
+                  "x": 1293,
+                  "y": 655.56
+                }
+              ],
+              "id": "1b083ec4-dfdb-49b5-a900-cb98bcdcf995",
+              "type": "default",
+              "source": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+              "sourcePort": "ckydgljcx005638652d9geac7",
+              "target": "126b5944-6475-4529-9fc6-7e0757866569",
+              "targetPort": "ckydgljc7000g3865r45156oe",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1c5f90a5-a1c8-41ad-ac08-53aa693be65a": {
+              "points": [
+                {
+                  "id": "6c3a1fe8-7237-4b8e-bd8e-d6770f20f221",
+                  "type": "point",
+                  "x": 1116.98,
+                  "y": 970.56
+                },
+                {
+                  "id": "5e91ccd5-080e-4d51-a4c3-8de2d8e09639",
+                  "type": "point",
+                  "x": 1153,
+                  "y": 970.56
+                }
+              ],
+              "id": "1c5f90a5-a1c8-41ad-ac08-53aa693be65a",
+              "type": "default",
+              "source": "77befae3-1e1d-4d44-8594-fa75735afc43",
+              "sourcePort": "ckydgljcz005i38655sz08zyo",
+              "target": "f1cac122-598d-49fe-b85b-b10fb5995347",
+              "targetPort": "ckydgljd40064386504etrsiu",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2a5e986b-d7c5-49d8-871e-ca82cacfaf59": {
+              "points": [
+                {
+                  "id": "b232da09-e49a-4205-865e-b1695b846965",
+                  "type": "point",
+                  "x": 1731.25,
+                  "y": 970.56
+                },
+                {
+                  "id": "33ae3f01-edc8-4b5b-8dea-533e66a275cd",
+                  "type": "point",
+                  "x": 1498,
+                  "y": 655.56
+                }
+              ],
+              "id": "2a5e986b-d7c5-49d8-871e-ca82cacfaf59",
+              "type": "default",
+              "source": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+              "sourcePort": "ckydgljd1005u3865glkv7zkq",
+              "target": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+              "targetPort": "ckydgljc8000s3865sp9d52g6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5f3c5724-a650-4056-8592-2ad8ae2f34c8": {
+              "points": [
+                {
+                  "id": "8ac4f436-fdd4-436e-8856-fb72e8da5eb5",
+                  "type": "point",
+                  "x": 1307,
+                  "y": 970.56
+                },
+                {
+                  "id": "f8b92174-4fb2-45b1-b444-d4fa3e36cc79",
+                  "type": "point",
+                  "x": 1358,
+                  "y": 970.56
+                }
+              ],
+              "id": "5f3c5724-a650-4056-8592-2ad8ae2f34c8",
+              "type": "default",
+              "source": "f1cac122-598d-49fe-b85b-b10fb5995347",
+              "sourcePort": "ckydgljd400663865xpjoe2is",
+              "target": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+              "targetPort": "ckydgljd6006g38658za7a0rn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "415d292a-96bc-41d6-bc26-41ee6aab20cb": {
+              "points": [
+                {
+                  "id": "6b92b057-2ee1-4158-b3b5-bb4916e2835b",
+                  "type": "point",
+                  "x": 1512,
+                  "y": 970.56
+                },
+                {
+                  "id": "430c5be6-4257-4b63-ba83-d76aa8fe0dc0",
+                  "type": "point",
+                  "x": 1558,
+                  "y": 970.56
+                }
+              ],
+              "id": "415d292a-96bc-41d6-bc26-41ee6aab20cb",
+              "type": "default",
+              "source": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+              "sourcePort": "ckydgljd6006i3865p5igunyz",
+              "target": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+              "targetPort": "ckydgljd1005s3865owylyu3m",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5e248281-511a-48f5-9acc-c7c4481edb2d": {
+              "points": [
+                {
+                  "id": "599cc32e-5e22-419b-9cac-d2a3a61dbe8b",
+                  "type": "point",
+                  "x": 2796.98,
+                  "y": 705.56
+                },
+                {
+                  "id": "9f1a646c-ed76-4d80-b1bb-dc0c356d1fce",
+                  "type": "point",
+                  "x": 2848,
+                  "y": 655.56
+                }
+              ],
+              "id": "5e248281-511a-48f5-9acc-c7c4481edb2d",
+              "type": "default",
+              "source": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+              "sourcePort": "ckydgljd8006y386519wbm6dn",
+              "target": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+              "targetPort": "ckydgljd9007a3865ihpp1ynz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "841f607d-32b1-4cb3-a103-3925892b5726": {
+              "points": [
+                {
+                  "id": "3e6fa45e-d746-4365-9fa5-2d940f18dff9",
+                  "type": "point",
+                  "x": 2796.98,
+                  "y": 730.72
+                },
+                {
+                  "id": "9a348653-a5f8-403b-87da-36c95597dba4",
+                  "type": "point",
+                  "x": 3063,
+                  "y": 730.56
+                }
+              ],
+              "id": "841f607d-32b1-4cb3-a103-3925892b5726",
+              "type": "default",
+              "source": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+              "sourcePort": "ckydgljd800703865lwobn9ba",
+              "target": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+              "targetPort": "ckydgljcq004a3865ifajszqp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d5140f49-45a9-4586-9076-37de842fee6a": {
+              "points": [
+                {
+                  "id": "99fc0439-0661-4608-8907-ab6fb4e0d219",
+                  "type": "point",
+                  "x": 3013.56,
+                  "y": 655.56
+                },
+                {
+                  "id": "f613f03e-3e52-4415-88fd-c9e77f38d4b3",
+                  "type": "point",
+                  "x": 3063,
+                  "y": 730.56
+                }
+              ],
+              "id": "d5140f49-45a9-4586-9076-37de842fee6a",
+              "type": "default",
+              "source": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+              "sourcePort": "ckydgljd9007c3865umuurqsz",
+              "target": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+              "targetPort": "ckydgljcq004a3865ifajszqp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "fce5c4d2-21c6-42da-ac24-0f556c643ba7",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "126b5944-6475-4529-9fc6-7e0757866569": {
+              "id": "126b5944-6475-4529-9fc6-7e0757866569",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 1293,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljc7000g3865r45156oe",
+                  "type": "default",
+                  "x": 1285,
+                  "y": 647.56,
+                  "name": "ckydgljc7000h3865dlaark34",
+                  "parentNode": "126b5944-6475-4529-9fc6-7e0757866569",
+                  "links": [
+                    "1b083ec4-dfdb-49b5-a900-cb98bcdcf995"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljc7000i3865a7wk7eow",
+                  "type": "default",
+                  "x": 1458.25,
+                  "y": 647.56,
+                  "name": "ckydgljc7000j3865q10upwss",
+                  "parentNode": "126b5944-6475-4529-9fc6-7e0757866569",
+                  "links": [
+                    "ed236b86-5944-4301-bca8-edc7c08eebda"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "fec85ade-f689-4c2d-9071-a8daa52c6b16"
+                ],
+                "transform": "(\n  $whereModel := $executeTransform(\"getModelByName\", {\n    \"api\": $state.context.parameters.api,\n    \"name\":$state.context.component.model.name & \"WhereInput\"\n  });\n  \n  $fields := $whereModel ? $whereModel.fields : [];\n  \n  $filter($fields, function($v, $i, $a) {\n    $substring($v.name, 0, 1) != \"_\"\n  })\n  ~> \n  $filter(function($v, $i, $a){\n    $v.name != \"dataChanges\"\n  })\n)"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Get Where Model Fields"
+            },
+            "fec85ade-f689-4c2d-9071-a8daa52c6b16": {
+              "id": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+              "type": "broadcast",
+              "selected": false,
+              "extras": {},
+              "x": 1498,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljc8000s3865sp9d52g6",
+                  "type": "default",
+                  "x": 1490,
+                  "y": 647.56,
+                  "name": "ckydgljc8000t3865ui3lhoud",
+                  "parentNode": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+                  "links": [
+                    "ed236b86-5944-4301-bca8-edc7c08eebda",
+                    "2a5e986b-d7c5-49d8-871e-ca82cacfaf59"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljc9000u3865cv9520s8",
+                  "type": "default",
+                  "x": 1644,
+                  "y": 647.56,
+                  "name": "ckydgljc9000v3865a2lrraqz",
+                  "parentNode": "fec85ade-f689-4c2d-9071-a8daa52c6b16",
+                  "links": [
+                    "edaecce5-a418-41ab-9e2a-ca317680397d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "4502cb18-02a5-4258-aece-7ed26aa5f7dc"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Broadcast"
+            },
+            "4502cb18-02a5-4258-aece-7ed26aa5f7dc": {
+              "id": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 1683,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljca00143865athz7ce4",
+                  "type": "default",
+                  "x": 1675,
+                  "y": 647.56,
+                  "name": "ckydgljca0015386508m5ioqg",
+                  "parentNode": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+                  "links": [
+                    "edaecce5-a418-41ab-9e2a-ca317680397d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljca0016386529q69kod",
+                  "type": "default",
+                  "x": 1845.06,
+                  "y": 647.56,
+                  "name": "ckydgljca00173865ywzquma1",
+                  "parentNode": "4502cb18-02a5-4258-aece-7ed26aa5f7dc",
+                  "links": [
+                    "7f94f308-d901-4e46-a0f5-cb3f3e49109d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $baseTypeMatch := $match(type, /^(\\w+?)(PredicateInput|RelationWhereInput|WhereInput)$/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  {\n    \"field\": $,\n    \"baseType\": $baseType,\n    \"isRelation\": $exists($match(type, /^\\w+RelationWhereInput$/)),\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    })\n  }\n)",
+                "nextNodes": [
+                  "1579af87-79de-4449-93b1-d17a39f6c2bf"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Parse Filter Type String"
+            },
+            "1579af87-79de-4449-93b1-d17a39f6c2bf": {
+              "id": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+              "type": "switch",
+              "selected": false,
+              "extras": {},
+              "x": 1953,
+              "y": 590.84,
+              "ports": [
+                {
+                  "id": "ckydgljcb001o3865zrw2qer6",
+                  "type": "default",
+                  "x": 1945,
+                  "y": 622.56,
+                  "name": "ckydgljcb001p3865iaskxl2k",
+                  "parentNode": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+                  "links": [
+                    "7f94f308-d901-4e46-a0f5-cb3f3e49109d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcb001q3865j7lnp0gx",
+                  "type": "default",
+                  "x": 2107.73,
+                  "y": 622.56,
+                  "name": "ckydgljcb001r3865iufuwgvv",
+                  "parentNode": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+                  "links": [
+                    "ae8a167e-6650-4aa8-857c-7d0db2011cb6"
+                  ],
+                  "in": false,
+                  "groupName": "Status Field",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckydgljcb001s386563sh0c5g",
+                  "type": "default",
+                  "x": 2107.73,
+                  "y": 647.72,
+                  "name": "ckydgljcb001t3865wrotocjk",
+                  "parentNode": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+                  "links": [
+                    "cf099d38-6d23-4061-a517-7fa7d0caa2c3"
+                  ],
+                  "in": false,
+                  "groupName": "Reference",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckydgljcb001u3865wcu815v9",
+                  "type": "default",
+                  "x": 2107.73,
+                  "y": 672.87,
+                  "name": "ckydgljcb001v3865dhlrnsvp",
+                  "parentNode": "1579af87-79de-4449-93b1-d17a39f6c2bf",
+                  "links": [
+                    "6852eebf-9aaa-44b7-a30a-136c2fa9fcbd"
+                  ],
+                  "in": false,
+                  "groupName": "Else (Scalars)",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Status Field",
+                    "transform": "$match(baseType, /\\w+Status$/)",
+                    "nextNodes": [
+                      "a5f75607-2d6e-4f21-bf2a-a2543006d6e5"
+                    ]
+                  },
+                  {
+                    "nextNodes": [
+                      "ef62344f-5d08-47b0-bd68-143006fd3c20"
+                    ],
+                    "name": "Reference",
+                    "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\""
+                  },
+                  {
+                    "name": "Else (Scalars)",
+                    "transform": "true",
+                    "nextNodes": [
+                      "176fdee5-2102-4d12-8519-2604456845bd"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Filter Type"
+            },
+            "176fdee5-2102-4d12-8519-2604456845bd": {
+              "id": "176fdee5-2102-4d12-8519-2604456845bd",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 2193,
+              "y": 430.84,
+              "ports": [
+                {
+                  "id": "ckydgljcd00243865byfkx1dv",
+                  "type": "default",
+                  "x": 2185,
+                  "y": 462.56,
+                  "name": "ckydgljcd002538656adjwtvo",
+                  "parentNode": "176fdee5-2102-4d12-8519-2604456845bd",
+                  "links": [
+                    "6852eebf-9aaa-44b7-a30a-136c2fa9fcbd"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcd00263865mr3urafu",
+                  "type": "default",
+                  "x": 2339,
+                  "y": 462.56,
+                  "name": "ckydgljcd00273865oo84fyg2",
+                  "parentNode": "176fdee5-2102-4d12-8519-2604456845bd",
+                  "links": [
+                    "2f33afb3-f721-4907-af11-334937807a5f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $fieldName := field.name;\n  $dataPath := \"filter.\" & $state.context.(\n    $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n  ) & $fieldName;\n  $label := $startCase($fieldName);\n\n  $scalarMap := {\n    \"String\": {\n      \"type\": $fieldName = $state.context.component.parameterField ? 'parameter' : 'text',\n      \"parameterName\": $fieldName = $state.context.component.parameterField ? 'id' : undefined,\n      \"dataPath\": $dataPath & ($fieldName = $state.context.component.parameterField ? \"._eq\" : \"._contains\")\n    },\n    \"Email\": {\n      \"type\": 'text',\n      \"dataPath\": $dataPath & \"._contains\"\n    },\n    \"Boolean\": {\n      \"type\": 'checkbox'\n    },\n    \"DateTime\": {\n      \"type\": 'datetimeRange',\n      \"dataPath\": $dataPath\n    },\n    \"Int\": [{\n      \"name\": $fieldName & '.min',\n      \"label\": $label & ' Min',\n      \"dataPath\": $dataPath & '._gte',\n      \"type\": 'integer'\n    }, {\n      \"name\": $fieldName & '.max',\n      \"label\": $label & ' Max',\n      \"dataPath\": $dataPath & '._lte',\n      \"type\": 'integer'\n    }],\n    \"Float\": [{\n      \"name\": $fieldName & '.min',\n      \"label\": $label & ' Min',\n      \"dataPath\": $dataPath & '._gte',\n      \"type\": 'float'\n    }, {\n      \"name\": $fieldName & '.max',\n      \"label\": $label & ' Max',\n      \"dataPath\": $dataPath & '._lte',\n      \"type\": 'float'\n    }],\n    \"Measure\": [\n      {\n        \"name\": $fieldName & '.min',\n        \"label\": $label & ' Min',\n        \"dataPath\": $dataPath & '.value._gte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.max',\n        \"label\": $label & ' Max',\n        \"dataPath\": $dataPath & '.value._lte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.unit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.unit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.unit.id._in'\n        },\n        \"label\": $label & ' Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      }\n    ],\n    \"RatioMeasure\": [\n      {\n        \"name\": $fieldName & '.min',\n        \"label\": $label & ' Min',\n        \"dataPath\": $dataPath & '.numeratorValue._gte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.max',\n        \"label\": $label & ' Max',\n        \"dataPath\": $dataPath & '.numeratorValue._lte',\n        \"type\": 'float'\n      },\n      {\n        \"name\": $fieldName & '.numeratorUnit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.numeratorUnit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.numeratorUnit.id._in'\n        },\n        \"label\": $label & ' Numerator Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      },\n      {\n        \"name\": $fieldName & '.denominatorunit',\n        \"type\": 'combobox',\n        \"dataPath\": $fieldName & '.denominatorunit',\n        \"target\": {\n          \"dataPath\": $dataPath & '.denominatorunit.id._in'\n        },\n        \"label\": $label & ' Denominator Unit',\n        \"multiselect\": true,\n        \"api\": 'Application',\n        \"queryType\": 'Unit',\n        \"labelField\": \"name\"\n      }\n    ]\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $map([$format ? $format : {}], function($v) {\n    $merge([\n      { \n        \"name\": $fieldName,\n        \"description\": field.description,\n        \"label\": $label,\n        \"type\": \"text\",\n        \"dataPath\": $dataPath & '._eq'\n      },\n      $v    \n    ])\n  })\n)",
+                "nextNodes": [
+                  "ad458cb3-004b-4471-a852-3ddecc099736"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is Scalar"
+            },
+            "a5f75607-2d6e-4f21-bf2a-a2543006d6e5": {
+              "id": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 2193,
+              "y": 735.84,
+              "ports": [
+                {
+                  "id": "ckydgljce002g3865w8r180xn",
+                  "type": "default",
+                  "x": 2185,
+                  "y": 767.56,
+                  "name": "ckydgljce002h3865654d92n9",
+                  "parentNode": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+                  "links": [
+                    "ae8a167e-6650-4aa8-857c-7d0db2011cb6"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljce002i3865iqgmqfza",
+                  "type": "default",
+                  "x": 2339,
+                  "y": 767.56,
+                  "name": "ckydgljce002j3865gthaygj3",
+                  "parentNode": "a5f75607-2d6e-4f21-bf2a-a2543006d6e5",
+                  "links": [
+                    "8602a812-3ba8-4689-83c0-8cc6a4a51409"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $activeFilter := function($fields){\n    (\n      $filteredFields := $filter($fields,function($v){\n        $contains($v.name, \"active\") and $v.type = \"Boolean!\" ? true : false\n      });\n\n      $count($filteredFields) = 0 ? undefined :\n      $count($filteredFields) = 1 ? {\n        $filteredFields.name : {\n          \"_eq\": true\n        }\n      } :\n      $count($filteredFields) > 1 ? undefined\n    )\n  };\n\n  $additionalFilter := $activeFilter(baseTypeModel.fields);\n\n  {\n    \"name\": field.name,\n    \"description\": field.description,\n    \"label\": $startCase(field.name),\n    \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"type\": 'combobox',\n    \"dataPath\": field.name,\n    \"target\": {\n      \"dataPath\": \"filter.\" & \n        $state.context.(\n          $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n        ) & \n        field.name & \".id._in\"\n    },\n    \"multiselect\": true,\n    \"api\": $state.context.parameters.api,\n    \"queryType\": baseType,\n    \"additionalFilter\":  $additionalFilter\n  }\n)\n\n/* {\n  \"name\": field.name,\n  \"description\": field.description,\n  \"label\": $startCase(field.name),\n  \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"type\": 'combobox',\n  \"dataPath\": field.name,\n  \"target\": {\n    \"dataPath\": \"filter.\" & field.name & \".id._in\"\n  },\n  \"multiselect\": true,\n  \"api\": $state.context.parameters.api,\n  \"queryType\": baseType,\n  \"additionalFilter\": {\n    \"active\": {\n      \"_eq\": true\n    }\n  }\n} */",
+                "nextNodes": [
+                  "ad458cb3-004b-4471-a852-3ddecc099736"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is Status",
+              "note": "11/4/2020: Edited to Remove additional filter when there is no active property on the model type. If more than one field is returned for active it will also remove the additional filter."
+            },
+            "ef62344f-5d08-47b0-bd68-143006fd3c20": {
+              "id": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 2193,
+              "y": 600.84,
+              "ports": [
+                {
+                  "id": "ckydgljcg002s3865hhhn8276",
+                  "type": "default",
+                  "x": 2185,
+                  "y": 632.56,
+                  "name": "ckydgljcg002t3865sx332421",
+                  "parentNode": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+                  "links": [
+                    "cf099d38-6d23-4061-a517-7fa7d0caa2c3"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcg002u3865k1w1zzbd",
+                  "type": "default",
+                  "x": 2339,
+                  "y": 632.56,
+                  "name": "ckydgljcg002v3865sck99ufc",
+                  "parentNode": "ef62344f-5d08-47b0-bd68-143006fd3c20",
+                  "links": [
+                    "32ed7b5d-a1d2-4834-9188-f3a3b2667431"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"name\": field.name,\n  \"description\": field.description,\n  \"label\": $startCase(field.name),\n  \"labelField\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"labelPath\": $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n  \"additionalFields\": baseTypeModel.metadata.mfgx.labelField,\n  \"type\": 'combobox',\n  \"dataPath\": field.name,\n  \"target\": {\n    \"dataPath\": \"filter.\" & \n      $state.context.(\n        $exists(joinTablePrefix) ? joinTablePrefix & \".\"\n      ) & \n      $state.context.component.model.fields[name = $$.field.name].metadata.mfgx.relation.fields.from & \n      (isRelation ? '._some' : '._in')\n  },\n  \"multiselect\": true,\n  \"api\": $state.context.parameters.api,\n  \"queryType\": baseType\n}",
+                "nextNodes": [
+                  "ad458cb3-004b-4471-a852-3ddecc099736"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is Reference"
+            },
+            "ad458cb3-004b-4471-a852-3ddecc099736": {
+              "id": "ad458cb3-004b-4471-a852-3ddecc099736",
+              "type": "combine",
+              "selected": false,
+              "extras": {},
+              "x": 2433,
+              "y": 670.84,
+              "ports": [
+                {
+                  "id": "ckydgljci00343865byb3br3e",
+                  "type": "default",
+                  "x": 2425,
+                  "y": 702.56,
+                  "name": "ckydgljci00353865bpgj9o8w",
+                  "parentNode": "ad458cb3-004b-4471-a852-3ddecc099736",
+                  "links": [
+                    "2f33afb3-f721-4907-af11-334937807a5f",
+                    "8602a812-3ba8-4689-83c0-8cc6a4a51409",
+                    "32ed7b5d-a1d2-4834-9188-f3a3b2667431"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljci003638650dxt94fo",
+                  "type": "default",
+                  "x": 2587.09,
+                  "y": 702.56,
+                  "name": "ckydgljci00373865iiej6ieq",
+                  "parentNode": "ad458cb3-004b-4471-a852-3ddecc099736",
+                  "links": [
+                    "b2c74cbf-6278-4927-bbd6-05523deccb9e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "executionTimeout": 60,
+                "payloadCombinationStrategy": "index",
+                "contextCombinationStrategy": "first",
+                "nextNodes": [
+                  "d5914198-e4df-42be-93e3-aa2742ee1dfb"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Combine (table, filter)"
+            },
+            "dd6bf010-42a9-47cf-9556-bda1fb4ddf01": {
+              "id": "dd6bf010-42a9-47cf-9556-bda1fb4ddf01",
+              "type": "request",
+              "selected": false,
+              "x": 343,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljck003c38657eny473f",
+                  "type": "default",
+                  "x": 501.55,
+                  "y": 647.56,
+                  "name": "ckydgljck003d38653ajzt8cp",
+                  "parentNode": "dd6bf010-42a9-47cf-9556-bda1fb4ddf01",
+                  "links": [
+                    "4b53cb25-a9c5-42e0-9cdb-aa6281cd3c6d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "14e265da-dc51-4fa5-9461-886ab3ef8af9"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Request (Filter Create)",
+              "note": "When provided a payload of the shape below, this module will generate the table filter configuration.\n\n```\n{\n    screenGeneration: {\n        module: 'filterCreate',\n        options: object\n    },\n    payload: {\n      component: object,\n      parameters: {\n          api: string\n      }\n    }\n  }\n```"
+            },
+            "14e265da-dc51-4fa5-9461-886ab3ef8af9": {
+              "id": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+              "type": "when",
+              "selected": false,
+              "x": 608,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljcn003m3865fmtb0jdp",
+                  "type": "default",
+                  "x": 600,
+                  "y": 647.56,
+                  "name": "ckydgljcn003n3865qorgfop9",
+                  "parentNode": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+                  "links": [
+                    "4b53cb25-a9c5-42e0-9cdb-aa6281cd3c6d",
+                    "60493a60-8d57-4757-aeb5-9f2354e4f872",
+                    "8c161839-3202-4e25-85ac-0c0674a8abf4"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcn003o3865bwabhsp6",
+                  "type": "default",
+                  "x": 754.19,
+                  "y": 647.56,
+                  "name": "ckydgljcn003p3865jotu13uo",
+                  "parentNode": "14e265da-dc51-4fa5-9461-886ab3ef8af9",
+                  "links": [
+                    "94be1871-cc04-43e4-927d-991b04f25f51"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0"
+                ],
+                "transform": "screenGeneration.module = 'filterCreate'"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Filter Create Module"
+            },
+            "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0": {
+              "id": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+              "type": "setContext",
+              "selected": false,
+              "x": 818,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljco003y3865fia6uzbp",
+                  "type": "default",
+                  "x": 810,
+                  "y": 647.56,
+                  "name": "ckydgljco003z38651ehdb5c6",
+                  "parentNode": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+                  "links": [
+                    "94be1871-cc04-43e4-927d-991b04f25f51"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljco00403865gp96dbie",
+                  "type": "default",
+                  "x": 964,
+                  "y": 647.56,
+                  "name": "ckydgljco00413865h2jrgt4p",
+                  "parentNode": "c1c5e131-5724-4a45-8a9e-c2c48b9c0ea0",
+                  "links": [
+                    "41ef8fa4-462f-4c25-99c3-3e0349783c39"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab"
+                ],
+                "transform": "{\n  \"isJoinTable\": payload.component.name ~> $contains('JoinTable'),\n  \"component\": payload.component,\n  \"parameters\": payload.parameters\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Set Context"
+            },
+            "31fd1d31-1296-4b92-92a2-fc84b51d5aec": {
+              "id": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+              "type": "response",
+              "selected": false,
+              "x": 3063,
+              "y": 690.84,
+              "ports": [
+                {
+                  "id": "ckydgljcq004a3865ifajszqp",
+                  "type": "default",
+                  "x": 3055,
+                  "y": 722.56,
+                  "name": "ckydgljcq004b3865art5wiei",
+                  "parentNode": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+                  "links": [
+                    "841f607d-32b1-4cb3-a103-3925892b5726",
+                    "d5140f49-45a9-4586-9076-37de842fee6a"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "ckydgljcq004c3865mrups5if",
+                  "type": "default",
+                  "x": 3208.98,
+                  "y": 722.56,
+                  "name": "ckydgljcq004d3865sfmcow8t",
+                  "parentNode": "31fd1d31-1296-4b92-92a2-fc84b51d5aec",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Response"
+            },
+            "2d2a1651-ad04-4f28-a5f5-91166311d95e": {
+              "id": "2d2a1651-ad04-4f28-a5f5-91166311d95e",
+              "type": "debugSource",
+              "selected": true,
+              "x": 345,
+              "y": 505,
+              "ports": [
+                {
+                  "id": "ckydgljcs004i3865fr7pefb5",
+                  "type": "default",
+                  "x": 490.98,
+                  "y": 536.72,
+                  "name": "ckydgljcs004j3865ua599sr0",
+                  "parentNode": "2d2a1651-ad04-4f28-a5f5-91166311d95e",
+                  "links": [
+                    "60493a60-8d57-4757-aeb5-9f2354e4f872"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "filterCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "BookReviewTable",
+                      "model": {
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "engineering",
+                              "group": {
+                                "id": "productDataManagement"
+                              }
+                            }
+                          },
+                          "mongo": {
+                            "collection": "bookReview"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[BookReviewDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The unique identifier of the BookReview.",
+                            "metadata": {
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "review",
+                            "type": "String!",
+                            "description": "The Review of the Book.",
+                            "metadata": {}
+                          },
+                          {
+                            "name": "rating",
+                            "type": "Int!",
+                            "description": "The Rating of the Book.",
+                            "metadata": {}
+                          },
+                          {
+                            "name": "bookId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the Book being reviewed.",
+                            "metadata": {}
+                          },
+                          {
+                            "name": "book",
+                            "type": "Book!",
+                            "description": "A relation to the Book being reviewed.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "bookId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "name": "BookReview",
+                        "description": "",
+                        "kind": "Reference"
+                      },
+                      "labelField": "id"
+                    },
+                    "parameters": {
+                      "api": "Application",
+                      "modelName": "BookReview",
+                      "screenFormat": "table",
+                      "upsertScreen": true
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "14e265da-dc51-4fa5-9461-886ab3ef8af9"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Filter Create Test"
+            },
+            "4585a01e-05ed-4513-9395-d52dfdce9a5d": {
+              "id": "4585a01e-05ed-4513-9395-d52dfdce9a5d",
+              "type": "debugSource",
+              "selected": false,
+              "x": 353,
+              "y": 725.84,
+              "ports": [
+                {
+                  "id": "ckydgljcu004o3865oxut2xhf",
+                  "type": "default",
+                  "x": 498.98,
+                  "y": 757.56,
+                  "name": "ckydgljcu004p38652hq2lc3z",
+                  "parentNode": "4585a01e-05ed-4513-9395-d52dfdce9a5d",
+                  "links": [
+                    "8c161839-3202-4e25-85ac-0c0674a8abf4"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "filterCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "SalesOrderRequirementJoinTable",
+                      "tabTitle": "Sales Order Requirements",
+                      "model": {
+                        "name": "SalesOrderRequirement",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "sales",
+                              "group": {
+                                "id": "customerRelationshipManagement"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "exposed": true,
+                              "retentionDays": 120
+                            },
+                            "labelField": "number"
+                          },
+                          "mongo": {
+                            "collection": "salesOrderRequirement"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[SalesOrderRequirementDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "number",
+                            "type": "String!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                },
+                                "sequence": {
+                                  "id": "salesOrderRequirementLineNumberSequence",
+                                  "keyField": "salesOrderLineId"
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "salesOrderLineId",
+                            "type": "ID!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requiredQuantity",
+                            "type": "Measure",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requiredQuantityBalance",
+                            "type": "Measure",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "shippedQuantity",
+                            "type": "Measure",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "dueDate",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "scheduledDate",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requirementStatusId",
+                            "type": "ID!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requirementTypeId",
+                            "type": "ID!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "shipToCustomerAddressId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "shipFromFacilityAddressId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requirementStatus",
+                            "description": "",
+                            "type": "RequirementStatus!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "requirementStatusId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "requirementType",
+                            "description": "",
+                            "type": "RequirementType!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "requirementTypeId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "salesOrderLine",
+                            "description": "",
+                            "type": "SalesOrderLine!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "salesOrderLineId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "shipFromFacilityAddress",
+                            "description": "",
+                            "type": "FacilityAddress",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "shipFromFacilityAddressId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "externalId",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "number",
+                      "parameterField": "salesOrderLineId"
+                    },
+                    "parameters": {
+                      "api": "Application",
+                      "modelName": "SalesOrderLine",
+                      "screenFormat": "form",
+                      "upsertScreen": true,
+                      "deployScreen": true
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "14e265da-dc51-4fa5-9461-886ab3ef8af9"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Join Tables"
+            },
+            "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab": {
+              "id": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+              "type": "ifElse",
+              "selected": false,
+              "x": 1018,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljcx00523865405r2hfx",
+                  "type": "default",
+                  "x": 1010,
+                  "y": 647.56,
+                  "name": "ckydgljcx0053386540fxl5o6",
+                  "parentNode": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+                  "links": [
+                    "41ef8fa4-462f-4c25-99c3-3e0349783c39"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcx00543865do3zk4w6",
+                  "type": "default",
+                  "x": 1163.98,
+                  "y": 647.56,
+                  "name": "ckydgljcx00553865yfa9rxlz",
+                  "parentNode": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+                  "links": [
+                    "8f7f7276-a51b-45ee-8973-e1aca68e4e4c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "ckydgljcx005638652d9geac7",
+                  "type": "default",
+                  "x": 1163.98,
+                  "y": 672.72,
+                  "name": "ckydgljcx00573865r6gvawkf",
+                  "parentNode": "e05bdfa6-d83c-4ab5-a2bf-79b464abf7ab",
+                  "links": [
+                    "1b083ec4-dfdb-49b5-a900-cb98bcdcf995"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onFalseNextNodes": [
+                  "126b5944-6475-4529-9fc6-7e0757866569"
+                ],
+                "onTrueNextNodes": [
+                  "77befae3-1e1d-4d44-8594-fa75735afc43"
+                ],
+                "transform": "$state.context.isJoinTable"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "If Join Table"
+            },
+            "77befae3-1e1d-4d44-8594-fa75735afc43": {
+              "id": "77befae3-1e1d-4d44-8594-fa75735afc43",
+              "type": "debugTransition",
+              "selected": false,
+              "x": 963,
+              "y": 930.84,
+              "ports": [
+                {
+                  "id": "ckydgljcz005g3865saeoa46t",
+                  "type": "default",
+                  "x": 955,
+                  "y": 962.56,
+                  "name": "ckydgljcz005h3865fquhcthx",
+                  "parentNode": "77befae3-1e1d-4d44-8594-fa75735afc43",
+                  "links": [
+                    "8f7f7276-a51b-45ee-8973-e1aca68e4e4c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljcz005i38655sz08zyo",
+                  "type": "default",
+                  "x": 1108.98,
+                  "y": 962.56,
+                  "name": "ckydgljcz005j3865hs85ns6c",
+                  "parentNode": "77befae3-1e1d-4d44-8594-fa75735afc43",
+                  "links": [
+                    "1c5f90a5-a1c8-41ad-ac08-53aa693be65a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "pauseExecution": false,
+                "nextNodes": [
+                  "f1cac122-598d-49fe-b85b-b10fb5995347"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Transition"
+            },
+            "ffa0ed66-959f-4505-9386-43cc1ff07935": {
+              "id": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+              "type": "transform",
+              "selected": false,
+              "extras": {},
+              "x": 1558,
+              "y": 930.84,
+              "ports": [
+                {
+                  "id": "ckydgljd1005s3865owylyu3m",
+                  "type": "default",
+                  "x": 1550,
+                  "y": 962.56,
+                  "name": "ckydgljd1005t3865w25na8kl",
+                  "parentNode": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+                  "links": [
+                    "415d292a-96bc-41d6-bc26-41ee6aab20cb"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljd1005u3865glkv7zkq",
+                  "type": "default",
+                  "x": 1723.25,
+                  "y": 962.56,
+                  "name": "ckydgljd1005v38657380cw5q",
+                  "parentNode": "ffa0ed66-959f-4505-9386-43cc1ff07935",
+                  "links": [
+                    "2a5e986b-d7c5-49d8-871e-ca82cacfaf59"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "fec85ade-f689-4c2d-9071-a8daa52c6b16"
+                ],
+                "transform": "(\n  $whereModel := $executeTransform(\"getModelByName\", {\n    \"api\": $state.context.parameters.api,\n    \"name\": type & \"WhereInput\"\n  });\n  \n  $fields := $whereModel ? $whereModel.fields : [];\n  \n  $filter($fields, function($v, $i, $a) {\n    $substring($v.name, 0, 1) != \"_\"\n  })\n  ~> \n  $filter(function($v, $i, $a){\n    $v.name != \"dataChanges\"\n  })\n)"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Get Where Model Fields"
+            },
+            "f1cac122-598d-49fe-b85b-b10fb5995347": {
+              "id": "f1cac122-598d-49fe-b85b-b10fb5995347",
+              "type": "transform",
+              "selected": false,
+              "x": 1153,
+              "y": 930.84,
+              "ports": [
+                {
+                  "id": "ckydgljd40064386504etrsiu",
+                  "type": "default",
+                  "x": 1145,
+                  "y": 962.56,
+                  "name": "ckydgljd40065386517ldrofh",
+                  "parentNode": "f1cac122-598d-49fe-b85b-b10fb5995347",
+                  "links": [
+                    "1c5f90a5-a1c8-41ad-ac08-53aa693be65a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljd400663865xpjoe2is",
+                  "type": "default",
+                  "x": 1299,
+                  "y": 962.56,
+                  "name": "ckydgljd400673865jf9h7u4i",
+                  "parentNode": "f1cac122-598d-49fe-b85b-b10fb5995347",
+                  "links": [
+                    "5f3c5724-a650-4056-8592-2ad8ae2f34c8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $standardFields := [\n    'id',\n    'createdAt',\n    'createdByUser',\n    'createdByUserId',\n    'dataChanges',\n    'updatedAt',\n    'updatedByUser',\n    'updatedByUserId',\n    $state.context.component.parameterField\n  ];\n\n  $getFieldToExpand := function( $model) {(\n\n    $joinField := $filter($model.fields, function($v) {\n      $not($exists($standardFields[$=$v.name])) and \n      ($v.type = 'ID')\n    });\n    \n    $count($joinField) > 1 ? $throw('Cannot determine a single join field');\n    \n    $expandField := $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $joinField.name\n    ];\n    \n    $isNil($expandField) ?\n      $throw('Error generating the columns of the linked type.  \n      The field, ' & $joinField.name & ', does not realize to a type.') :\n      $expandField;\n\n  )};\n  \n  $fieldToExpand := payload.component.model \n  ~> $getFieldToExpand;\n  \n  $baseTypeMatch := $match($fieldToExpand.type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  $getBackReference := function( $model ){\n    $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $state.context.component.parameterField\n    ]\n  };\n  \n  $backReference := payload.component.model\n  ~> $getBackReference;\n  \n  {\n    \"name\": $fieldToExpand.name,\n    \"type\": $baseType,\n    \"backReference\": $backReference\n  }\n)",
+                "nextNodes": [
+                  "b7119a9f-2d1a-46ba-80fe-f736f1547daa"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Project Join Model"
+            },
+            "b7119a9f-2d1a-46ba-80fe-f736f1547daa": {
+              "id": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1358,
+              "y": 930.84,
+              "ports": [
+                {
+                  "id": "ckydgljd6006g38658za7a0rn",
+                  "type": "default",
+                  "x": 1350,
+                  "y": 962.56,
+                  "name": "ckydgljd6006h38652qc5e57b",
+                  "parentNode": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+                  "links": [
+                    "5f3c5724-a650-4056-8592-2ad8ae2f34c8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljd6006i3865p5igunyz",
+                  "type": "default",
+                  "x": 1504,
+                  "y": 962.56,
+                  "name": "ckydgljd6006j3865ln2hi0pe",
+                  "parentNode": "b7119a9f-2d1a-46ba-80fe-f736f1547daa",
+                  "links": [
+                    "415d292a-96bc-41d6-bc26-41ee6aab20cb"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "ffa0ed66-959f-4505-9386-43cc1ff07935"
+                ],
+                "transform": "{\n  \"joinTablePrefix\": name,\n  \"backReference\": backReference\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Merge Context"
+            },
+            "d5914198-e4df-42be-93e3-aa2742ee1dfb": {
+              "id": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+              "type": "ifElse",
+              "selected": false,
+              "x": 2643,
+              "y": 665.84,
+              "ports": [
+                {
+                  "id": "ckydgljd8006w3865pw6o3z86",
+                  "type": "default",
+                  "x": 2635,
+                  "y": 697.56,
+                  "name": "ckydgljd8006x3865c5roxkjx",
+                  "parentNode": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+                  "links": [
+                    "b2c74cbf-6278-4927-bbd6-05523deccb9e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljd8006y386519wbm6dn",
+                  "type": "default",
+                  "x": 2788.98,
+                  "y": 697.56,
+                  "name": "ckydgljd8006z3865oeixkqed",
+                  "parentNode": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+                  "links": [
+                    "5e248281-511a-48f5-9acc-c7c4481edb2d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "ckydgljd800703865lwobn9ba",
+                  "type": "default",
+                  "x": 2788.98,
+                  "y": 722.72,
+                  "name": "ckydgljd800713865xy3puwbt",
+                  "parentNode": "d5914198-e4df-42be-93e3-aa2742ee1dfb",
+                  "links": [
+                    "841f607d-32b1-4cb3-a103-3925892b5726"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onFalseNextNodes": [
+                  "31fd1d31-1296-4b92-92a2-fc84b51d5aec"
+                ],
+                "onTrueNextNodes": [
+                  "44bc77bb-6150-4788-a201-bbe6d5ead7a7"
+                ],
+                "transform": "$state.context.isJoinTable"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "If Join Table"
+            },
+            "44bc77bb-6150-4788-a201-bbe6d5ead7a7": {
+              "id": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+              "type": "transform",
+              "selected": false,
+              "x": 2848,
+              "y": 615.84,
+              "ports": [
+                {
+                  "id": "ckydgljd9007a3865ihpp1ynz",
+                  "type": "default",
+                  "x": 2840,
+                  "y": 647.56,
+                  "name": "ckydgljd9007b3865r855wa1w",
+                  "parentNode": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+                  "links": [
+                    "5e248281-511a-48f5-9acc-c7c4481edb2d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckydgljd9007c3865umuurqsz",
+                  "type": "default",
+                  "x": 3005.56,
+                  "y": 647.56,
+                  "name": "ckydgljd9007d386570rgksiq",
+                  "parentNode": "44bc77bb-6150-4788-a201-bbe6d5ead7a7",
+                  "links": [
+                    "d5140f49-45a9-4586-9076-37de842fee6a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$append($state.context.backReference.{\n  \"type\": \"parameter\",\n  \"parameterName\": \"id\",\n  \"dataPath\": \"filter.\" & name & \".id._eq\",\n  \"name\": \"parametricField\"\n},$)",
+                "nextNodes": [
+                  "31fd1d31-1296-4b92-92a2-fc84b51d5aec"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Add filter for join table"
+            }
+          }
+        }
+      ],
+      "name": "Screen Generation Filter Create",
+      "type": "System",
+      "version": "0.0.1",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

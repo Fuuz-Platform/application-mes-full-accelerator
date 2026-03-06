@@ -1,0 +1,2772 @@
+{
+  "header": {
+    "id": "distributionGroupAddRemoveWebFlow",
+    "name": "Distribution Group Add Remove Web Flow",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "Screen",
+    "moduleId": "workOrderManagement"
+  },
+  "version": {
+    "id": "clv5ifu4t17id01cd176lfe68",
+    "number": "0.0.5",
+    "description": "",
+    "dataFlowId": "distributionGroupAddRemoveWebFlow",
+    "flow": {
+      "id": "clv5ifu4t17id01cd176lfe68",
+      "name": "Distribution Group Add Remove Web Flow",
+      "type": "Screen",
+      "nodes": [
+        {
+          "id": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+          "name": "Query: DIST/GROUP",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"d\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  },\n  \"g\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.groupId]\n    }\n  }\n}",
+            "query": "query Query(\n  $d: WorkOrderProcessDistributionWhereInput,\n  $g: WorkOrderProcessDistributionGroupWhereInput\n) {\n  d:workOrderProcessDistribution(where: $d) {\n    edges {\n      node {\n        id\n        workcenterId\n        distributionGroupId\n        balanceQuantity\n        requiredQuantity\n        workOrder {id number}\n        workcenterId\n        earliestStartAt\n        estimatedTime\n        latestStartAt\n        workOrderProcess {\n          id\n          productStrategyProcessId \n        }\n      }\n    }\n  }\n  g: workOrderProcessDistributionGroup(where: $g) {\n    edges {\n      node {\n        id\n        workOrderProcessDistributionStatusId\n        balanceQuantity\n        requiredQuantity\n        estimatedTime\n        workcenterId\n        distributions {\n          edges {\n            node {\n              id\n              requiredQuantity\n              workOrderProcess {\n                productStrategyProcessId\n              }\n              estimatedTime\n              earliestStartAt\n              latestStartAt\n              workOrderProcessDistributionStatusId\n            \n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "92fa2ff3-786d-44b1-817c-1c0578573922"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "92fa2ff3-786d-44b1-817c-1c0578573922",
+          "name": "Route: ADD DIST/GROUP",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "FAIL NO DIST",
+                "transform": "$isNilOrEmpty(d.edges.node)",
+                "nextNodes": [
+                  "e5d2fc25-456b-4a8c-b1a6-6690685dec4b"
+                ]
+              },
+              {
+                "name": "FAIL NO GROUP",
+                "transform": "$isNilOrEmpty(g.edges.node)",
+                "nextNodes": [
+                  "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c"
+                ]
+              },
+              {
+                "name": "FAIL PROCESS NOT EQUAL",
+                "transform": "\n  d.edges.node.workcenterId\n  !=\n  g.edges[0].node.distributions.edges[0].node.workcenterId\n",
+                "nextNodes": [
+                  "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107"
+                ]
+              },
+              {
+                "name": "PASS",
+                "transform": "true",
+                "nextNodes": [
+                  "2c89eb77-0125-42cf-a68e-22da386285fe"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "titleTransform": "\"Failed to add distribution\"",
+            "messageTransform": "\"No distribution found\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "titleTransform": "\"Failed to add distribution\"",
+            "messageTransform": "\"No distribution group found\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "titleTransform": "\"Failed to add distribution\"",
+            "messageTransform": "\"Workcenters do not match\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2c89eb77-0125-42cf-a68e-22da386285fe",
+          "name": "JSONata: FORMAT DIST/GROUP PAYLOAD",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $g := g.edges.node;\n  $d := d.edges.node;\n\n  {\n    \"dg\": $g.{\n      \"update\": {\n        \"balanceQuantity\": balanceQuantity + $d.balanceQuantity,\n        \"requiredQuantity\": requiredQuantity + $d.requiredQuantity,\n        \"estimatedTime\": estimatedTime + $d.estimatedTime\n      },\n      \"where\": {\n        \"id\": id\n      }\n    },\n\n    \"du\": $d.{\n      \"update\": {\n        \"distributionGroupId\": $g.id\n      },\n      \"where\": {\n        \"id\":id\n      }\n    }\n  }\n\n\n)",
+            "nextNodes": [
+              "83b56afc-36dc-4245-9b2f-d11dec7cd467"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+          "name": "Mutate: DIST/GROUP",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation(\n  $dg: [WorkOrderProcessDistributionGroupUpdatePayloadInput!]!,\n  $du: [WorkOrderProcessDistributionUpdatePayloadInput!]!\n){\n  dg:updateWorkOrderProcessDistributionGroup(payload:$dg){id},\n  du:updateWorkOrderProcessDistribution(payload:$du){id}\n} ",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+          "name": "Route: REMOVE DIST/GROUP",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "FAIL NO GROUP",
+                "transform": "$isNilOrEmpty(g.edges.node)",
+                "nextNodes": [
+                  "32a9fd48-aafa-4d91-a745-add76d5681eb"
+                ]
+              },
+              {
+                "name": "FAIL NO DIST",
+                "transform": "$isNilOrEmpty(g.edges.node.distributions.edges.node[id=$state.context.REQUEST.DATA.id])",
+                "nextNodes": [
+                  "895b9246-361c-4e16-a48f-2d393f7fda6e"
+                ]
+              },
+              {
+                "name": "PASS",
+                "transform": "true",
+                "nextNodes": [
+                  "1c318ee3-f7a3-4010-a74e-db4311259d72"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "titleTransform": "\"Failed to remove distribution\"",
+            "messageTransform": "\"No distribution found\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "titleTransform": "\"Failed to remove distribution\"",
+            "messageTransform": "\"No distribution group found\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+          "name": "JSONata: FORMAT DIST/GROUP PAYLOAD",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $g := g.edges.node;\n  $d := d.edges.node;\n  $id := $state.context.REQUEST.DATA.id;\n  $dgid := $cuid();\n\n  {\n    \"dg\":  $g.{\n      \"update\": {\n        \"balanceQuantity\": balanceQuantity - $d.balanceQuantity,\n        \"requiredQuantity\": requiredQuantity - $d.requiredQuantity,\n        \"estimatedTime\": estimatedTime - $d.estimatedTime\n      },\n      \"where\": {\n        \"id\": id\n      }\n    } ,\n\n    \"du\": $d.{\n      \"update\": {\n        \"distributionGroupId\": $dgid\n      },\n      \"where\": {\n        \"id\":id\n      }\n    },\n    \n  \n    \"dc\": {\n      \"create\": $merge([$omit($d,[\"id\",\"workOrder\",\"workOrderProcess\",\"distributionGroupId\"]),{\"id\":$dgid}])\n    }\n  }\n\n\n)",
+            "nextNodes": [
+              "a52c1539-2894-4e74-8463-e4c551cfc156"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a52c1539-2894-4e74-8463-e4c551cfc156",
+          "name": "Mutate: DIST/GROUP",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation(\n    $dc: [WorkOrderProcessDistributionGroupCreatePayloadInput!]!,\n  $dg: [WorkOrderProcessDistributionGroupUpdatePayloadInput!]!,\n  $du: [WorkOrderProcessDistributionUpdatePayloadInput!]!,\n\n){\n  dc:createWorkOrderProcessDistributionGroup(payload:$dc){id},\n  du:updateWorkOrderProcessDistribution(payload:$du){id},\n  dg:updateWorkOrderProcessDistributionGroup(payload:$dg){id}\n  \n} ",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+          "name": "Query: DIST/GROUP",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"d\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  },\n  \"g\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.groupId]\n    }\n  }\n}",
+            "query": "query Query(\n  $d: WorkOrderProcessDistributionWhereInput,\n  $g: WorkOrderProcessDistributionGroupWhereInput\n) {\n  d:workOrderProcessDistribution(where: $d) {\n    edges {\n      node {\n        id\n        distributionGroupId\n        balanceQuantity\n        requiredQuantity\n        workOrder {id number}\n        workcenterId\n        earliestStartAt\n        estimatedTime\n        latestStartAt\n        workOrderProcess {\n          id\n          productStrategyProcessId \n        }\n        productionOperators\n        setupOperators\n        workOrderProcessDistributionStatusId\n        standardRate\n        cycleTime\n        idealRate\n        actualStartAt\n        actualFinishAt\n        scheduledStartAt\n        scheduledFinishAt\n        percentComplete\n        producedQuantity\n        scrappedQuantity\n        earliestStartAt\n        latestStartAt\n        \n      }\n    }\n  }\n  g: workOrderProcessDistributionGroup(where: $g) {\n    edges {\n      node {\n        id\n        requiredQuantity\n        balanceQuantity\n        estimatedTime\n        workOrderProcessDistributionStatusId\n        distributions {\n          edges {\n            node {\n              id\n              requiredQuantity\n              workOrderProcess {\n                productStrategyProcessId\n              }\n              estimatedTime\n              earliestStartAt\n              latestStartAt\n              workOrderProcessDistributionStatusId\n              \n            \n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "8b23d540-e158-484e-a5f3-1d5e33ec3b90"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+          "name": "Route",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "ADD",
+                "transform": "REQUEST.ACTION=\"ADD\"",
+                "nextNodes": [
+                  "947ce98a-e908-4d6a-b010-110eef9b8cf7"
+                ]
+              },
+              {
+                "name": "REMOVE",
+                "transform": "REQUEST.ACTION=\"REMOVE\"",
+                "nextNodes": [
+                  "feba6ccf-0c00-4dcf-9078-867eaf587091"
+                ]
+              },
+              {
+                "name": "PASS",
+                "transform": "true",
+                "nextNodes": [
+                  "4f0b1e00-66a6-4b30-80cb-7771ec8c5385"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+          "name": "Alert Dialog",
+          "type": "alert",
+          "data": {
+            "messageTransform": "\"No Action Provided\"",
+            "titleTransform": "\"Request cannot be completed\"",
+            "nextNodes": [
+              "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540",
+          "name": "Execute Flow: LOG",
+          "type": "executeFlow",
+          "data": {
+            "flowId": "webFlowLog",
+            "payloadTransform": "{\n  \"FLOW\": \"distributionGroupWebFlow\",\n  \"$\": $,\n  \"CTX\": $state.context\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1b217c85-5516-482d-a2e0-fbe23467a72d",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "4739024c-52d8-451f-8765-902a432d4f8b",
+              "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4739024c-52d8-451f-8765-902a432d4f8b",
+          "name": "Set Context: REQ",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "a6b3d203-d626-49a4-aa71-b511dfa7f8f8"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.5"
+    },
+    "diagram": {
+      "id": "clv5ifu4t17id01cd176lfe68",
+      "offsetX": 153.22,
+      "offsetY": 179.75,
+      "zoom": 55.11,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "1aafdf24-eae9-437e-bc95-9409245dbab3",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "ad02b1c4-4a43-4166-b51a-ee31f393ed06": {
+              "points": [
+                {
+                  "id": "ae96f421-fe42-4805-8b90-e70c51235e34",
+                  "type": "point",
+                  "x": 815.98,
+                  "y": 282.89
+                },
+                {
+                  "id": "28aa8ee3-d445-41f6-b72a-3d28341f1b1d",
+                  "type": "point",
+                  "x": 841,
+                  "y": 271.13
+                },
+                {
+                  "id": "a1d57c53-77b3-4040-bfc9-ed09f38b6c3e",
+                  "type": "point",
+                  "x": 864.49,
+                  "y": 245.14
+                }
+              ],
+              "id": "ad02b1c4-4a43-4166-b51a-ee31f393ed06",
+              "type": "default",
+              "source": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+              "sourcePort": "clv5gi8ru000o356nafrhpail",
+              "target": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "targetPort": "clv5gi8rw001a356nnhfnr00c",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "62960054-1ad9-4a47-8e7c-3abec394eaac": {
+              "points": [
+                {
+                  "id": "8e2841ff-b1ff-4454-9e5c-86d417825f7e",
+                  "type": "point",
+                  "x": 1101.37,
+                  "y": 245.14
+                },
+                {
+                  "id": "4d96edf3-a8d0-488a-b5c1-76a32b2ee5b6",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 77.16
+                },
+                {
+                  "id": "1a512417-7601-4740-bac9-1f25a4fc1921",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 77.16
+                },
+                {
+                  "id": "c4671fa1-a22b-443a-945b-c4bbf4716dd2",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 77.16
+                },
+                {
+                  "id": "4f17c647-6c6e-4d96-a78e-6ee28d589c64",
+                  "type": "point",
+                  "x": 1477.87,
+                  "y": 88.93
+                }
+              ],
+              "id": "62960054-1ad9-4a47-8e7c-3abec394eaac",
+              "type": "default",
+              "source": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "sourcePort": "clv5gi8rw001c356nmwh8qzpk",
+              "target": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+              "targetPort": "clv5gi8ry001s356nxxub2svd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1b3a86d4-fe99-4cb3-908f-93f337c6d52e": {
+              "points": [
+                {
+                  "id": "2e2f408c-cf5e-4216-9c1c-d96b5ecaebfe",
+                  "type": "point",
+                  "x": 1101.37,
+                  "y": 270.25
+                },
+                {
+                  "id": "1fcfd0a4-e872-4f5a-925f-cef291728108",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 206.47
+                },
+                {
+                  "id": "21ffb8cf-9d78-4585-b209-90b731959548",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 206.47
+                },
+                {
+                  "id": "beb572a9-5d6c-4c76-ad2c-aba941c81afc",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 206.47
+                },
+                {
+                  "id": "da464508-192d-47b1-8374-85675f98f201",
+                  "type": "point",
+                  "x": 1478.5,
+                  "y": 223.93
+                }
+              ],
+              "id": "1b3a86d4-fe99-4cb3-908f-93f337c6d52e",
+              "type": "default",
+              "source": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "sourcePort": "clv5gi8rw001e356nidbeve1y",
+              "target": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+              "targetPort": "clv5gi8rz0024356n37e76zyi",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0edb6299-0aea-47d2-9ab9-0b1ccca0382f": {
+              "points": [
+                {
+                  "id": "53a8290a-cd64-4295-a2dd-3ad4b9310b07",
+                  "type": "point",
+                  "x": 1101.37,
+                  "y": 295.37
+                },
+                {
+                  "id": "48e21c56-cf42-4981-9a91-c6737c8f9e9e",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 335.78
+                },
+                {
+                  "id": "3bc1500c-6dc4-4ee9-841f-92007140eb9f",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 335.78
+                },
+                {
+                  "id": "3bd4d539-348a-45bd-9454-40bb090d8fe2",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 335.78
+                },
+                {
+                  "id": "421545d1-2b84-463a-9cf6-485b8d50a137",
+                  "type": "point",
+                  "x": 1477.87,
+                  "y": 347.54
+                }
+              ],
+              "id": "0edb6299-0aea-47d2-9ab9-0b1ccca0382f",
+              "type": "default",
+              "source": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "sourcePort": "clv5gi8rw001g356n5q6e2fno",
+              "target": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+              "targetPort": "clv5gi8s1002g356ns0qxv25w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f7eaa952-45b5-4682-87b2-b00d76f8c4cc": {
+              "points": [
+                {
+                  "id": "69d03a70-6f02-4764-8537-8e065cf09f6e",
+                  "type": "point",
+                  "x": 1101.37,
+                  "y": 320.49
+                },
+                {
+                  "id": "5ceb43b2-b9d2-4170-9bfe-4a21d7fd2739",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 465.09
+                },
+                {
+                  "id": "ce9317bd-0248-4d7c-9fe4-461af656ba00",
+                  "type": "point",
+                  "x": 1149.88,
+                  "y": 476.86
+                }
+              ],
+              "id": "f7eaa952-45b5-4682-87b2-b00d76f8c4cc",
+              "type": "default",
+              "source": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "sourcePort": "clv5gi8rw001i356njcsy61zr",
+              "target": "2c89eb77-0125-42cf-a68e-22da386285fe",
+              "targetPort": "clv5gi8s3002s356nm5noiizs",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "121ec2bc-585d-405f-9a84-448d4e6f9147": {
+              "points": [
+                {
+                  "id": "619dde79-0771-4ab1-88b1-b631ed53c47e",
+                  "type": "point",
+                  "x": 1633.38,
+                  "y": 88.93
+                },
+                {
+                  "id": "ea7cd20c-9555-4a00-9ba4-ba960266b39c",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 77.16
+                },
+                {
+                  "id": "219394b0-c85d-45a6-a90c-4daaa1dbb650",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "121ec2bc-585d-405f-9a84-448d4e6f9147",
+              "type": "default",
+              "source": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+              "sourcePort": "clv5gi8ry001u356no7b8w5ez",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "478c4a6d-02c2-4fe5-90ac-8c4cb49402e4": {
+              "points": [
+                {
+                  "id": "8ed0d606-e7a0-49a4-a9fd-51be19d9f857",
+                  "type": "point",
+                  "x": 1634,
+                  "y": 223.93
+                },
+                {
+                  "id": "284cd0e4-9990-4af7-9a8e-5d91356abe3f",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 206.47
+                },
+                {
+                  "id": "49c52748-9f31-46ca-a78a-22a9bf016f87",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "478c4a6d-02c2-4fe5-90ac-8c4cb49402e4",
+              "type": "default",
+              "source": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+              "sourcePort": "clv5gi8s00026356n9g2jbbil",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e6208db7-666f-4989-b315-91d57a048436": {
+              "points": [
+                {
+                  "id": "a131fb35-9b38-496b-9605-11c004758dc1",
+                  "type": "point",
+                  "x": 1633.38,
+                  "y": 347.54
+                },
+                {
+                  "id": "b76f5307-05b2-44e4-8391-addcb2552fc2",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 335.78
+                },
+                {
+                  "id": "f8b209b7-54c5-4e8b-9d1e-e03bae229b1c",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "e6208db7-666f-4989-b315-91d57a048436",
+              "type": "default",
+              "source": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+              "sourcePort": "clv5gi8s1002i356nc2lzb3n7",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4c2162e5-6a36-4e21-aa01-c5c60606b020": {
+              "points": [
+                {
+                  "id": "b4d55363-e32c-476e-9213-6719af24e110",
+                  "type": "point",
+                  "x": 1426.54,
+                  "y": 476.86
+                },
+                {
+                  "id": "965f280e-58cf-46b9-b07c-64c50e67d63b",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 465.09
+                },
+                {
+                  "id": "983949d5-d38f-4430-aad3-9bd08d6a62fb",
+                  "type": "point",
+                  "x": 1475.12,
+                  "y": 476.86
+                }
+              ],
+              "id": "4c2162e5-6a36-4e21-aa01-c5c60606b020",
+              "type": "default",
+              "source": "2c89eb77-0125-42cf-a68e-22da386285fe",
+              "sourcePort": "clv5gi8s3002u356nqse02kk8",
+              "target": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+              "targetPort": "clv5gi8s40034356nk4fx6nfn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ff0c6ba7-c96e-406b-a6d0-d0cc060e59f7": {
+              "points": [
+                {
+                  "id": "f4f3cefd-49de-4af7-bc84-b5d804dd08cd",
+                  "type": "point",
+                  "x": 1636.07,
+                  "y": 476.86
+                },
+                {
+                  "id": "5df039dc-fd74-4602-91cb-401092c527c3",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 465.09
+                },
+                {
+                  "id": "08b782a5-e220-44bf-980d-fdf4ce0826d3",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "ff0c6ba7-c96e-406b-a6d0-d0cc060e59f7",
+              "type": "default",
+              "source": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+              "sourcePort": "clv5gi8s40036356nr4zx74en",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "aca6f57b-fd57-4531-bdec-936f0d229c33": {
+              "points": [
+                {
+                  "id": "6442249d-36a5-443a-96cd-127c8aa0d3d6",
+                  "type": "point",
+                  "x": 1085.53,
+                  "y": 710.33
+                },
+                {
+                  "id": "517b9267-421f-44b5-926a-837115297f9c",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 723.72
+                },
+                {
+                  "id": "509c8404-287d-421c-a031-ba0d373f0406",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 723.72
+                },
+                {
+                  "id": "7c45c192-5917-44e5-abf9-d15f08bf0266",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 723.72
+                },
+                {
+                  "id": "b53230d9-1801-49ae-8cbd-b004951b9ade",
+                  "type": "point",
+                  "x": 1477.87,
+                  "y": 735.47
+                }
+              ],
+              "id": "aca6f57b-fd57-4531-bdec-936f0d229c33",
+              "type": "default",
+              "source": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+              "sourcePort": "clv5gi8s70042356npqscac0b",
+              "target": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+              "targetPort": "clv5gi8sc004s356n47kgja0k",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ed8b456f-00ce-4b1c-a9ea-15e8d95b8fad": {
+              "points": [
+                {
+                  "id": "cc16d0b8-b3c3-4e05-8cda-07d0f9fae0df",
+                  "type": "point",
+                  "x": 1085.53,
+                  "y": 735.45
+                },
+                {
+                  "id": "93896e73-3d85-4946-ae39-2156153182e0",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 594.41
+                },
+                {
+                  "id": "dbbfb60a-85b1-4560-85fa-5cf921275b02",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 594.41
+                },
+                {
+                  "id": "4d03501b-d9f5-446c-b59a-51c610f2eda3",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 594.41
+                },
+                {
+                  "id": "7dff65a9-d42f-4089-9309-2cbf2b4b1081",
+                  "type": "point",
+                  "x": 1477.87,
+                  "y": 606.17
+                }
+              ],
+              "id": "ed8b456f-00ce-4b1c-a9ea-15e8d95b8fad",
+              "type": "default",
+              "source": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+              "sourcePort": "clv5gi8s70044356ne4q10c6k",
+              "target": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+              "targetPort": "clv5gi8sa004g356nhdlan0em",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2a90ebf2-c256-46f9-b965-9c76799a7d96": {
+              "points": [
+                {
+                  "id": "1c7659d9-0ad5-4cb2-9995-e41a986e5ace",
+                  "type": "point",
+                  "x": 1085.53,
+                  "y": 760.57
+                },
+                {
+                  "id": "70a5fee4-4018-4aba-8093-4259155264ce",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 853.03
+                },
+                {
+                  "id": "0c2fc9c2-aa1c-4798-b626-402558ab3c44",
+                  "type": "point",
+                  "x": 1149.88,
+                  "y": 864.8
+                }
+              ],
+              "id": "2a90ebf2-c256-46f9-b965-9c76799a7d96",
+              "type": "default",
+              "source": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+              "sourcePort": "clv5gi8s70046356nabrjvwo6",
+              "target": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+              "targetPort": "clv5gi8sg0054356npfvcn58z",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8e7949d0-4d50-4bc3-8c04-78f669f093fa": {
+              "points": [
+                {
+                  "id": "e17919f1-f40d-4529-9df5-7ab90b7e7f79",
+                  "type": "point",
+                  "x": 1633.38,
+                  "y": 606.17
+                },
+                {
+                  "id": "6bc55716-7757-4598-bd8a-57658355136e",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 594.41
+                },
+                {
+                  "id": "84fd3882-6cb6-4a44-b7de-092bad38924f",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "8e7949d0-4d50-4bc3-8c04-78f669f093fa",
+              "type": "default",
+              "source": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+              "sourcePort": "clv5gi8sa004i356nwzpimbqc",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ad8b15d9-2ec7-4757-a575-406869e5473c": {
+              "points": [
+                {
+                  "id": "d99630f9-083b-4df6-a1c8-2f0cae41cb4c",
+                  "type": "point",
+                  "x": 1633.38,
+                  "y": 735.47
+                },
+                {
+                  "id": "abf99fe9-63a5-47e5-872f-8063cee437dd",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 723.72
+                },
+                {
+                  "id": "e78621c4-b31a-42ae-bd5b-894651b091f3",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "ad8b15d9-2ec7-4757-a575-406869e5473c",
+              "type": "default",
+              "source": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+              "sourcePort": "clv5gi8sc004u356n15jzu64h",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5569792e-60f8-4e1c-9166-aeeb440ec5b0": {
+              "points": [
+                {
+                  "id": "602ba133-9723-4fae-8108-85af048477ff",
+                  "type": "point",
+                  "x": 1426.54,
+                  "y": 864.8
+                },
+                {
+                  "id": "2896897e-6341-4ee4-bc02-a5a180e00f37",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 853.03
+                },
+                {
+                  "id": "b71e9a4a-b461-468d-a175-b8265987a2bf",
+                  "type": "point",
+                  "x": 1475.12,
+                  "y": 864.8
+                }
+              ],
+              "id": "5569792e-60f8-4e1c-9166-aeeb440ec5b0",
+              "type": "default",
+              "source": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+              "sourcePort": "clv5gi8sg0056356nfzq8vwkc",
+              "target": "a52c1539-2894-4e74-8463-e4c551cfc156",
+              "targetPort": "clv5gi8sj005g356n1t71dvxz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c9c72eb8-c485-4b0f-860f-59014fe7c3b9": {
+              "points": [
+                {
+                  "id": "30cbab26-19b3-4182-b60d-8334f7f3af84",
+                  "type": "point",
+                  "x": 1636.07,
+                  "y": 864.8
+                },
+                {
+                  "id": "8dd9fc8c-1231-42f7-b47f-e5422c6fc3f9",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 853.03
+                },
+                {
+                  "id": "e2f179de-1860-4632-97bf-007caa0de8bc",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "c9c72eb8-c485-4b0f-860f-59014fe7c3b9",
+              "type": "default",
+              "source": "a52c1539-2894-4e74-8463-e4c551cfc156",
+              "sourcePort": "clv5gi8sk005i356nuyehfsrq",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "54a75a9f-f980-47ca-9a0d-173a5f6e9f03": {
+              "points": [
+                {
+                  "id": "266268f4-77b1-4737-adf5-a5c39a53a3cd",
+                  "type": "point",
+                  "x": 815.98,
+                  "y": 735.47
+                },
+                {
+                  "id": "6f735a2d-6fbf-4104-874b-b4c8e22735e5",
+                  "type": "point",
+                  "x": 841,
+                  "y": 723.72
+                },
+                {
+                  "id": "ddd6a354-d832-4afa-a340-e77f8dfb7a63",
+                  "type": "point",
+                  "x": 880.25,
+                  "y": 710.33
+                }
+              ],
+              "id": "54a75a9f-f980-47ca-9a0d-173a5f6e9f03",
+              "type": "default",
+              "source": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+              "sourcePort": "clv5gi8sl005u356nypcdg2gk",
+              "target": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+              "targetPort": "clv5gi8s70040356ne2jhjwn7",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "38e5cddd-fda6-4d09-aaa5-129bcc2f6e19": {
+              "points": [
+                {
+                  "id": "47d9c302-f485-44cb-9542-f2ed04e5a4bd",
+                  "type": "point",
+                  "x": 611.97,
+                  "y": 710.33
+                },
+                {
+                  "id": "0a521573-c423-431a-8671-56d181a4439a",
+                  "type": "point",
+                  "x": 637,
+                  "y": 271.13
+                },
+                {
+                  "id": "8a9a515d-ee4e-4b30-8c2e-61cf84090a4d",
+                  "type": "point",
+                  "x": 660.49,
+                  "y": 282.89
+                }
+              ],
+              "id": "38e5cddd-fda6-4d09-aaa5-129bcc2f6e19",
+              "type": "default",
+              "source": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+              "sourcePort": "clv5gi8sn006e356nee2tg1rn",
+              "target": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+              "targetPort": "clv5gi8ru000m356nwyxgn91z",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a5f3c403-92d9-4dcc-8664-bbcd82d453a3": {
+              "points": [
+                {
+                  "id": "05ecccdb-22a3-4131-8e18-5212d592f6fb",
+                  "type": "point",
+                  "x": 611.97,
+                  "y": 735.45
+                },
+                {
+                  "id": "9f03c6ed-94b2-48e9-a7ae-3f834a331e92",
+                  "type": "point",
+                  "x": 637,
+                  "y": 723.72
+                },
+                {
+                  "id": "a04466b1-28f1-4808-93a0-1f2a5ad7a966",
+                  "type": "point",
+                  "x": 660.49,
+                  "y": 735.47
+                }
+              ],
+              "id": "a5f3c403-92d9-4dcc-8664-bbcd82d453a3",
+              "type": "default",
+              "source": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+              "sourcePort": "clv5gi8sn006g356n4hthxil4",
+              "target": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+              "targetPort": "clv5gi8sl005s356newt14s6h",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e76791f5-bcd4-4aa2-b0e6-b6d5913057c0": {
+              "points": [
+                {
+                  "id": "39c3891f-f41c-4d85-8d24-77da9850c409",
+                  "type": "point",
+                  "x": 611.97,
+                  "y": 760.57
+                },
+                {
+                  "id": "a31d7241-91f8-4aea-aa16-82b99f0ff59e",
+                  "type": "point",
+                  "x": 637,
+                  "y": 982.34
+                },
+                {
+                  "id": "f0227bb5-b306-4a35-bb1c-1c41878bee86",
+                  "type": "point",
+                  "x": 739,
+                  "y": 982.34
+                },
+                {
+                  "id": "8d37eb4c-c6ae-464e-9286-4ab0bbf9e3f6",
+                  "type": "point",
+                  "x": 841,
+                  "y": 982.34
+                },
+                {
+                  "id": "2feb43c1-10de-4500-8b2f-dbb21a22b0ac",
+                  "type": "point",
+                  "x": 983.7,
+                  "y": 982.34
+                },
+                {
+                  "id": "b02994f9-0a2c-4a34-9319-c6121724ca39",
+                  "type": "point",
+                  "x": 1126.39,
+                  "y": 982.34
+                },
+                {
+                  "id": "408260ee-5605-4bda-9b4f-71febe05ff6c",
+                  "type": "point",
+                  "x": 1289.01,
+                  "y": 982.34
+                },
+                {
+                  "id": "bd37b4d2-aa1a-4d1b-84fc-1abdc30f0614",
+                  "type": "point",
+                  "x": 1451.63,
+                  "y": 982.34
+                },
+                {
+                  "id": "f721fb73-6fa2-4126-8578-c37191884e00",
+                  "type": "point",
+                  "x": 1477.87,
+                  "y": 994.1
+                }
+              ],
+              "id": "e76791f5-bcd4-4aa2-b0e6-b6d5913057c0",
+              "type": "default",
+              "source": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+              "sourcePort": "clv5gi8sn006i356nffge51ww",
+              "target": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+              "targetPort": "clv5gi8sr006s356nii1wkpu1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ecce0746-bc99-4bda-9468-4a995f1cd091": {
+              "points": [
+                {
+                  "id": "1bc98beb-e89f-4ea8-bb95-408c189954bd",
+                  "type": "point",
+                  "x": 1633.38,
+                  "y": 994.1
+                },
+                {
+                  "id": "7a7030cf-ed50-4f3d-a801-bdf698031e9c",
+                  "type": "point",
+                  "x": 1661.16,
+                  "y": 982.34
+                },
+                {
+                  "id": "7bdf9b4a-58f9-4bc8-9cd3-d0ca0b79458d",
+                  "type": "point",
+                  "x": 1684.65,
+                  "y": 606.17
+                }
+              ],
+              "id": "ecce0746-bc99-4bda-9468-4a995f1cd091",
+              "type": "default",
+              "source": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+              "sourcePort": "clv5gi8sr006u356n6bbh684p",
+              "target": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "targetPort": "clv5gi8s6003g356n458kz1iz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "afb3e681-5df3-41e9-81f7-05c950e43027": {
+              "points": [
+                {
+                  "id": "444a8548-4eae-4eda-bdd9-f77a9b9719e1",
+                  "type": "point",
+                  "x": 204,
+                  "y": 670.82
+                },
+                {
+                  "id": "9267b1ee-84d3-402c-af4d-ef69add7c031",
+                  "type": "point",
+                  "x": 229,
+                  "y": 723.72
+                },
+                {
+                  "id": "e2f758c0-c676-4718-886c-dd3d7d4cd9c6",
+                  "type": "point",
+                  "x": 252.48,
+                  "y": 735.47
+                }
+              ],
+              "id": "afb3e681-5df3-41e9-81f7-05c950e43027",
+              "type": "default",
+              "source": "1b217c85-5516-482d-a2e0-fbe23467a72d",
+              "sourcePort": "clv5gi8su007c356n3hribj98",
+              "target": "4739024c-52d8-451f-8765-902a432d4f8b",
+              "targetPort": "clv5gi8sw007m356n2kujmr8t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f690ae77-0829-4731-97da-b62db789d904": {
+              "points": [
+                {
+                  "id": "0a6aaddd-853b-4fbd-b52d-a080d351c5e6",
+                  "type": "point",
+                  "x": 204,
+                  "y": 670.82
+                },
+                {
+                  "id": "60a0ccb1-2b0f-489e-8522-220c83067ade",
+                  "type": "point",
+                  "x": 229,
+                  "y": 594.41
+                },
+                {
+                  "id": "98bda525-e5c4-4038-8159-e2293ad3c151",
+                  "type": "point",
+                  "x": 252.48,
+                  "y": 606.17
+                }
+              ],
+              "id": "f690ae77-0829-4731-97da-b62db789d904",
+              "type": "default",
+              "source": "1b217c85-5516-482d-a2e0-fbe23467a72d",
+              "sourcePort": "clv5gi8su007c356n3hribj98",
+              "target": "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540",
+              "targetPort": "clv5gi8st0074356nm9tgng6z",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "27403233-76f7-44df-930d-7d6b411bd0fa": {
+              "points": [
+                {
+                  "id": "b93e10b6-5d12-4e88-9f03-d9005c2960b3",
+                  "type": "point",
+                  "x": 407.97,
+                  "y": 735.47
+                },
+                {
+                  "id": "09a40d9f-42b7-48c3-b928-75f779d1fdd1",
+                  "type": "point",
+                  "x": 433,
+                  "y": 723.72
+                },
+                {
+                  "id": "d6c332c9-9b81-46c7-a3c6-1167eb7bf317",
+                  "type": "point",
+                  "x": 456.48,
+                  "y": 710.33
+                }
+              ],
+              "id": "27403233-76f7-44df-930d-7d6b411bd0fa",
+              "type": "default",
+              "source": "4739024c-52d8-451f-8765-902a432d4f8b",
+              "sourcePort": "clv5gi8sw007o356n2m4xztvb",
+              "target": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+              "targetPort": "clv5gi8sn006c356nfsfxlclp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ce4b4e2d-9a56-430b-b8ae-11e096c0f59f": {
+              "points": [
+                {
+                  "id": "0dd534f2-ad6b-4dbf-bd66-c64bfae8bc6f",
+                  "type": "point",
+                  "x": 168.98,
+                  "y": 483.93
+                },
+                {
+                  "id": "79ab295e-a97e-4d21-8a3f-2682c95da7fd",
+                  "type": "point",
+                  "x": 252.48,
+                  "y": 735.47
+                }
+              ],
+              "id": "ce4b4e2d-9a56-430b-b8ae-11e096c0f59f",
+              "type": "default",
+              "selected": false,
+              "source": "7c2ad282-215b-4c2d-8707-2e06492eba7f",
+              "sourcePort": "clv5hse7q00dj356n5lk1cefz",
+              "target": "4739024c-52d8-451f-8765-902a432d4f8b",
+              "targetPort": "clv5gi8sw007m356n2kujmr8t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "e225a82e-27bd-4e13-9093-2322520a3002",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "947ce98a-e908-4d6a-b010-110eef9b8cf7": {
+              "id": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+              "type": "query",
+              "selected": false,
+              "x": 662,
+              "y": 243.97,
+              "ports": [
+                {
+                  "id": "clv5gi8ru000m356nwyxgn91z",
+                  "type": "default",
+                  "x": 653.24,
+                  "y": 275.64,
+                  "name": "clv5gi8ru000n356ni6ohg28q",
+                  "parentNode": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+                  "links": [
+                    "38e5cddd-fda6-4d09-aaa5-129bcc2f6e19"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8ru000o356nafrhpail",
+                  "type": "default",
+                  "x": 808.73,
+                  "y": 275.64,
+                  "name": "clv5gi8ru000p356n03kjo6ws",
+                  "parentNode": "947ce98a-e908-4d6a-b010-110eef9b8cf7",
+                  "links": [
+                    "ad02b1c4-4a43-4166-b51a-ee31f393ed06"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"d\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  },\n  \"g\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.groupId]\n    }\n  }\n}",
+                "query": "query Query(\n  $d: WorkOrderProcessDistributionWhereInput,\n  $g: WorkOrderProcessDistributionGroupWhereInput\n) {\n  d:workOrderProcessDistribution(where: $d) {\n    edges {\n      node {\n        id\n        workcenterId\n        distributionGroupId\n        balanceQuantity\n        requiredQuantity\n        workOrder {id number}\n        workcenterId\n        earliestStartAt\n        estimatedTime\n        latestStartAt\n        workOrderProcess {\n          id\n          productStrategyProcessId \n        }\n      }\n    }\n  }\n  g: workOrderProcessDistributionGroup(where: $g) {\n    edges {\n      node {\n        id\n        workOrderProcessDistributionStatusId\n        balanceQuantity\n        requiredQuantity\n        estimatedTime\n        workcenterId\n        distributions {\n          edges {\n            node {\n              id\n              requiredQuantity\n              workOrderProcess {\n                productStrategyProcessId\n              }\n              estimatedTime\n              earliestStartAt\n              latestStartAt\n              workOrderProcessDistributionStatusId\n            \n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "92fa2ff3-786d-44b1-817c-1c0578573922"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query: DIST/GROUP"
+            },
+            "92fa2ff3-786d-44b1-817c-1c0578573922": {
+              "id": "92fa2ff3-786d-44b1-817c-1c0578573922",
+              "type": "switch",
+              "selected": false,
+              "x": 866,
+              "y": 206.23,
+              "ports": [
+                {
+                  "id": "clv5gi8rw001a356nnhfnr00c",
+                  "type": "default",
+                  "x": 857.25,
+                  "y": 237.89,
+                  "name": "clv5gi8rw001b356n825esk7y",
+                  "parentNode": "92fa2ff3-786d-44b1-817c-1c0578573922",
+                  "links": [
+                    "ad02b1c4-4a43-4166-b51a-ee31f393ed06"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8rw001c356nmwh8qzpk",
+                  "type": "default",
+                  "x": 1094.12,
+                  "y": 237.89,
+                  "name": "clv5gi8rw001d356nuw62jzru",
+                  "parentNode": "92fa2ff3-786d-44b1-817c-1c0578573922",
+                  "links": [
+                    "62960054-1ad9-4a47-8e7c-3abec394eaac"
+                  ],
+                  "in": false,
+                  "groupName": "FAIL NO DIST",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8rw001e356nidbeve1y",
+                  "type": "default",
+                  "x": 1094.12,
+                  "y": 263.01,
+                  "name": "clv5gi8rw001f356n6wgaexfl",
+                  "parentNode": "92fa2ff3-786d-44b1-817c-1c0578573922",
+                  "links": [
+                    "1b3a86d4-fe99-4cb3-908f-93f337c6d52e"
+                  ],
+                  "in": false,
+                  "groupName": "FAIL NO GROUP",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8rw001g356n5q6e2fno",
+                  "type": "default",
+                  "x": 1094.12,
+                  "y": 288.13,
+                  "name": "clv5gi8rw001h356ncjovb9oj",
+                  "parentNode": "92fa2ff3-786d-44b1-817c-1c0578573922",
+                  "links": [
+                    "0edb6299-0aea-47d2-9ab9-0b1ccca0382f"
+                  ],
+                  "in": false,
+                  "groupName": "FAIL PROCESS NOT EQUAL",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8rw001i356njcsy61zr",
+                  "type": "default",
+                  "x": 1094.12,
+                  "y": 313.24,
+                  "name": "clv5gi8rw001j356noz9er66q",
+                  "parentNode": "92fa2ff3-786d-44b1-817c-1c0578573922",
+                  "links": [
+                    "f7eaa952-45b5-4682-87b2-b00d76f8c4cc"
+                  ],
+                  "in": false,
+                  "groupName": "PASS",
+                  "groupIndex": 3,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "FAIL NO DIST",
+                    "transform": "$isNilOrEmpty(d.edges.node)",
+                    "nextNodes": [
+                      "e5d2fc25-456b-4a8c-b1a6-6690685dec4b"
+                    ]
+                  },
+                  {
+                    "name": "FAIL NO GROUP",
+                    "transform": "$isNilOrEmpty(g.edges.node)",
+                    "nextNodes": [
+                      "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c"
+                    ]
+                  },
+                  {
+                    "name": "FAIL PROCESS NOT EQUAL",
+                    "transform": "\n  d.edges.node.workcenterId\n  !=\n  g.edges[0].node.distributions.edges[0].node.workcenterId\n",
+                    "nextNodes": [
+                      "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107"
+                    ]
+                  },
+                  {
+                    "name": "PASS",
+                    "transform": "true",
+                    "nextNodes": [
+                      "2c89eb77-0125-42cf-a68e-22da386285fe"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route: ADD DIST/GROUP"
+            },
+            "e5d2fc25-456b-4a8c-b1a6-6690685dec4b": {
+              "id": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+              "type": "alert",
+              "selected": false,
+              "x": 1479.39,
+              "y": 50,
+              "ports": [
+                {
+                  "id": "clv5gi8ry001s356nxxub2svd",
+                  "type": "default",
+                  "x": 1470.62,
+                  "y": 81.68,
+                  "name": "clv5gi8ry001t356nx9lt64i0",
+                  "parentNode": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+                  "links": [
+                    "62960054-1ad9-4a47-8e7c-3abec394eaac"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8ry001u356no7b8w5ez",
+                  "type": "default",
+                  "x": 1626.13,
+                  "y": 81.68,
+                  "name": "clv5gi8ry001v356npxgxuu7e",
+                  "parentNode": "e5d2fc25-456b-4a8c-b1a6-6690685dec4b",
+                  "links": [
+                    "121ec2bc-585d-405f-9a84-448d4e6f9147"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "titleTransform": "\"Failed to add distribution\"",
+                "messageTransform": "\"No distribution found\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c": {
+              "id": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+              "type": "alert",
+              "selected": false,
+              "x": 1480,
+              "y": 185,
+              "ports": [
+                {
+                  "id": "clv5gi8rz0024356n37e76zyi",
+                  "type": "default",
+                  "x": 1471.25,
+                  "y": 216.68,
+                  "name": "clv5gi8s00025356nu2qbaun2",
+                  "parentNode": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+                  "links": [
+                    "1b3a86d4-fe99-4cb3-908f-93f337c6d52e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8s00026356n9g2jbbil",
+                  "type": "default",
+                  "x": 1626.76,
+                  "y": 216.68,
+                  "name": "clv5gi8s00027356nesf7r1oc",
+                  "parentNode": "2a1a429b-bc93-4ada-bb57-3efdcfa1bd0c",
+                  "links": [
+                    "478c4a6d-02c2-4fe5-90ac-8c4cb49402e4"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "titleTransform": "\"Failed to add distribution\"",
+                "messageTransform": "\"No distribution group found\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107": {
+              "id": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+              "type": "alert",
+              "selected": false,
+              "x": 1479.39,
+              "y": 308.63,
+              "ports": [
+                {
+                  "id": "clv5gi8s1002g356ns0qxv25w",
+                  "type": "default",
+                  "x": 1470.62,
+                  "y": 340.29,
+                  "name": "clv5gi8s1002h356n32c7t9z4",
+                  "parentNode": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+                  "links": [
+                    "0edb6299-0aea-47d2-9ab9-0b1ccca0382f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8s1002i356nc2lzb3n7",
+                  "type": "default",
+                  "x": 1626.13,
+                  "y": 340.29,
+                  "name": "clv5gi8s1002j356nd5102t37",
+                  "parentNode": "3ba5b2b5-0928-4f2e-92a4-661ec3ab1107",
+                  "links": [
+                    "e6208db7-666f-4989-b315-91d57a048436"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "titleTransform": "\"Failed to add distribution\"",
+                "messageTransform": "\"Workcenters do not match\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "2c89eb77-0125-42cf-a68e-22da386285fe": {
+              "id": "2c89eb77-0125-42cf-a68e-22da386285fe",
+              "type": "transform",
+              "selected": false,
+              "x": 1151.39,
+              "y": 437.94,
+              "ports": [
+                {
+                  "id": "clv5gi8s3002s356nm5noiizs",
+                  "type": "default",
+                  "x": 1142.64,
+                  "y": 469.61,
+                  "name": "clv5gi8s3002t356ntx6ry05l",
+                  "parentNode": "2c89eb77-0125-42cf-a68e-22da386285fe",
+                  "links": [
+                    "f7eaa952-45b5-4682-87b2-b00d76f8c4cc"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8s3002u356nqse02kk8",
+                  "type": "default",
+                  "x": 1419.3,
+                  "y": 469.61,
+                  "name": "clv5gi8s3002v356ndcs17qyc",
+                  "parentNode": "2c89eb77-0125-42cf-a68e-22da386285fe",
+                  "links": [
+                    "4c2162e5-6a36-4e21-aa01-c5c60606b020"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $g := g.edges.node;\n  $d := d.edges.node;\n\n  {\n    \"dg\": $g.{\n      \"update\": {\n        \"balanceQuantity\": balanceQuantity + $d.balanceQuantity,\n        \"requiredQuantity\": requiredQuantity + $d.requiredQuantity,\n        \"estimatedTime\": estimatedTime + $d.estimatedTime\n      },\n      \"where\": {\n        \"id\": id\n      }\n    },\n\n    \"du\": $d.{\n      \"update\": {\n        \"distributionGroupId\": $g.id\n      },\n      \"where\": {\n        \"id\":id\n      }\n    }\n  }\n\n\n)",
+                "nextNodes": [
+                  "83b56afc-36dc-4245-9b2f-d11dec7cd467"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata: FORMAT DIST/GROUP PAYLOAD"
+            },
+            "83b56afc-36dc-4245-9b2f-d11dec7cd467": {
+              "id": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+              "type": "mutate",
+              "selected": false,
+              "x": 1476.63,
+              "y": 437.94,
+              "ports": [
+                {
+                  "id": "clv5gi8s40034356nk4fx6nfn",
+                  "type": "default",
+                  "x": 1467.87,
+                  "y": 469.61,
+                  "name": "clv5gi8s40035356nv0c1pp5l",
+                  "parentNode": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+                  "links": [
+                    "4c2162e5-6a36-4e21-aa01-c5c60606b020"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8s40036356nr4zx74en",
+                  "type": "default",
+                  "x": 1628.83,
+                  "y": 469.61,
+                  "name": "clv5gi8s40037356nra7trzlm",
+                  "parentNode": "83b56afc-36dc-4245-9b2f-d11dec7cd467",
+                  "links": [
+                    "ff0c6ba7-c96e-406b-a6d0-d0cc060e59f7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation(\n  $dg: [WorkOrderProcessDistributionGroupUpdatePayloadInput!]!,\n  $du: [WorkOrderProcessDistributionUpdatePayloadInput!]!\n){\n  dg:updateWorkOrderProcessDistributionGroup(payload:$dg){id},\n  du:updateWorkOrderProcessDistribution(payload:$du){id}\n} ",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate: DIST/GROUP"
+            },
+            "368cb313-9518-4bc8-9bc2-4acfeee5ba69": {
+              "id": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+              "type": "response",
+              "selected": false,
+              "x": 1686.16,
+              "y": 567.25,
+              "ports": [
+                {
+                  "id": "clv5gi8s6003g356n458kz1iz",
+                  "type": "default",
+                  "x": 1677.4,
+                  "y": 598.93,
+                  "name": "clv5gi8s6003h356nz2hgzvox",
+                  "parentNode": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+                  "links": [
+                    "121ec2bc-585d-405f-9a84-448d4e6f9147",
+                    "478c4a6d-02c2-4fe5-90ac-8c4cb49402e4",
+                    "e6208db7-666f-4989-b315-91d57a048436",
+                    "ff0c6ba7-c96e-406b-a6d0-d0cc060e59f7",
+                    "8e7949d0-4d50-4bc3-8c04-78f669f093fa",
+                    "ad8b15d9-2ec7-4757-a575-406869e5473c",
+                    "c9c72eb8-c485-4b0f-860f-59014fe7c3b9",
+                    "ecce0746-bc99-4bda-9468-4a995f1cd091"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clv5gi8s6003i356npz4f3fj5",
+                  "type": "default",
+                  "x": 1832.89,
+                  "y": 598.93,
+                  "name": "clv5gi8s6003j356nx5ih741c",
+                  "parentNode": "368cb313-9518-4bc8-9bc2-4acfeee5ba69",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "8b23d540-e158-484e-a5f3-1d5e33ec3b90": {
+              "id": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+              "type": "switch",
+              "selected": false,
+              "x": 881.77,
+              "y": 671.41,
+              "ports": [
+                {
+                  "id": "clv5gi8s70040356ne2jhjwn7",
+                  "type": "default",
+                  "x": 873.01,
+                  "y": 703.09,
+                  "name": "clv5gi8s70041356nnnrk1j04",
+                  "parentNode": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+                  "links": [
+                    "54a75a9f-f980-47ca-9a0d-173a5f6e9f03"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8s70042356npqscac0b",
+                  "type": "default",
+                  "x": 1078.28,
+                  "y": 703.09,
+                  "name": "clv5gi8s70043356nucvxbcli",
+                  "parentNode": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+                  "links": [
+                    "aca6f57b-fd57-4531-bdec-936f0d229c33"
+                  ],
+                  "in": false,
+                  "groupName": "FAIL NO GROUP",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8s70044356ne4q10c6k",
+                  "type": "default",
+                  "x": 1078.28,
+                  "y": 728.2,
+                  "name": "clv5gi8s70045356nfudkrzln",
+                  "parentNode": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+                  "links": [
+                    "ed8b456f-00ce-4b1c-a9ea-15e8d95b8fad"
+                  ],
+                  "in": false,
+                  "groupName": "FAIL NO DIST",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8s70046356nabrjvwo6",
+                  "type": "default",
+                  "x": 1078.28,
+                  "y": 753.32,
+                  "name": "clv5gi8s70047356nnco6ld9g",
+                  "parentNode": "8b23d540-e158-484e-a5f3-1d5e33ec3b90",
+                  "links": [
+                    "2a90ebf2-c256-46f9-b965-9c76799a7d96"
+                  ],
+                  "in": false,
+                  "groupName": "PASS",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "FAIL NO GROUP",
+                    "transform": "$isNilOrEmpty(g.edges.node)",
+                    "nextNodes": [
+                      "32a9fd48-aafa-4d91-a745-add76d5681eb"
+                    ]
+                  },
+                  {
+                    "name": "FAIL NO DIST",
+                    "transform": "$isNilOrEmpty(g.edges.node.distributions.edges.node[id=$state.context.REQUEST.DATA.id])",
+                    "nextNodes": [
+                      "895b9246-361c-4e16-a48f-2d393f7fda6e"
+                    ]
+                  },
+                  {
+                    "name": "PASS",
+                    "transform": "true",
+                    "nextNodes": [
+                      "1c318ee3-f7a3-4010-a74e-db4311259d72"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route: REMOVE DIST/GROUP"
+            },
+            "895b9246-361c-4e16-a48f-2d393f7fda6e": {
+              "id": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+              "type": "alert",
+              "selected": false,
+              "x": 1479.39,
+              "y": 567.25,
+              "ports": [
+                {
+                  "id": "clv5gi8sa004g356nhdlan0em",
+                  "type": "default",
+                  "x": 1470.62,
+                  "y": 598.93,
+                  "name": "clv5gi8sa004h356notoz8k4o",
+                  "parentNode": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+                  "links": [
+                    "ed8b456f-00ce-4b1c-a9ea-15e8d95b8fad"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sa004i356nwzpimbqc",
+                  "type": "default",
+                  "x": 1626.13,
+                  "y": 598.93,
+                  "name": "clv5gi8sa004j356n6m25uq2f",
+                  "parentNode": "895b9246-361c-4e16-a48f-2d393f7fda6e",
+                  "links": [
+                    "8e7949d0-4d50-4bc3-8c04-78f669f093fa"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "titleTransform": "\"Failed to remove distribution\"",
+                "messageTransform": "\"No distribution found\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "32a9fd48-aafa-4d91-a745-add76d5681eb": {
+              "id": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+              "type": "alert",
+              "selected": false,
+              "x": 1479.39,
+              "y": 696.56,
+              "ports": [
+                {
+                  "id": "clv5gi8sc004s356n47kgja0k",
+                  "type": "default",
+                  "x": 1470.62,
+                  "y": 728.22,
+                  "name": "clv5gi8sc004t356nf3hnlt41",
+                  "parentNode": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+                  "links": [
+                    "aca6f57b-fd57-4531-bdec-936f0d229c33"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sc004u356n15jzu64h",
+                  "type": "default",
+                  "x": 1626.13,
+                  "y": 728.22,
+                  "name": "clv5gi8sc004v356nrm1wsmym",
+                  "parentNode": "32a9fd48-aafa-4d91-a745-add76d5681eb",
+                  "links": [
+                    "ad8b15d9-2ec7-4757-a575-406869e5473c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "titleTransform": "\"Failed to remove distribution\"",
+                "messageTransform": "\"No distribution group found\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "1c318ee3-f7a3-4010-a74e-db4311259d72": {
+              "id": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+              "type": "transform",
+              "selected": false,
+              "x": 1151.39,
+              "y": 825.88,
+              "ports": [
+                {
+                  "id": "clv5gi8sg0054356npfvcn58z",
+                  "type": "default",
+                  "x": 1142.64,
+                  "y": 857.56,
+                  "name": "clv5gi8sg0055356n8j8bp6jb",
+                  "parentNode": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+                  "links": [
+                    "2a90ebf2-c256-46f9-b965-9c76799a7d96"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sg0056356nfzq8vwkc",
+                  "type": "default",
+                  "x": 1419.3,
+                  "y": 857.56,
+                  "name": "clv5gi8sg0057356n72wxoqll",
+                  "parentNode": "1c318ee3-f7a3-4010-a74e-db4311259d72",
+                  "links": [
+                    "5569792e-60f8-4e1c-9166-aeeb440ec5b0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $g := g.edges.node;\n  $d := d.edges.node;\n  $id := $state.context.REQUEST.DATA.id;\n  $dgid := $cuid();\n\n  {\n    \"dg\":  $g.{\n      \"update\": {\n        \"balanceQuantity\": balanceQuantity - $d.balanceQuantity,\n        \"requiredQuantity\": requiredQuantity - $d.requiredQuantity,\n        \"estimatedTime\": estimatedTime - $d.estimatedTime\n      },\n      \"where\": {\n        \"id\": id\n      }\n    } ,\n\n    \"du\": $d.{\n      \"update\": {\n        \"distributionGroupId\": $dgid\n      },\n      \"where\": {\n        \"id\":id\n      }\n    },\n    \n  \n    \"dc\": {\n      \"create\": $merge([$omit($d,[\"id\",\"workOrder\",\"workOrderProcess\",\"distributionGroupId\"]),{\"id\":$dgid}])\n    }\n  }\n\n\n)",
+                "nextNodes": [
+                  "a52c1539-2894-4e74-8463-e4c551cfc156"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata: FORMAT DIST/GROUP PAYLOAD"
+            },
+            "a52c1539-2894-4e74-8463-e4c551cfc156": {
+              "id": "a52c1539-2894-4e74-8463-e4c551cfc156",
+              "type": "mutate",
+              "selected": false,
+              "x": 1476.63,
+              "y": 825.88,
+              "ports": [
+                {
+                  "id": "clv5gi8sj005g356n1t71dvxz",
+                  "type": "default",
+                  "x": 1467.87,
+                  "y": 857.56,
+                  "name": "clv5gi8sj005h356ni9rk3dvx",
+                  "parentNode": "a52c1539-2894-4e74-8463-e4c551cfc156",
+                  "links": [
+                    "5569792e-60f8-4e1c-9166-aeeb440ec5b0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sk005i356nuyehfsrq",
+                  "type": "default",
+                  "x": 1628.83,
+                  "y": 857.56,
+                  "name": "clv5gi8sk005j356ng4c8dc6k",
+                  "parentNode": "a52c1539-2894-4e74-8463-e4c551cfc156",
+                  "links": [
+                    "c9c72eb8-c485-4b0f-860f-59014fe7c3b9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation(\n    $dc: [WorkOrderProcessDistributionGroupCreatePayloadInput!]!,\n  $dg: [WorkOrderProcessDistributionGroupUpdatePayloadInput!]!,\n  $du: [WorkOrderProcessDistributionUpdatePayloadInput!]!,\n\n){\n  dc:createWorkOrderProcessDistributionGroup(payload:$dc){id},\n  du:updateWorkOrderProcessDistribution(payload:$du){id},\n  dg:updateWorkOrderProcessDistributionGroup(payload:$dg){id}\n  \n} ",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate: DIST/GROUP"
+            },
+            "feba6ccf-0c00-4dcf-9078-867eaf587091": {
+              "id": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+              "type": "query",
+              "selected": true,
+              "x": 662,
+              "y": 696.56,
+              "ports": [
+                {
+                  "id": "clv5gi8sl005s356newt14s6h",
+                  "type": "default",
+                  "x": 653.24,
+                  "y": 728.22,
+                  "name": "clv5gi8sl005t356nu2iwbdxq",
+                  "parentNode": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+                  "links": [
+                    "a5f3c403-92d9-4dcc-8664-bbcd82d453a3"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sl005u356nypcdg2gk",
+                  "type": "default",
+                  "x": 808.73,
+                  "y": 728.22,
+                  "name": "clv5gi8sl005v356nwcurk0jg",
+                  "parentNode": "feba6ccf-0c00-4dcf-9078-867eaf587091",
+                  "links": [
+                    "54a75a9f-f980-47ca-9a0d-173a5f6e9f03"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"d\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.id]\n    }\n  },\n  \"g\": {\n    \"id\": {\n      \"_in\": [REQUEST.DATA.groupId]\n    }\n  }\n}",
+                "query": "query Query(\n  $d: WorkOrderProcessDistributionWhereInput,\n  $g: WorkOrderProcessDistributionGroupWhereInput\n) {\n  d:workOrderProcessDistribution(where: $d) {\n    edges {\n      node {\n        id\n        distributionGroupId\n        balanceQuantity\n        requiredQuantity\n        workOrder {id number}\n        workcenterId\n        earliestStartAt\n        estimatedTime\n        latestStartAt\n        workOrderProcess {\n          id\n          productStrategyProcessId \n        }\n        productionOperators\n        setupOperators\n        workOrderProcessDistributionStatusId\n        standardRate\n        cycleTime\n        idealRate\n        actualStartAt\n        actualFinishAt\n        scheduledStartAt\n        scheduledFinishAt\n        percentComplete\n        producedQuantity\n        scrappedQuantity\n        earliestStartAt\n        latestStartAt\n        \n      }\n    }\n  }\n  g: workOrderProcessDistributionGroup(where: $g) {\n    edges {\n      node {\n        id\n        requiredQuantity\n        balanceQuantity\n        estimatedTime\n        workOrderProcessDistributionStatusId\n        distributions {\n          edges {\n            node {\n              id\n              requiredQuantity\n              workOrderProcess {\n                productStrategyProcessId\n              }\n              estimatedTime\n              earliestStartAt\n              latestStartAt\n              workOrderProcessDistributionStatusId\n              \n            \n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "8b23d540-e158-484e-a5f3-1d5e33ec3b90"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query: DIST/GROUP"
+            },
+            "a6b3d203-d626-49a4-aa71-b511dfa7f8f8": {
+              "id": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+              "type": "switch",
+              "selected": false,
+              "x": 458,
+              "y": 671.41,
+              "ports": [
+                {
+                  "id": "clv5gi8sn006c356nfsfxlclp",
+                  "type": "default",
+                  "x": 449.24,
+                  "y": 703.09,
+                  "name": "clv5gi8sn006d356nahmb4iu4",
+                  "parentNode": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+                  "links": [
+                    "27403233-76f7-44df-930d-7d6b411bd0fa"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sn006e356nee2tg1rn",
+                  "type": "default",
+                  "x": 604.73,
+                  "y": 703.09,
+                  "name": "clv5gi8sn006f356nwea3ym6d",
+                  "parentNode": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+                  "links": [
+                    "38e5cddd-fda6-4d09-aaa5-129bcc2f6e19"
+                  ],
+                  "in": false,
+                  "groupName": "ADD",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8sn006g356n4hthxil4",
+                  "type": "default",
+                  "x": 604.73,
+                  "y": 728.2,
+                  "name": "clv5gi8sn006h356nv5c690t8",
+                  "parentNode": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+                  "links": [
+                    "a5f3c403-92d9-4dcc-8664-bbcd82d453a3"
+                  ],
+                  "in": false,
+                  "groupName": "REMOVE",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clv5gi8sn006i356nffge51ww",
+                  "type": "default",
+                  "x": 604.73,
+                  "y": 753.32,
+                  "name": "clv5gi8sn006j356nkycut9u2",
+                  "parentNode": "a6b3d203-d626-49a4-aa71-b511dfa7f8f8",
+                  "links": [
+                    "e76791f5-bcd4-4aa2-b0e6-b6d5913057c0"
+                  ],
+                  "in": false,
+                  "groupName": "PASS",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "ADD",
+                    "transform": "REQUEST.ACTION=\"ADD\"",
+                    "nextNodes": [
+                      "947ce98a-e908-4d6a-b010-110eef9b8cf7"
+                    ]
+                  },
+                  {
+                    "name": "REMOVE",
+                    "transform": "REQUEST.ACTION=\"REMOVE\"",
+                    "nextNodes": [
+                      "feba6ccf-0c00-4dcf-9078-867eaf587091"
+                    ]
+                  },
+                  {
+                    "name": "PASS",
+                    "transform": "true",
+                    "nextNodes": [
+                      "4f0b1e00-66a6-4b30-80cb-7771ec8c5385"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route"
+            },
+            "4f0b1e00-66a6-4b30-80cb-7771ec8c5385": {
+              "id": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+              "type": "alert",
+              "selected": false,
+              "x": 1479.39,
+              "y": 955.19,
+              "ports": [
+                {
+                  "id": "clv5gi8sr006s356nii1wkpu1",
+                  "type": "default",
+                  "x": 1470.62,
+                  "y": 986.86,
+                  "name": "clv5gi8sr006t356ncdiyvces",
+                  "parentNode": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+                  "links": [
+                    "e76791f5-bcd4-4aa2-b0e6-b6d5913057c0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sr006u356n6bbh684p",
+                  "type": "default",
+                  "x": 1626.13,
+                  "y": 986.86,
+                  "name": "clv5gi8sr006v356n3bzrkm2y",
+                  "parentNode": "4f0b1e00-66a6-4b30-80cb-7771ec8c5385",
+                  "links": [
+                    "ecce0746-bc99-4bda-9468-4a995f1cd091"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Dismiss",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"No Action Provided\"",
+                "titleTransform": "\"Request cannot be completed\"",
+                "nextNodes": [
+                  "368cb313-9518-4bc8-9bc2-4acfeee5ba69"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Alert Dialog"
+            },
+            "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540": {
+              "id": "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540",
+              "type": "executeFlow",
+              "selected": false,
+              "x": 254,
+              "y": 567.25,
+              "ports": [
+                {
+                  "id": "clv5gi8st0074356nm9tgng6z",
+                  "type": "default",
+                  "x": 245.23,
+                  "y": 598.93,
+                  "name": "clv5gi8st0075356nyhwmoqzo",
+                  "parentNode": "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540",
+                  "links": [
+                    "f690ae77-0829-4731-97da-b62db789d904"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8st0076356nfytph1z4",
+                  "type": "default",
+                  "x": 400.72,
+                  "y": 598.93,
+                  "name": "clv5gi8st0077356nr7ze4jul",
+                  "parentNode": "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "flowId": "webFlowLog",
+                "payloadTransform": "{\n  \"FLOW\": \"distributionGroupWebFlow\",\n  \"$\": $,\n  \"CTX\": $state.context\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Execute Flow: LOG"
+            },
+            "1b217c85-5516-482d-a2e0-fbe23467a72d": {
+              "id": "1b217c85-5516-482d-a2e0-fbe23467a72d",
+              "type": "request",
+              "selected": false,
+              "x": 50,
+              "y": 631.91,
+              "ports": [
+                {
+                  "id": "clv5gi8su007c356n3hribj98",
+                  "type": "default",
+                  "x": 196.76,
+                  "y": 663.57,
+                  "name": "clv5gi8su007d356nqvl3y6ds",
+                  "parentNode": "1b217c85-5516-482d-a2e0-fbe23467a72d",
+                  "links": [
+                    "afb3e681-5df3-41e9-81f7-05c950e43027",
+                    "f690ae77-0829-4731-97da-b62db789d904"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "4739024c-52d8-451f-8765-902a432d4f8b",
+                  "45bb0b93-3ba2-4b88-8a3b-bd13c9a5b540"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "4739024c-52d8-451f-8765-902a432d4f8b": {
+              "id": "4739024c-52d8-451f-8765-902a432d4f8b",
+              "type": "setContext",
+              "selected": false,
+              "x": 254,
+              "y": 696.56,
+              "ports": [
+                {
+                  "id": "clv5gi8sw007m356n2kujmr8t",
+                  "type": "default",
+                  "x": 245.23,
+                  "y": 728.22,
+                  "name": "clv5gi8sw007n356nnkiarlet",
+                  "parentNode": "4739024c-52d8-451f-8765-902a432d4f8b",
+                  "links": [
+                    "afb3e681-5df3-41e9-81f7-05c950e43027",
+                    "ce4b4e2d-9a56-430b-b8ae-11e096c0f59f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clv5gi8sw007o356n2m4xztvb",
+                  "type": "default",
+                  "x": 400.72,
+                  "y": 728.22,
+                  "name": "clv5gi8sw007p356nrb91s5i7",
+                  "parentNode": "4739024c-52d8-451f-8765-902a432d4f8b",
+                  "links": [
+                    "27403233-76f7-44df-930d-7d6b411bd0fa"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "a6b3d203-d626-49a4-aa71-b511dfa7f8f8"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context: REQ"
+            },
+            "7c2ad282-215b-4c2d-8707-2e06492eba7f": {
+              "id": "7c2ad282-215b-4c2d-8707-2e06492eba7f",
+              "type": "debugSource",
+              "selected": false,
+              "x": 15,
+              "y": 445,
+              "ports": [
+                {
+                  "id": "clv5hse7q00dj356n5lk1cefz",
+                  "type": "default",
+                  "x": 161.74,
+                  "y": 476.68,
+                  "name": "clv5hse7q00dk356nct17c7tq",
+                  "parentNode": "7c2ad282-215b-4c2d-8707-2e06492eba7f",
+                  "links": [
+                    "ce4b4e2d-9a56-430b-b8ae-11e096c0f59f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "id": "cltgqt7h3001s01caghole4nr",
+                      "groupId": "cltgqt7f8001b01ca2y3m7k12"
+                    },
+                    "ACTION": "ADD"
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "4739024c-52d8-451f-8765-902a432d4f8b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Distribution Group Add Remove Web Flow",
+      "type": "Screen",
+      "version": "0.0.5",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

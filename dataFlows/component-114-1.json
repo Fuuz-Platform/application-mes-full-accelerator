@@ -1,0 +1,2474 @@
+{
+  "header": {
+    "id": "screenGenerationActionsCreate",
+    "name": "Screen Generation Actions Create",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cl64yqlum00eb01411u0a4pke",
+    "number": "0.0.3",
+    "description": "Added support for validation=false when a sequence exists.",
+    "dataFlowId": "screenGenerationActionsCreate",
+    "flow": {
+      "id": "cl64yqlum00eb01411u0a4pke",
+      "name": "Screen Generation Actions Create",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+          "name": "Broadcast Mutation Inputs",
+          "type": "broadcast",
+          "data": {
+            "nextNodes": [
+              "5e955221-1713-4cc1-9af7-79523a20255b"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+          "name": "Combine Mutations",
+          "type": "combine",
+          "data": {
+            "executionTimeout": 60,
+            "payloadCombinationStrategy": "index",
+            "contextCombinationStrategy": "first",
+            "nextNodes": [
+              "aa7cc537-97c5-446f-b050-d862fc047eed"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+          "name": "Broadcast Fields",
+          "type": "broadcast",
+          "data": {
+            "nextNodes": [
+              "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+          "name": "Combine Fields",
+          "type": "combine",
+          "data": {
+            "executionTimeout": 60,
+            "payloadCombinationStrategy": "index",
+            "contextCombinationStrategy": "first",
+            "nextNodes": [
+              "c901748f-0d05-410f-982c-6cf8e2879fbe"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+          "name": "Parse Field Type String",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $baseTypeMatch := $match(type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  $baseFieldName := $coalesce([$match(name, /(\\w+)Id$/).groups[0], name]);\n  $baseField := $state.context.component.model.fields[name=$baseFieldName];\n  $baseFieldType := $match($baseField.type, /\\[?(\\w+)!?\\]?!?/).groups[0];\n  \n  {\n    \"field\": $,\n    \"isList\": $contains(type, \"[\"),\n    \"isRequired\": $contains(type, \"!\"),\n    \"baseType\": $baseType,\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    }),\n    \"baseField\": {\n      \"isList\": $contains($baseField.type, \"[\"),\n      \"isRequired\": $contains($baseField.type, \"!\"),\n      \"fieldName\": $baseFieldName,\n      \"field\": $baseField,\n      \"baseType\": $baseFieldType,\n      \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n        \"api\": $state.context.parameters.api,\n        \"name\": $baseFieldType\n      })\n    }\n  }\n)",
+            "nextNodes": [
+              "40a4af07-284d-4112-99a3-e5f17b77033e"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "40a4af07-284d-4112-99a3-e5f17b77033e",
+          "name": "Field Type",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "ID Field",
+                "nextNodes": [
+                  "7c7ce568-23a2-429e-b7f9-40b3e6b82085"
+                ],
+                "transform": "baseType = 'ID' and $not($isNil(baseField.baseTypeModel))"
+              },
+              {
+                "name": "Else (Scalars)",
+                "transform": "true",
+                "nextNodes": [
+                  "689bd742-2425-4eb4-8178-ca0638e80805"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+          "name": "Type is ID",
+          "type": "transform",
+          "data": {
+            "transform": "field.name = $state.context.component.parameterField \n  ? {\n    \"name\": field.name,\n    \"type\": 'parameter',\n    \"parameterName\": 'id',\n    \"dataPath\": baseField.field.name,\n    \"target\": {\n      \"dataPath\": field.name\n    },\n    \"query\": {\n      \"fields\": [baseField.field.name]\n    }\n  } : {\n    \"name\": baseField.field.name,\n    \"description\": baseField.field.description,\n    \"label\": $startCase(baseField.field.name),\n    \"labelField\": $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"labelPath\": $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"additionalFields\": baseField.baseTypeModel.metadata.mfgx.labelField,\n    \"type\": 'combobox',\n    \"dataPath\": baseField.field.name,\n    \"queryType\": baseField.baseType,\n    \"target\": {\n      \"dataPath\": field.name\n    },\n    \"api\": $state.context.parameters.api,\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseField.baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseField.baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseField.baseType),'en')\n        & '/'\n        & '\" & data.' \n        & baseField.field.name\n        & '.id'\n    },\n    \"validation\": {\n      \"required\": baseField.isRequired and $not($exists(baseField.field.metadata.mfgx.defaultValue))\n    },\n    \"query\": {\n      \"fields\": [\n        baseField.field.name & '.id',\n        baseField.field.name & '.' & $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"])\n      ]\n    }\n  }",
+            "nextNodes": [
+              "9bda2be1-9a64-445b-a02c-15dd724ee5d2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "5e955221-1713-4cc1-9af7-79523a20255b",
+          "name": "Fields",
+          "type": "transform",
+          "data": {
+            "transform": "fields",
+            "nextNodes": [
+              "b3124131-6ff5-40d9-9ef0-7e4e789af047"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "689bd742-2425-4eb4-8178-ca0638e80805",
+          "name": "Type is Scalar",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $dataPath := field.name;\n  $label := $startCase(field.name);\n\n  $scalarMap := {\n    \"String\": {\n      \"type\": field.name = \"description\" or field.name = \"note\" ? 'markdown' : 'text'\n    },\n    \"Password\": {\n      \"type\": \"password\"\n    },\n    \"Email\": {\n      \"type\": 'text'\n    },\n    \"Boolean\": {\n      \"type\": 'checkbox'\n    },\n    \"DateTime\": {\n      \"type\": 'datetime'\n    },\n    \"Date\": {\n      \"type\": 'date'\n    },\n    \"Time\": {\n      \"type\": 'time'\n    },\n    \"Int\": {\n      \"name\": field.name,\n      \"type\": 'integer'\n    },\n    \"Float\": {\n      \"type\": 'float'\n    },\n    \"AddressCreateInput\": {\n      \"type\": 'address'\n    },\n    \"MeasureCreateInput\": {\n      \"type\": 'measure'\n    },\n    \"RatioMeasureCreateInput\": {\n      \"type\": 'ratioMeasure'\n    },\n    \"AddressUpdateInput\": {\n      \"type\": 'address'\n    },\n    \"MeasureUpdateInput\": {\n      \"type\": 'measure'\n    },\n    \"RatioMeasureUpdateInput\": {\n      \"type\": 'ratioMeasure'\n    },\n    \"JSON\": {\n      \"type\": 'json'\n    },\n    \"JSONObject\": {\n      \"type\": 'json'\n    }\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $merge([\n    { \n      \"name\": field.name,\n      \"description\": field.description,\n      \"label\": $label,\n      \"type\": \"text\",\n      \"dataPath\": $dataPath,\n      \"validation\": {\n        \"required\": $not(field.name = 'id') and baseField.isRequired and $not($exists(baseField.field.metadata.mfgx.defaultValue)) and $not($exists(baseField.field.metadata.mfgx.sequence))\n      },\n      \"defaultValue\": baseField.field.metadata.mfgx.defaultValue,\n      \"query\": {\n        \"fields\": [$dataPath]\n      }\n    },\n    $format    \n  ])\n)",
+            "nextNodes": [
+              "9bda2be1-9a64-445b-a02c-15dd724ee5d2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "e7fe08c4-c50a-457b-aa49-164337d4cae7",
+          "name": "Request (Input Create)",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "52f6d53c-6a11-441e-8c5f-a9240c977007"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+          "name": "Input Create Module",
+          "type": "when",
+          "data": {
+            "nextNodes": [
+              "c6380b7b-4b2b-4fca-9e63-820dc791062d"
+            ],
+            "transform": "screenGeneration.module = 'inputCreate'"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "20d710d8-dac9-4065-bd97-0a93a720edc2"
+            ],
+            "transform": "{\n  \"component\": payload.component,\n  \"parameters\": payload.parameters,\n  \"actions\": payload.actions\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "aa7cc537-97c5-446f-b050-d862fc047eed",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+          "name": "Get Input Payoad",
+          "type": "transform",
+          "data": {
+            "transform": "$state.context.actions",
+            "nextNodes": [
+              "7156e10f-a8c3-4e73-a6c1-5a3426af86ac"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.2"
+    },
+    "diagram": {
+      "id": "cl64yqlum00eb01411u0a4pke",
+      "offsetX": 87.13,
+      "offsetY": 173.74,
+      "zoom": 71.67,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "0c607883-dfc8-4920-919a-f55e49b1ac65",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "d8ff419a-cbf0-4b55-8b9f-39330790e2f8": {
+              "points": [
+                {
+                  "id": "8d1c6d29-8107-468e-a59a-4f1135b42cc8",
+                  "type": "point",
+                  "x": 1612.56,
+                  "y": 565.89
+                },
+                {
+                  "id": "d1a56f98-2697-48d1-88fe-e69427842910",
+                  "type": "point",
+                  "x": 1703.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "d8ff419a-cbf0-4b55-8b9f-39330790e2f8",
+              "type": "default",
+              "source": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+              "sourcePort": "cl64yq7so003w306d0cyncx7v",
+              "target": "5e955221-1713-4cc1-9af7-79523a20255b",
+              "targetPort": "cl64yq7t9006c306d5deg9gpj",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4dc3e035-ade4-4b56-8a41-55d1e76464d0": {
+              "points": [
+                {
+                  "id": "dfc7f501-d690-47e5-8009-8daca48f8272",
+                  "type": "point",
+                  "x": 3502.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "909126d9-8f2d-4c79-9db3-2f8fdaeae4ae",
+                  "type": "point",
+                  "x": 3538.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "4dc3e035-ade4-4b56-8a41-55d1e76464d0",
+              "type": "default",
+              "source": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+              "sourcePort": "cl64yq7sr0048306d541pgru5",
+              "target": "aa7cc537-97c5-446f-b050-d862fc047eed",
+              "targetPort": "cl64yq7tk007u306dg8aeqloa",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d8cb11dd-ef89-45b1-bbfd-c0fba63e1505": {
+              "points": [
+                {
+                  "id": "a8dfc31c-c2d4-4eea-a54b-8fa18c5496fb",
+                  "type": "point",
+                  "x": 2142.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "1430d1c0-f639-4aee-adf7-eb67c42683ab",
+                  "type": "point",
+                  "x": 2218.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "d8cb11dd-ef89-45b1-bbfd-c0fba63e1505",
+              "type": "default",
+              "source": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+              "sourcePort": "cl64yq7su004k306ddj8mz1kc",
+              "target": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+              "targetPort": "cl64yq7sz0056306d99shxfi3",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1800f0a8-6750-41c5-8054-18f2375c2b61": {
+              "points": [
+                {
+                  "id": "db6ae2a1-373f-40ab-ae36-9aab5eea2a89",
+                  "type": "point",
+                  "x": 3287.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "3c5e88ea-871e-4b0f-9efb-e6a7315f6117",
+                  "type": "point",
+                  "x": 3348.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "1800f0a8-6750-41c5-8054-18f2375c2b61",
+              "type": "default",
+              "source": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+              "sourcePort": "cl64yq7sw004w306dou5kk03z",
+              "target": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+              "targetPort": "cl64yq7sr0046306dyhvyyfyl",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4f97b040-19ab-44db-a0a3-97211cb9ffa0": {
+              "points": [
+                {
+                  "id": "e5701232-ba31-44dc-ab5e-45f5cad8756e",
+                  "type": "point",
+                  "x": 2387.47,
+                  "y": 565.89
+                },
+                {
+                  "id": "e0556130-e7b0-431e-85ec-24992166a8a2",
+                  "type": "point",
+                  "x": 2458.75,
+                  "y": 555.89
+                }
+              ],
+              "id": "4f97b040-19ab-44db-a0a3-97211cb9ffa0",
+              "type": "default",
+              "source": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+              "sourcePort": "cl64yq7sz0058306dcyhon0s3",
+              "target": "40a4af07-284d-4112-99a3-e5f17b77033e",
+              "targetPort": "cl64yq7t2005m306dtr4piujo",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "da3a699c-8f2e-4c49-bd34-4b7666904749": {
+              "points": [
+                {
+                  "id": "12ef4f43-0628-41f2-aa3e-e26f01db25eb",
+                  "type": "point",
+                  "x": 2621.48,
+                  "y": 555.89
+                },
+                {
+                  "id": "410d3051-4b5b-4605-8cd4-8bb49a88e1a3",
+                  "type": "point",
+                  "x": 2733.75,
+                  "y": 530.89
+                }
+              ],
+              "id": "da3a699c-8f2e-4c49-bd34-4b7666904749",
+              "type": "default",
+              "source": "40a4af07-284d-4112-99a3-e5f17b77033e",
+              "sourcePort": "cl64yq7t2005o306dil8b6877",
+              "target": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+              "targetPort": "cl64yq7t50060306d3xj694dq",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d29eace5-c0f6-4806-8875-cb9c7af90d3c": {
+              "points": [
+                {
+                  "id": "0e56b8c3-28b5-4947-93bf-923c17bde423",
+                  "type": "point",
+                  "x": 2621.48,
+                  "y": 581.05
+                },
+                {
+                  "id": "6d8447b5-e74d-4d17-925b-af188809c6f2",
+                  "type": "point",
+                  "x": 2733.75,
+                  "y": 600.89
+                }
+              ],
+              "id": "d29eace5-c0f6-4806-8875-cb9c7af90d3c",
+              "type": "default",
+              "source": "40a4af07-284d-4112-99a3-e5f17b77033e",
+              "sourcePort": "cl64yq7t2005q306docgf4seh",
+              "target": "689bd742-2425-4eb4-8178-ca0638e80805",
+              "targetPort": "cl64yq7tb006o306d4vmhwlrr",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9595e7c1-b5ea-4a75-9391-953fcae79800": {
+              "points": [
+                {
+                  "id": "5eb4ad15-b618-44f7-a765-cce340921218",
+                  "type": "point",
+                  "x": 2887.75,
+                  "y": 530.89
+                },
+                {
+                  "id": "080cefed-0a16-410b-862e-75c8d06717cd",
+                  "type": "point",
+                  "x": 3133.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "9595e7c1-b5ea-4a75-9391-953fcae79800",
+              "type": "default",
+              "source": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+              "sourcePort": "cl64yq7t50062306dgwv9o57y",
+              "target": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+              "targetPort": "cl64yq7sw004u306dy5qdyhhy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "58a7eb98-cb10-470e-af4f-7392c918b2b1": {
+              "points": [
+                {
+                  "id": "d0c14339-37e9-4076-8a17-2d8d8ad3c559",
+                  "type": "point",
+                  "x": 1857.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "8befc954-dda8-44d3-b52d-32cbbdf123fc",
+                  "type": "point",
+                  "x": 1988.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "58a7eb98-cb10-470e-af4f-7392c918b2b1",
+              "type": "default",
+              "source": "5e955221-1713-4cc1-9af7-79523a20255b",
+              "sourcePort": "cl64yq7t9006e306d464r9fd0",
+              "target": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+              "targetPort": "cl64yq7su004i306docoguv1q",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7407b9ea-a4cb-4f83-8588-fd1520d39220": {
+              "points": [
+                {
+                  "id": "d9bf710a-03b1-4906-9b9d-f0b31b3ac4a0",
+                  "type": "point",
+                  "x": 2887.75,
+                  "y": 600.89
+                },
+                {
+                  "id": "1c10e5df-db8e-4b59-aee6-e7f23a3c1f31",
+                  "type": "point",
+                  "x": 3133.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "7407b9ea-a4cb-4f83-8588-fd1520d39220",
+              "type": "default",
+              "source": "689bd742-2425-4eb4-8178-ca0638e80805",
+              "sourcePort": "cl64yq7tb006q306dbginv2fj",
+              "target": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+              "targetPort": "cl64yq7sw004u306dy5qdyhhy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f69a2fb0-3a95-43a0-9b39-102e53accae7": {
+              "points": [
+                {
+                  "id": "a96ec629-cd7e-4f64-a10d-3ab796f806ce",
+                  "type": "point",
+                  "x": 540.52,
+                  "y": 565.89
+                },
+                {
+                  "id": "15367958-3071-4cc4-9e7a-d4d5a704e5bc",
+                  "type": "point",
+                  "x": 638.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "f69a2fb0-3a95-43a0-9b39-102e53accae7",
+              "type": "default",
+              "source": "e7fe08c4-c50a-457b-aa49-164337d4cae7",
+              "sourcePort": "cl64yq7tf006w306dim0tad3b",
+              "target": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+              "targetPort": "cl64yq7th0076306d3k8jowrc",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4c6710fe-2ea6-4dbf-bf92-1a9de7f338e8": {
+              "points": [
+                {
+                  "id": "8f5055b7-da7b-4372-bc3f-89f3966d88f6",
+                  "type": "point",
+                  "x": 793.19,
+                  "y": 565.89
+                },
+                {
+                  "id": "3057d37c-b044-44e9-84ef-39cf77334888",
+                  "type": "point",
+                  "x": 908.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "4c6710fe-2ea6-4dbf-bf92-1a9de7f338e8",
+              "type": "default",
+              "source": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+              "sourcePort": "cl64yq7th0078306db4ek41z4",
+              "target": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+              "targetPort": "cl64yq7tj007i306dtm62voqf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f5644355-81a0-4a9e-8475-68476eb179fb": {
+              "points": [
+                {
+                  "id": "a89469d3-59b3-4829-8c14-e23ba48779f8",
+                  "type": "point",
+                  "x": 1062.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "0e0a6d20-e4e4-415f-a9d6-7599895d7e88",
+                  "type": "point",
+                  "x": 1168.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "f5644355-81a0-4a9e-8475-68476eb179fb",
+              "type": "default",
+              "source": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+              "sourcePort": "cl64yq7tj007k306dqu0t2ew0",
+              "target": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+              "targetPort": "cl64yq7tm0086306d5780umcx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "42faf14c-d6d7-4d4c-bd6d-23fd9795e6bc": {
+              "points": [
+                {
+                  "id": "2200bcbc-d3b7-45ca-8452-5f4198f37451",
+                  "type": "point",
+                  "x": 1322.75,
+                  "y": 565.89
+                },
+                {
+                  "id": "c516c8b8-78a5-467e-bf27-d95959dfdb8c",
+                  "type": "point",
+                  "x": 1423.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "42faf14c-d6d7-4d4c-bd6d-23fd9795e6bc",
+              "type": "default",
+              "source": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+              "sourcePort": "cl64yq7tm0088306djhjmcqfd",
+              "target": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+              "targetPort": "cl64yq7so003u306dvsl7uc25",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5d55a8e8-21a2-45b0-bb62-00062fdfa6e9": {
+              "points": [
+                {
+                  "id": "8c64cb60-dff5-42cf-97c7-c2763713a5ac",
+                  "type": "point",
+                  "x": 557.73,
+                  "y": 420.89
+                },
+                {
+                  "id": "499db6fd-ab09-4d84-811e-d4a25353321f",
+                  "type": "point",
+                  "x": 638.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "5d55a8e8-21a2-45b0-bb62-00062fdfa6e9",
+              "type": "default",
+              "source": "a4f985d4-565f-40d7-978c-7597e345e41d",
+              "sourcePort": "cl64yq7to008e306dvi89g5sl",
+              "target": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+              "targetPort": "cl64yq7th0076306d3k8jowrc",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ee8147ac-e344-4ffd-b33f-0bfdc09b07ee": {
+              "points": [
+                {
+                  "id": "578122a2-39fe-4dbc-86c6-dcd0b351dded",
+                  "type": "point",
+                  "x": 532.73,
+                  "y": 645.89
+                },
+                {
+                  "id": "2ab99d8a-9301-4b73-9cb8-794673756620",
+                  "type": "point",
+                  "x": 638.75,
+                  "y": 565.89
+                }
+              ],
+              "id": "ee8147ac-e344-4ffd-b33f-0bfdc09b07ee",
+              "type": "default",
+              "source": "2e0b45cd-177f-4b66-a705-4c5d306fcbf6",
+              "sourcePort": "cl64yq7tq008k306dy7r1o7vd",
+              "target": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+              "targetPort": "cl64yq7th0076306d3k8jowrc",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "5f7a0b49-16ef-4b86-8552-65d26c97c98a",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "7156e10f-a8c3-4e73-a6c1-5a3426af86ac": {
+              "id": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+              "type": "broadcast",
+              "selected": true,
+              "extras": {},
+              "x": 1423.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7so003u306dvsl7uc25",
+                  "type": "default",
+                  "x": 1415.75,
+                  "y": 557.89,
+                  "name": "cl64yq7so003v306d3sm1aisu",
+                  "parentNode": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+                  "links": [
+                    "42faf14c-d6d7-4d4c-bd6d-23fd9795e6bc"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7so003w306d0cyncx7v",
+                  "type": "default",
+                  "x": 1604.56,
+                  "y": 557.89,
+                  "name": "cl64yq7so003x306daiubn9o8",
+                  "parentNode": "7156e10f-a8c3-4e73-a6c1-5a3426af86ac",
+                  "links": [
+                    "d8ff419a-cbf0-4b55-8b9f-39330790e2f8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "5e955221-1713-4cc1-9af7-79523a20255b"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Broadcast Mutation Inputs"
+            },
+            "c901748f-0d05-410f-982c-6cf8e2879fbe": {
+              "id": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+              "type": "combine",
+              "selected": true,
+              "extras": {},
+              "x": 3348.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7sr0046306dyhvyyfyl",
+                  "type": "default",
+                  "x": 3340.75,
+                  "y": 557.89,
+                  "name": "cl64yq7sr0047306damspcp61",
+                  "parentNode": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+                  "links": [
+                    "1800f0a8-6750-41c5-8054-18f2375c2b61"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7sr0048306d541pgru5",
+                  "type": "default",
+                  "x": 3494.75,
+                  "y": 557.89,
+                  "name": "cl64yq7sr0049306dt4sccseo",
+                  "parentNode": "c901748f-0d05-410f-982c-6cf8e2879fbe",
+                  "links": [
+                    "4dc3e035-ade4-4b56-8a41-55d1e76464d0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "executionTimeout": 60,
+                "payloadCombinationStrategy": "index",
+                "contextCombinationStrategy": "first",
+                "nextNodes": [
+                  "aa7cc537-97c5-446f-b050-d862fc047eed"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Combine Mutations"
+            },
+            "b3124131-6ff5-40d9-9ef0-7e4e789af047": {
+              "id": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+              "type": "broadcast",
+              "selected": true,
+              "extras": {},
+              "x": 1988.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7su004i306docoguv1q",
+                  "type": "default",
+                  "x": 1980.75,
+                  "y": 557.89,
+                  "name": "cl64yq7su004j306dsh2pl4em",
+                  "parentNode": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+                  "links": [
+                    "58a7eb98-cb10-470e-af4f-7392c918b2b1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7su004k306ddj8mz1kc",
+                  "type": "default",
+                  "x": 2134.75,
+                  "y": 557.89,
+                  "name": "cl64yq7su004l306dz951jhm7",
+                  "parentNode": "b3124131-6ff5-40d9-9ef0-7e4e789af047",
+                  "links": [
+                    "d8cb11dd-ef89-45b1-bbfd-c0fba63e1505"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Broadcast Fields"
+            },
+            "9bda2be1-9a64-445b-a02c-15dd724ee5d2": {
+              "id": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+              "type": "combine",
+              "selected": true,
+              "extras": {},
+              "x": 3133.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7sw004u306dy5qdyhhy",
+                  "type": "default",
+                  "x": 3125.75,
+                  "y": 557.89,
+                  "name": "cl64yq7sw004v306dbqzdblb8",
+                  "parentNode": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+                  "links": [
+                    "9595e7c1-b5ea-4a75-9391-953fcae79800",
+                    "7407b9ea-a4cb-4f83-8588-fd1520d39220"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7sw004w306dou5kk03z",
+                  "type": "default",
+                  "x": 3279.75,
+                  "y": 557.89,
+                  "name": "cl64yq7sw004x306drs5ltm3r",
+                  "parentNode": "9bda2be1-9a64-445b-a02c-15dd724ee5d2",
+                  "links": [
+                    "1800f0a8-6750-41c5-8054-18f2375c2b61"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "executionTimeout": 60,
+                "payloadCombinationStrategy": "index",
+                "contextCombinationStrategy": "first",
+                "nextNodes": [
+                  "c901748f-0d05-410f-982c-6cf8e2879fbe"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Combine Fields"
+            },
+            "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d": {
+              "id": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+              "type": "transform",
+              "selected": true,
+              "extras": {},
+              "x": 2218.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7sz0056306d99shxfi3",
+                  "type": "default",
+                  "x": 2210.75,
+                  "y": 557.89,
+                  "name": "cl64yq7sz0057306d91qdi0yw",
+                  "parentNode": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+                  "links": [
+                    "d8cb11dd-ef89-45b1-bbfd-c0fba63e1505"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7sz0058306dcyhon0s3",
+                  "type": "default",
+                  "x": 2379.47,
+                  "y": 557.89,
+                  "name": "cl64yq7sz0059306dlwf70kkw",
+                  "parentNode": "b93c2f4d-c834-4ca0-b6cf-eea0a98c6e7d",
+                  "links": [
+                    "4f97b040-19ab-44db-a0a3-97211cb9ffa0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $baseTypeMatch := $match(type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  $baseFieldName := $coalesce([$match(name, /(\\w+)Id$/).groups[0], name]);\n  $baseField := $state.context.component.model.fields[name=$baseFieldName];\n  $baseFieldType := $match($baseField.type, /\\[?(\\w+)!?\\]?!?/).groups[0];\n  \n  {\n    \"field\": $,\n    \"isList\": $contains(type, \"[\"),\n    \"isRequired\": $contains(type, \"!\"),\n    \"baseType\": $baseType,\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    }),\n    \"baseField\": {\n      \"isList\": $contains($baseField.type, \"[\"),\n      \"isRequired\": $contains($baseField.type, \"!\"),\n      \"fieldName\": $baseFieldName,\n      \"field\": $baseField,\n      \"baseType\": $baseFieldType,\n      \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n        \"api\": $state.context.parameters.api,\n        \"name\": $baseFieldType\n      })\n    }\n  }\n)",
+                "nextNodes": [
+                  "40a4af07-284d-4112-99a3-e5f17b77033e"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Parse Field Type String"
+            },
+            "40a4af07-284d-4112-99a3-e5f17b77033e": {
+              "id": "40a4af07-284d-4112-99a3-e5f17b77033e",
+              "type": "switch",
+              "selected": true,
+              "extras": {},
+              "x": 2458.75,
+              "y": 516.17,
+              "ports": [
+                {
+                  "id": "cl64yq7t2005m306dtr4piujo",
+                  "type": "default",
+                  "x": 2450.75,
+                  "y": 547.89,
+                  "name": "cl64yq7t2005n306d03s6e6u0",
+                  "parentNode": "40a4af07-284d-4112-99a3-e5f17b77033e",
+                  "links": [
+                    "4f97b040-19ab-44db-a0a3-97211cb9ffa0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7t2005o306dil8b6877",
+                  "type": "default",
+                  "x": 2613.48,
+                  "y": 547.89,
+                  "name": "cl64yq7t2005p306dtabgxrsm",
+                  "parentNode": "40a4af07-284d-4112-99a3-e5f17b77033e",
+                  "links": [
+                    "da3a699c-8f2e-4c49-bd34-4b7666904749"
+                  ],
+                  "in": false,
+                  "groupName": "ID Field",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "cl64yq7t2005q306docgf4seh",
+                  "type": "default",
+                  "x": 2613.48,
+                  "y": 573.05,
+                  "name": "cl64yq7t2005r306dgq4c2l01",
+                  "parentNode": "40a4af07-284d-4112-99a3-e5f17b77033e",
+                  "links": [
+                    "d29eace5-c0f6-4806-8875-cb9c7af90d3c"
+                  ],
+                  "in": false,
+                  "groupName": "Else (Scalars)",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "ID Field",
+                    "nextNodes": [
+                      "7c7ce568-23a2-429e-b7f9-40b3e6b82085"
+                    ],
+                    "transform": "baseType = 'ID' and $not($isNil(baseField.baseTypeModel))"
+                  },
+                  {
+                    "name": "Else (Scalars)",
+                    "transform": "true",
+                    "nextNodes": [
+                      "689bd742-2425-4eb4-8178-ca0638e80805"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Field Type"
+            },
+            "7c7ce568-23a2-429e-b7f9-40b3e6b82085": {
+              "id": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+              "type": "transform",
+              "selected": true,
+              "extras": {},
+              "x": 2733.75,
+              "y": 491.17,
+              "ports": [
+                {
+                  "id": "cl64yq7t50060306d3xj694dq",
+                  "type": "default",
+                  "x": 2725.75,
+                  "y": 522.89,
+                  "name": "cl64yq7t50061306d0vo86uvh",
+                  "parentNode": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+                  "links": [
+                    "da3a699c-8f2e-4c49-bd34-4b7666904749"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7t50062306dgwv9o57y",
+                  "type": "default",
+                  "x": 2879.75,
+                  "y": 522.89,
+                  "name": "cl64yq7t50063306d0811qow4",
+                  "parentNode": "7c7ce568-23a2-429e-b7f9-40b3e6b82085",
+                  "links": [
+                    "9595e7c1-b5ea-4a75-9391-953fcae79800"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "field.name = $state.context.component.parameterField \n  ? {\n    \"name\": field.name,\n    \"type\": 'parameter',\n    \"parameterName\": 'id',\n    \"dataPath\": baseField.field.name,\n    \"target\": {\n      \"dataPath\": field.name\n    },\n    \"query\": {\n      \"fields\": [baseField.field.name]\n    }\n  } : {\n    \"name\": baseField.field.name,\n    \"description\": baseField.field.description,\n    \"label\": $startCase(baseField.field.name),\n    \"labelField\": $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"labelPath\": $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"additionalFields\": baseField.baseTypeModel.metadata.mfgx.labelField,\n    \"type\": 'combobox',\n    \"dataPath\": baseField.field.name,\n    \"queryType\": baseField.baseType,\n    \"target\": {\n      \"dataPath\": field.name\n    },\n    \"api\": $state.context.parameters.api,\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseField.baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseField.baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseField.baseType),'en')\n        & '/'\n        & '\" & data.' \n        & baseField.field.name\n        & '.id'\n    },\n    \"validation\": {\n      \"required\": baseField.isRequired and $not($exists(baseField.field.metadata.mfgx.defaultValue))\n    },\n    \"query\": {\n      \"fields\": [\n        baseField.field.name & '.id',\n        baseField.field.name & '.' & $coalesce([baseField.baseTypeModel.metadata.mfgx.labelField, \"id\"])\n      ]\n    }\n  }",
+                "nextNodes": [
+                  "9bda2be1-9a64-445b-a02c-15dd724ee5d2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Type is ID"
+            },
+            "5e955221-1713-4cc1-9af7-79523a20255b": {
+              "id": "5e955221-1713-4cc1-9af7-79523a20255b",
+              "type": "transform",
+              "selected": true,
+              "extras": {},
+              "x": 1703.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7t9006c306d5deg9gpj",
+                  "type": "default",
+                  "x": 1695.75,
+                  "y": 557.89,
+                  "name": "cl64yq7t9006d306d170jmt4c",
+                  "parentNode": "5e955221-1713-4cc1-9af7-79523a20255b",
+                  "links": [
+                    "d8ff419a-cbf0-4b55-8b9f-39330790e2f8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7t9006e306d464r9fd0",
+                  "type": "default",
+                  "x": 1849.75,
+                  "y": 557.89,
+                  "name": "cl64yq7t9006f306durwtmo62",
+                  "parentNode": "5e955221-1713-4cc1-9af7-79523a20255b",
+                  "links": [
+                    "58a7eb98-cb10-470e-af4f-7392c918b2b1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "fields",
+                "nextNodes": [
+                  "b3124131-6ff5-40d9-9ef0-7e4e789af047"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Fields"
+            },
+            "689bd742-2425-4eb4-8178-ca0638e80805": {
+              "id": "689bd742-2425-4eb4-8178-ca0638e80805",
+              "type": "transform",
+              "selected": true,
+              "extras": {},
+              "x": 2733.75,
+              "y": 561.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tb006o306d4vmhwlrr",
+                  "type": "default",
+                  "x": 2725.75,
+                  "y": 592.89,
+                  "name": "cl64yq7tb006p306djscau652",
+                  "parentNode": "689bd742-2425-4eb4-8178-ca0638e80805",
+                  "links": [
+                    "d29eace5-c0f6-4806-8875-cb9c7af90d3c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7tb006q306dbginv2fj",
+                  "type": "default",
+                  "x": 2879.75,
+                  "y": 592.89,
+                  "name": "cl64yq7tb006r306dyuq2j1n3",
+                  "parentNode": "689bd742-2425-4eb4-8178-ca0638e80805",
+                  "links": [
+                    "7407b9ea-a4cb-4f83-8588-fd1520d39220"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $dataPath := field.name;\n  $label := $startCase(field.name);\n\n  $scalarMap := {\n    \"String\": {\n      \"type\": field.name = \"description\" or field.name = \"note\" ? 'markdown' : 'text'\n    },\n    \"Password\": {\n      \"type\": \"password\"\n    },\n    \"Email\": {\n      \"type\": 'text'\n    },\n    \"Boolean\": {\n      \"type\": 'checkbox'\n    },\n    \"DateTime\": {\n      \"type\": 'datetime'\n    },\n    \"Date\": {\n      \"type\": 'date'\n    },\n    \"Time\": {\n      \"type\": 'time'\n    },\n    \"Int\": {\n      \"name\": field.name,\n      \"type\": 'integer'\n    },\n    \"Float\": {\n      \"type\": 'float'\n    },\n    \"AddressCreateInput\": {\n      \"type\": 'address'\n    },\n    \"MeasureCreateInput\": {\n      \"type\": 'measure'\n    },\n    \"RatioMeasureCreateInput\": {\n      \"type\": 'ratioMeasure'\n    },\n    \"AddressUpdateInput\": {\n      \"type\": 'address'\n    },\n    \"MeasureUpdateInput\": {\n      \"type\": 'measure'\n    },\n    \"RatioMeasureUpdateInput\": {\n      \"type\": 'ratioMeasure'\n    },\n    \"JSON\": {\n      \"type\": 'json'\n    },\n    \"JSONObject\": {\n      \"type\": 'json'\n    }\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $merge([\n    { \n      \"name\": field.name,\n      \"description\": field.description,\n      \"label\": $label,\n      \"type\": \"text\",\n      \"dataPath\": $dataPath,\n      \"validation\": {\n        \"required\": $not(field.name = 'id') and baseField.isRequired and $not($exists(baseField.field.metadata.mfgx.defaultValue)) and $not($exists(baseField.field.metadata.mfgx.sequence))\n      },\n      \"defaultValue\": baseField.field.metadata.mfgx.defaultValue,\n      \"query\": {\n        \"fields\": [$dataPath]\n      }\n    },\n    $format    \n  ])\n)",
+                "nextNodes": [
+                  "9bda2be1-9a64-445b-a02c-15dd724ee5d2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Type is Scalar",
+              "note": "\n3/22/2021 :  changed the Integer dataPath and field names from field.name._gte to  field.name\n"
+            },
+            "e7fe08c4-c50a-457b-aa49-164337d4cae7": {
+              "id": "e7fe08c4-c50a-457b-aa49-164337d4cae7",
+              "type": "request",
+              "selected": true,
+              "x": 373.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tf006w306dim0tad3b",
+                  "type": "default",
+                  "x": 532.52,
+                  "y": 557.89,
+                  "name": "cl64yq7tf006x306dpzihti75",
+                  "parentNode": "e7fe08c4-c50a-457b-aa49-164337d4cae7",
+                  "links": [
+                    "f69a2fb0-3a95-43a0-9b39-102e53accae7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "52f6d53c-6a11-441e-8c5f-a9240c977007"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request (Input Create)",
+              "note": "When provided a payload of the shape below, this module will generate the table section inputs configuration.\n\n```\n{\n    screenGeneration: {\n        module: 'inputCreate',\n        options: object\n    },\n    payload: {\n      component: object,\n      parameters: {\n          api: string\n      },\n      actions: {\n        create: object,\n        update: object\n      }\n    }\n  }\n```"
+            },
+            "52f6d53c-6a11-441e-8c5f-a9240c977007": {
+              "id": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+              "type": "when",
+              "selected": true,
+              "x": 638.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7th0076306d3k8jowrc",
+                  "type": "default",
+                  "x": 630.75,
+                  "y": 557.89,
+                  "name": "cl64yq7th0077306d4g62q5r7",
+                  "parentNode": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+                  "links": [
+                    "f69a2fb0-3a95-43a0-9b39-102e53accae7",
+                    "5d55a8e8-21a2-45b0-bb62-00062fdfa6e9",
+                    "ee8147ac-e344-4ffd-b33f-0bfdc09b07ee"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7th0078306db4ek41z4",
+                  "type": "default",
+                  "x": 785.19,
+                  "y": 557.89,
+                  "name": "cl64yq7th0079306divsdihls",
+                  "parentNode": "52f6d53c-6a11-441e-8c5f-a9240c977007",
+                  "links": [
+                    "4c6710fe-2ea6-4dbf-bf92-1a9de7f338e8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "c6380b7b-4b2b-4fca-9e63-820dc791062d"
+                ],
+                "transform": "screenGeneration.module = 'inputCreate'"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Input Create Module"
+            },
+            "c6380b7b-4b2b-4fca-9e63-820dc791062d": {
+              "id": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+              "type": "setContext",
+              "selected": true,
+              "x": 908.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tj007i306dtm62voqf",
+                  "type": "default",
+                  "x": 900.75,
+                  "y": 557.89,
+                  "name": "cl64yq7tj007j306db9tsyb2t",
+                  "parentNode": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+                  "links": [
+                    "4c6710fe-2ea6-4dbf-bf92-1a9de7f338e8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7tj007k306dqu0t2ew0",
+                  "type": "default",
+                  "x": 1054.75,
+                  "y": 557.89,
+                  "name": "cl64yq7tj007l306ddsukj8mp",
+                  "parentNode": "c6380b7b-4b2b-4fca-9e63-820dc791062d",
+                  "links": [
+                    "f5644355-81a0-4a9e-8475-68476eb179fb"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "20d710d8-dac9-4065-bd97-0a93a720edc2"
+                ],
+                "transform": "{\n  \"component\": payload.component,\n  \"parameters\": payload.parameters,\n  \"actions\": payload.actions\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Set Context"
+            },
+            "aa7cc537-97c5-446f-b050-d862fc047eed": {
+              "id": "aa7cc537-97c5-446f-b050-d862fc047eed",
+              "type": "response",
+              "selected": true,
+              "x": 3538.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tk007u306dg8aeqloa",
+                  "type": "default",
+                  "x": 3530.75,
+                  "y": 557.89,
+                  "name": "cl64yq7tk007v306dydozfmvh",
+                  "parentNode": "aa7cc537-97c5-446f-b050-d862fc047eed",
+                  "links": [
+                    "4dc3e035-ade4-4b56-8a41-55d1e76464d0"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cl64yq7tk007w306d27yww999",
+                  "type": "default",
+                  "x": 3684.73,
+                  "y": 557.89,
+                  "name": "cl64yq7tk007x306dn20i964i",
+                  "parentNode": "aa7cc537-97c5-446f-b050-d862fc047eed",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response"
+            },
+            "20d710d8-dac9-4065-bd97-0a93a720edc2": {
+              "id": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+              "type": "transform",
+              "selected": true,
+              "x": 1168.75,
+              "y": 526.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tm0086306d5780umcx",
+                  "type": "default",
+                  "x": 1160.75,
+                  "y": 557.89,
+                  "name": "cl64yq7tm0087306diwf3se48",
+                  "parentNode": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+                  "links": [
+                    "f5644355-81a0-4a9e-8475-68476eb179fb"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl64yq7tm0088306djhjmcqfd",
+                  "type": "default",
+                  "x": 1314.75,
+                  "y": 557.89,
+                  "name": "cl64yq7tm0089306d2rhbk4f9",
+                  "parentNode": "20d710d8-dac9-4065-bd97-0a93a720edc2",
+                  "links": [
+                    "42faf14c-d6d7-4d4c-bd6d-23fd9795e6bc"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$state.context.actions",
+                "nextNodes": [
+                  "7156e10f-a8c3-4e73-a6c1-5a3426af86ac"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Get Input Payoad"
+            },
+            "a4f985d4-565f-40d7-978c-7597e345e41d": {
+              "id": "a4f985d4-565f-40d7-978c-7597e345e41d",
+              "type": "debugSource",
+              "selected": true,
+              "x": 403.75,
+              "y": 381.17,
+              "ports": [
+                {
+                  "id": "cl64yq7to008e306dvi89g5sl",
+                  "type": "default",
+                  "x": 549.73,
+                  "y": 412.89,
+                  "name": "cl64yq7to008f306dhiwg2097",
+                  "parentNode": "a4f985d4-565f-40d7-978c-7597e345e41d",
+                  "links": [
+                    "5d55a8e8-21a2-45b0-bb62-00062fdfa6e9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "inputCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "FacilityTable",
+                      "model": {
+                        "name": "Facility",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "logistics",
+                              "group": {
+                                "id": "materialsManagement"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "enabled": true,
+                              "retentionDays": 120
+                            },
+                            "labelField": "name"
+                          },
+                          "mongo": {
+                            "collection": "facility"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[FacilityDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "name",
+                            "type": "String!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                },
+                                "sequence": {
+                                  "id": "loadNumber"
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "description",
+                            "type": "String!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "addresses",
+                            "description": "",
+                            "type": "[FacilityAddress!]!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "facilityId"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "locations",
+                            "description": "",
+                            "type": "[Location!]!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "facilityId"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "name"
+                    },
+                    "parameters": {
+                      "api": "Application",
+                      "modelName": "Facility",
+                      "screenFormat": "table",
+                      "upsertScreen": true
+                    },
+                    "actions": {
+                      "create": {
+                        "name": "FacilityCreateInput",
+                        "metadata": {
+                          "mfgx": {
+                            "derivedFrom": "Facility"
+                          },
+                          "graphql": {
+                            "type": "InputObject"
+                          }
+                        },
+                        "kind": "Abstract",
+                        "fields": [
+                          {
+                            "name": "id",
+                            "type": "ID",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "name",
+                            "type": "String!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "description",
+                            "type": "String!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": "The FacilityCreateInput type represents the input values that can be given to create an instance of the Facility type in MFGx."
+                      },
+                      "update": {
+                        "name": "FacilityUpdateInput",
+                        "metadata": {
+                          "mfgx": {
+                            "derivedFrom": "Facility"
+                          },
+                          "graphql": {
+                            "type": "InputObject"
+                          }
+                        },
+                        "kind": "Abstract",
+                        "fields": [
+                          {
+                            "name": "name",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "description",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": "The FacilityUpdateInput type represents the input values that can be given to update an instance of the Facility type in MFGx."
+                      }
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "52f6d53c-6a11-441e-8c5f-a9240c977007"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Input Create Test"
+            },
+            "2e0b45cd-177f-4b66-a705-4c5d306fcbf6": {
+              "id": "2e0b45cd-177f-4b66-a705-4c5d306fcbf6",
+              "type": "debugSource",
+              "selected": true,
+              "x": 378.75,
+              "y": 606.17,
+              "ports": [
+                {
+                  "id": "cl64yq7tq008k306dy7r1o7vd",
+                  "type": "default",
+                  "x": 524.73,
+                  "y": 637.89,
+                  "name": "cl64yq7tq008l306dnx27es7p",
+                  "parentNode": "2e0b45cd-177f-4b66-a705-4c5d306fcbf6",
+                  "links": [
+                    "ee8147ac-e344-4ffd-b33f-0bfdc09b07ee"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "inputCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "UserEmailJoinTable",
+                      "tabTitle": "User Emails",
+                      "model": {
+                        "name": "UserEmail",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "configuration",
+                              "group": {
+                                "id": "system"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "enabled": true,
+                              "retentionDays": 120
+                            }
+                          },
+                          "mongo": {
+                            "collection": "userEmail"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[UserEmailDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "userId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "user",
+                            "type": "User!",
+                            "description": "The associated user.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "userId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "emailId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "email",
+                            "type": "Email!",
+                            "description": "The associated email.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "emailId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "id",
+                      "parameterField": "emailId"
+                    },
+                    "parameters": {
+                      "api": "Application",
+                      "modelName": "Email",
+                      "screenFormat": "form",
+                      "upsertScreen": true
+                    },
+                    "actions": {
+                      "create": {
+                        "name": "UserEmailCreateInput",
+                        "metadata": {
+                          "mfgx": {
+                            "derivedFrom": "UserEmail"
+                          },
+                          "graphql": {
+                            "type": "InputObject"
+                          }
+                        },
+                        "kind": "Abstract",
+                        "fields": [
+                          {
+                            "name": "id",
+                            "type": "ID",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "userId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "emailId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": "The UserEmailCreateInput type represents the input values that can be given to create an instance of the UserEmail type in MFGx."
+                      },
+                      "update": {
+                        "name": "UserEmailUpdateInput",
+                        "metadata": {
+                          "mfgx": {
+                            "derivedFrom": "UserEmail"
+                          },
+                          "graphql": {
+                            "type": "InputObject"
+                          }
+                        },
+                        "kind": "Abstract",
+                        "fields": [
+                          {
+                            "name": "userId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "emailId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": "The UserEmailUpdateInput type represents the input values that can be given to update an instance of the UserEmail type in MFGx."
+                      }
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "52f6d53c-6a11-441e-8c5f-a9240c977007"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Join Tables"
+            }
+          }
+        }
+      ],
+      "name": "Screen Generation Actions Create",
+      "type": "System",
+      "version": "0.0.2",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

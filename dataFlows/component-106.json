@@ -1,0 +1,834 @@
+{
+  "header": {
+    "id": "retireInventoryInFuuz",
+    "name": "Retire Inventory in Fuuz",
+    "description": "Flow to retire the passed inventory in Fuuz\n\nRequest Payload :\n\n\n```\n{ \"inventoryNumber\": \"1S000001\"}\n```\n",
+    "active": true,
+    "dataFlowTypeId": "Integration",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cl4ybcol800xe0jcs1yag1t0v",
+    "number": "0.0.2",
+    "description": "",
+    "dataFlowId": "retireInventoryInFuuz",
+    "flow": {
+      "id": "cl4ybcol800xe0jcs1yag1t0v",
+      "name": "Retire Inventory in Fuuz",
+      "type": "Integration",
+      "nodes": [
+        {
+          "id": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+          "name": "Validate",
+          "type": "validate",
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "inventoryNumber": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "inventoryNumber"
+              ]
+            },
+            "nextNodes": [
+              "db8c1871-d9eb-4313-8097-a92aadfb08b0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "0e580fbf-4ac5-4650-9316-144069ed9757",
+          "name": "Delete Workcenter Position Material",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": [workcenterPositionMaterial.edges.node.{\n    \"where\": {\n      \"id\": id\n    }\n  }]\n}",
+            "nextNodes": [
+              "4d658459-d961-43e8-a464-b2207b1b0d42"
+            ],
+            "mutation": "mutation($payload :  [WorkcenterPositionMaterialDeletePayloadInput!]!){\n  deleteWorkcenterPositionMaterial(payload: $payload){\n    id\n    inventoryId\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "58fcb000-39c9-47d2-8534-f5809f52283c",
+          "name": "Query Workcenter Position Material in Fuuz ",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"inventoryNumber\":$state.context.input.inventoryNumber\n}",
+            "query": "query($inventoryNumber : String!){\n  workcenterPositionMaterial(where:{\n    inventory:{\n      number:{\n        _eq: $inventoryNumber\n      }\n    }\n  }){\n    edges{\n      node{\n        id\n      }\n    }\n  }\n}",
+            "nextNodes": [
+              "0e580fbf-4ac5-4650-9316-144069ed9757"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "4d658459-d961-43e8-a464-b2207b1b0d42",
+          "name": "Retire Inventory",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "({\n  \"payload\": {\n     \"update\": {\n      \"active\": false,\n      \"transactionTypeId\": \"Inventory Adjustment\",\n      \"note\": \"Retire from Control Panel\"\n    },\n    \"where\":{\n      \"number\": $state.context.input.inventoryNumber\n    }\n  }\n})",
+            "mutation": "mutation($payload :  [InventoryUpdatePayloadInput!]!){\n  updateInventory(payload: $payload){\n    id\n    locationId\n    productStrategyProcessId\n  }\n}",
+            "nextNodes": [
+              "96370e95-1bc1-4906-9852-d70a3402e678"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "96370e95-1bc1-4906-9852-d70a3402e678",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+          "name": "Store Input to Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"input\":$\n}",
+            "nextNodes": [
+              "58fcb000-39c9-47d2-8534-f5809f52283c"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "f528ebe6-4f5c-4129-a391-baff840ec0a3",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "7cc656a4-7ef5-4770-b50f-92b9d85ac930"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.2"
+    },
+    "diagram": {
+      "id": "cl4ybcol800xe0jcs1yag1t0v",
+      "offsetX": 233.35,
+      "offsetY": 57.47,
+      "zoom": 78.33,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "9a295351-c3c4-402c-b13b-fc5f37cd7f28",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "0776d277-29ed-4f26-9a5c-389ead6ae436": {
+              "points": [
+                {
+                  "id": "4920a1fd-a771-4928-a5ce-d7181869fe73",
+                  "type": "point",
+                  "x": 158.98,
+                  "y": 314.73
+                },
+                {
+                  "id": "17c6127d-5f13-4600-b5fb-aa7270872fad",
+                  "type": "point",
+                  "x": 195,
+                  "y": 319.73
+                }
+              ],
+              "id": "0776d277-29ed-4f26-9a5c-389ead6ae436",
+              "type": "default",
+              "selected": false,
+              "source": "469e2e20-75ff-4504-a381-aca38a43e5e5",
+              "sourcePort": "cl4x3r33g002o356c31lat88y",
+              "target": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+              "targetPort": "cl4x3rwna0047356c8fhjgabh",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e20a0c5b-b763-4876-abed-0aadf9e07c0b": {
+              "points": [
+                {
+                  "id": "0e74b953-d43a-4bb4-8022-fba3876b7e96",
+                  "type": "point",
+                  "x": 863.91,
+                  "y": 319.73
+                },
+                {
+                  "id": "483435bc-7dc9-41c6-ae3f-c5e538aa339f",
+                  "type": "point",
+                  "x": 900,
+                  "y": 319.73
+                }
+              ],
+              "id": "e20a0c5b-b763-4876-abed-0aadf9e07c0b",
+              "type": "default",
+              "selected": false,
+              "source": "58fcb000-39c9-47d2-8534-f5809f52283c",
+              "sourcePort": "cl4x41ip4005t356c0k5l8nsp",
+              "target": "0e580fbf-4ac5-4650-9316-144069ed9757",
+              "targetPort": "cl4x41ip2005f356ce6n2zmfm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0ccd5620-28b7-41ae-a34f-c04daf16ae80": {
+              "points": [
+                {
+                  "id": "d9c98650-aa6f-4dbc-b16f-08b704985280",
+                  "type": "point",
+                  "x": 1344,
+                  "y": 319.73
+                },
+                {
+                  "id": "f7e1c100-1230-425e-aa12-754fa5ea011e",
+                  "type": "point",
+                  "x": 1395,
+                  "y": 319.73
+                }
+              ],
+              "id": "0ccd5620-28b7-41ae-a34f-c04daf16ae80",
+              "type": "default",
+              "selected": false,
+              "source": "4d658459-d961-43e8-a464-b2207b1b0d42",
+              "sourcePort": "cl4x41ip7006h356crpj6vmfw",
+              "target": "96370e95-1bc1-4906-9852-d70a3402e678",
+              "targetPort": "cl4x41ip9006r356c2lsdbh8g",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c11333df-662f-4925-a03e-dc81b67f040d": {
+              "points": [
+                {
+                  "id": "fa7675f5-00d0-4f71-bd7c-7a27b5837ac2",
+                  "type": "point",
+                  "x": 349,
+                  "y": 319.73
+                },
+                {
+                  "id": "51fe9ff2-1277-473a-a0a8-500ac69f8934",
+                  "type": "point",
+                  "x": 385,
+                  "y": 319.73
+                }
+              ],
+              "id": "c11333df-662f-4925-a03e-dc81b67f040d",
+              "type": "default",
+              "selected": false,
+              "source": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+              "sourcePort": "cl4x3rwna0049356cuu9jfzlo",
+              "target": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+              "targetPort": "cl4x43k1d0088356cfj87zea0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "067e9950-3e0a-4792-b6ba-ebe34217c6f5": {
+              "points": [
+                {
+                  "id": "27dc3ecf-0bbd-48e4-b39a-d56a9825c202",
+                  "type": "point",
+                  "x": 548.03,
+                  "y": 319.73
+                },
+                {
+                  "id": "61d9b839-cd67-47ea-a756-b1165b1392aa",
+                  "type": "point",
+                  "x": 585,
+                  "y": 319.73
+                }
+              ],
+              "id": "067e9950-3e0a-4792-b6ba-ebe34217c6f5",
+              "type": "default",
+              "selected": false,
+              "source": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+              "sourcePort": "cl4x43k1d008a356cmwg6ktfy",
+              "target": "58fcb000-39c9-47d2-8534-f5809f52283c",
+              "targetPort": "cl4x41ip4005r356ccwqilumg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f9f79fee-de4d-47f5-b3c1-ad09c83ed65d": {
+              "points": [
+                {
+                  "id": "af6a08e8-8343-4e02-bbc0-fdca44f587f4",
+                  "type": "point",
+                  "x": 1139.53,
+                  "y": 319.73
+                },
+                {
+                  "id": "0128c8d9-3e82-4112-974f-64836e3c272f",
+                  "type": "point",
+                  "x": 1190,
+                  "y": 319.73
+                }
+              ],
+              "id": "f9f79fee-de4d-47f5-b3c1-ad09c83ed65d",
+              "type": "default",
+              "selected": false,
+              "source": "0e580fbf-4ac5-4650-9316-144069ed9757",
+              "sourcePort": "cl4x41ip2005h356ch1cqc2zn",
+              "target": "4d658459-d961-43e8-a464-b2207b1b0d42",
+              "targetPort": "cl4x41ip7006f356c450wkln7",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8e6b1405-743b-45b1-bf39-f253b9d1f3d7": {
+              "points": [
+                {
+                  "id": "f57c4829-bf03-46d7-96b9-55c0375991e7",
+                  "type": "point",
+                  "x": 64.2,
+                  "y": 466.61
+                },
+                {
+                  "id": "7ba91c2f-8ea4-43ac-9104-09fcfdffa785",
+                  "type": "point",
+                  "x": 195,
+                  "y": 319.73
+                }
+              ],
+              "id": "8e6b1405-743b-45b1-bf39-f253b9d1f3d7",
+              "type": "default",
+              "selected": true,
+              "source": "f528ebe6-4f5c-4129-a391-baff840ec0a3",
+              "sourcePort": "cl5bghftm002t356cs71p7st6",
+              "target": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+              "targetPort": "cl4x3rwna0047356c8fhjgabh",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "76432f49-a55a-48cf-9335-4f239991e739",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "469e2e20-75ff-4504-a381-aca38a43e5e5": {
+              "id": "469e2e20-75ff-4504-a381-aca38a43e5e5",
+              "type": "debugSource",
+              "selected": false,
+              "x": 5,
+              "y": 275,
+              "ports": [
+                {
+                  "id": "cl4x3r33g002o356c31lat88y",
+                  "type": "default",
+                  "x": 150.98,
+                  "y": 306.73,
+                  "name": "cl4x3r33g002p356cmxshl7w0",
+                  "parentNode": "469e2e20-75ff-4504-a381-aca38a43e5e5",
+                  "links": [
+                    "0776d277-29ed-4f26-9a5c-389ead6ae436"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "inventoryNumber": "TOL005"
+                },
+                "nextNodes": [
+                  "7cc656a4-7ef5-4770-b50f-92b9d85ac930"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Source"
+            },
+            "7cc656a4-7ef5-4770-b50f-92b9d85ac930": {
+              "id": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+              "type": "validate",
+              "selected": false,
+              "x": 195,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x3rwna0047356c8fhjgabh",
+                  "type": "default",
+                  "x": 187,
+                  "y": 311.73,
+                  "name": "cl4x3rwna0048356ctjuqi4a7",
+                  "parentNode": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+                  "links": [
+                    "0776d277-29ed-4f26-9a5c-389ead6ae436",
+                    "8e6b1405-743b-45b1-bf39-f253b9d1f3d7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl4x3rwna0049356cuu9jfzlo",
+                  "type": "default",
+                  "x": 341,
+                  "y": 311.73,
+                  "name": "cl4x3rwna004a356cw473yxgx",
+                  "parentNode": "7cc656a4-7ef5-4770-b50f-92b9d85ac930",
+                  "links": [
+                    "c11333df-662f-4925-a03e-dc81b67f040d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "inventoryNumber": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "inventoryNumber"
+                  ]
+                },
+                "nextNodes": [
+                  "db8c1871-d9eb-4313-8097-a92aadfb08b0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Validate"
+            },
+            "0e580fbf-4ac5-4650-9316-144069ed9757": {
+              "id": "0e580fbf-4ac5-4650-9316-144069ed9757",
+              "type": "mutate",
+              "selected": false,
+              "x": 900,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x41ip2005f356ce6n2zmfm",
+                  "type": "default",
+                  "x": 892,
+                  "y": 311.73,
+                  "name": "cl4x41ip2005g356cben3heuc",
+                  "parentNode": "0e580fbf-4ac5-4650-9316-144069ed9757",
+                  "links": [
+                    "e20a0c5b-b763-4876-abed-0aadf9e07c0b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl4x41ip2005h356ch1cqc2zn",
+                  "type": "default",
+                  "x": 1131.53,
+                  "y": 311.73,
+                  "name": "cl4x41ip2005i356c0eye200r",
+                  "parentNode": "0e580fbf-4ac5-4650-9316-144069ed9757",
+                  "links": [
+                    "f9f79fee-de4d-47f5-b3c1-ad09c83ed65d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": [workcenterPositionMaterial.edges.node.{\n    \"where\": {\n      \"id\": id\n    }\n  }]\n}",
+                "nextNodes": [
+                  "4d658459-d961-43e8-a464-b2207b1b0d42"
+                ],
+                "mutation": "mutation($payload :  [WorkcenterPositionMaterialDeletePayloadInput!]!){\n  deleteWorkcenterPositionMaterial(payload: $payload){\n    id\n    inventoryId\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Delete Workcenter Position Material"
+            },
+            "58fcb000-39c9-47d2-8534-f5809f52283c": {
+              "id": "58fcb000-39c9-47d2-8534-f5809f52283c",
+              "type": "query",
+              "selected": false,
+              "x": 585,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x41ip4005r356ccwqilumg",
+                  "type": "default",
+                  "x": 577,
+                  "y": 311.73,
+                  "name": "cl4x41ip4005s356cmx6d0th7",
+                  "parentNode": "58fcb000-39c9-47d2-8534-f5809f52283c",
+                  "links": [
+                    "067e9950-3e0a-4792-b6ba-ebe34217c6f5"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl4x41ip4005t356c0k5l8nsp",
+                  "type": "default",
+                  "x": 855.91,
+                  "y": 311.73,
+                  "name": "cl4x41ip4005u356c75r52ms8",
+                  "parentNode": "58fcb000-39c9-47d2-8534-f5809f52283c",
+                  "links": [
+                    "e20a0c5b-b763-4876-abed-0aadf9e07c0b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"inventoryNumber\":$state.context.input.inventoryNumber\n}",
+                "query": "query($inventoryNumber : String!){\n  workcenterPositionMaterial(where:{\n    inventory:{\n      number:{\n        _eq: $inventoryNumber\n      }\n    }\n  }){\n    edges{\n      node{\n        id\n      }\n    }\n  }\n}",
+                "nextNodes": [
+                  "0e580fbf-4ac5-4650-9316-144069ed9757"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query Workcenter Position Material in Fuuz "
+            },
+            "4d658459-d961-43e8-a464-b2207b1b0d42": {
+              "id": "4d658459-d961-43e8-a464-b2207b1b0d42",
+              "type": "mutate",
+              "selected": false,
+              "x": 1190,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x41ip7006f356c450wkln7",
+                  "type": "default",
+                  "x": 1182,
+                  "y": 311.73,
+                  "name": "cl4x41ip7006g356czh92uopg",
+                  "parentNode": "4d658459-d961-43e8-a464-b2207b1b0d42",
+                  "links": [
+                    "f9f79fee-de4d-47f5-b3c1-ad09c83ed65d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl4x41ip7006h356crpj6vmfw",
+                  "type": "default",
+                  "x": 1336,
+                  "y": 311.73,
+                  "name": "cl4x41ip7006i356chv1jqf7z",
+                  "parentNode": "4d658459-d961-43e8-a464-b2207b1b0d42",
+                  "links": [
+                    "0ccd5620-28b7-41ae-a34f-c04daf16ae80"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "({\n  \"payload\": {\n     \"update\": {\n      \"active\": false,\n      \"transactionTypeId\": \"Inventory Adjustment\",\n      \"note\": \"Retire from Control Panel\"\n    },\n    \"where\":{\n      \"number\": $state.context.input.inventoryNumber\n    }\n  }\n})",
+                "mutation": "mutation($payload :  [InventoryUpdatePayloadInput!]!){\n  updateInventory(payload: $payload){\n    id\n    locationId\n    productStrategyProcessId\n  }\n}",
+                "nextNodes": [
+                  "96370e95-1bc1-4906-9852-d70a3402e678"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Retire Inventory"
+            },
+            "96370e95-1bc1-4906-9852-d70a3402e678": {
+              "id": "96370e95-1bc1-4906-9852-d70a3402e678",
+              "type": "response",
+              "selected": false,
+              "x": 1395,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x41ip9006r356c2lsdbh8g",
+                  "type": "default",
+                  "x": 1387,
+                  "y": 311.73,
+                  "name": "cl4x41ip9006s356civmnmz5h",
+                  "parentNode": "96370e95-1bc1-4906-9852-d70a3402e678",
+                  "links": [
+                    "0ccd5620-28b7-41ae-a34f-c04daf16ae80"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cl4x41ip9006t356cpu1rpu9b",
+                  "type": "default",
+                  "x": 1540.98,
+                  "y": 311.73,
+                  "name": "cl4x41ip9006u356c9428e9fe",
+                  "parentNode": "96370e95-1bc1-4906-9852-d70a3402e678",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response"
+            },
+            "db8c1871-d9eb-4313-8097-a92aadfb08b0": {
+              "id": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 385,
+              "y": 280,
+              "ports": [
+                {
+                  "id": "cl4x43k1d0088356cfj87zea0",
+                  "type": "default",
+                  "x": 377,
+                  "y": 311.73,
+                  "name": "cl4x43k1d0089356cne3gpuj4",
+                  "parentNode": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+                  "links": [
+                    "c11333df-662f-4925-a03e-dc81b67f040d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl4x43k1d008a356cmwg6ktfy",
+                  "type": "default",
+                  "x": 540.03,
+                  "y": 311.73,
+                  "name": "cl4x43k1d008b356c1ar4gcx2",
+                  "parentNode": "db8c1871-d9eb-4313-8097-a92aadfb08b0",
+                  "links": [
+                    "067e9950-3e0a-4792-b6ba-ebe34217c6f5"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"input\":$\n}",
+                "nextNodes": [
+                  "58fcb000-39c9-47d2-8534-f5809f52283c"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Store Input to Context"
+            },
+            "f528ebe6-4f5c-4129-a391-baff840ec0a3": {
+              "id": "f528ebe6-4f5c-4129-a391-baff840ec0a3",
+              "type": "request",
+              "x": -89.81,
+              "y": 426.88,
+              "ports": [
+                {
+                  "id": "cl5bghftm002t356cs71p7st6",
+                  "type": "default",
+                  "x": 56.2,
+                  "y": 458.61,
+                  "name": "cl5bghftm002u356cyt1j97ia",
+                  "parentNode": "f528ebe6-4f5c-4129-a391-baff840ec0a3",
+                  "links": [
+                    "8e6b1405-743b-45b1-bf39-f253b9d1f3d7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "7cc656a4-7ef5-4770-b50f-92b9d85ac930"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request"
+            }
+          }
+        }
+      ],
+      "name": "Retire Inventory in Fuuz",
+      "type": "Integration",
+      "version": "0.0.2",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

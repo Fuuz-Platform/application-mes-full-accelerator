@@ -1,0 +1,2512 @@
+{
+  "header": {
+    "id": "resourceTest",
+    "name": "Resource Test",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "clfky24tw0002015i32qe0hk6",
+    "number": "0.0.1",
+    "description": "",
+    "dataFlowId": "resourceTest",
+    "flow": {
+      "id": "clfky24tw0002015i32qe0hk6",
+      "name": "Resource Test",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+          "name": "Query",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"productStrategyProcessId\": {\n      \"_in\":[\"clfh2j0fz00gz016p8o0bgnew\",\"clfh2z5e300h9016pd7kfer3u\"]\n    }\n  }\n}",
+            "query": "query Query($where: ResourceProcessListWhereInput, $orderBy: [ResourceProcessListOrderByInput!], $first: Int, $after: String) {\n  resourceProcessList(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        number\n        quantity\n        requireSerial\n        workOrderOnly\n        productStrategyProcessId\n        resourceId\n        resource {\n          id\n          quantity\n        }\n        workOrderProcess {\n          workOrderProcessDistributions {\n            edges {\n              node {\n          id scheduledStartAt scheduledFinishAt\n      }\n      }\n    }\n    }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "b8f3aaec-88ea-4597-8022-f15796956357"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b8f3aaec-88ea-4597-8022-f15796956357",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "transform": "{\n  \"LOCAL\": {\n    \"resources\": resourceProcessList.edges.node.{\n      \"resourceId\":resource.id,\n      \"total\": resource.quantity,\n      \"productStrategyProcessId\":productStrategyProcessId,\n      \"quantity\":quantity\n    }\n  }\n}",
+            "nextNodes": [
+              "6499645e-f88d-4b13-8566-aea9af9702f9"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "be658787-3d94-4cf9-891b-1bd8989c75ba",
+          "name": "JSONata",
+          "type": "transform",
+          "data": {
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "6499645e-f88d-4b13-8566-aea9af9702f9",
+          "name": "Query",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{}",
+            "query": "query Query($where: WorkOrderProcessDistributionWhereInput, $orderBy: [WorkOrderProcessDistributionOrderByInput!], $first: Int, $after: String) {\n  workOrderProcessDistribution(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        scheduledFinishAt\n        scheduledStartAt\n        workOrderProcess {\n          productStrategyProcessId\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "23d112b3-8695-41f5-b371-3c0c29240e57"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "23d112b3-8695-41f5-b371-3c0c29240e57",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n\"LOCAL\": {\n  \"distributions\": \n    $.workOrderProcessDistribution.edges.node~>|$|{\"productStrategyProcessId\":workOrderProcess.productStrategyProcessId},[\"workOrderProcess\"]|\n  \n}\n\n}",
+            "nextNodes": [
+              "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+          "name": "JSONata",
+          "type": "transform",
+          "data": {
+            "transform": "(\n\n$d := $innerJoin( $state.context.LOCAL.resources, $state.context.LOCAL.distributions, 'productStrategyProcessId', 'productStrategyProcessId', 'dists', { 'grouped': true } );\n\n\n)",
+            "nextNodes": [
+              "6f21aa26-c246-445b-b923-5eddf96bbefe"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+          "name": "JavaScript",
+          "type": "javascriptTransform",
+          "data": {
+            "transform": "function res(resources) {\n    const cal = []\n    const total = resources[0].total\n    for (let i = 0; i < resources.length; i++) {\n        for (let ii = 0; ii < resources[i].dists.length; ii++) {\n            cal.push({\n                \"quantity\": resources[i].quantity,\n                \"start\": resources[i].dists[ii].scheduledStartAt,\n                \"end\": resources[i].dists[ii].scheduledFinishAt,\n            })\n        }\n    }\n    return {\n        \"total\": total,\n        \"cal\": cal\n    }\n}\n\nreturn res($)",
+            "nextNodes": [
+              "3f733b6a-9fd0-4085-bc2a-376198c5d5c2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "3f733b6a-9fd0-4085-bc2a-376198c5d5c2",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"LOCAL\": {\n    \"resourceCalendar\": $\n  }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.1"
+    },
+    "diagram": {
+      "id": "clfky24tw0002015i32qe0hk6",
+      "offsetX": -120.93,
+      "offsetY": 133.53,
+      "zoom": 55.18,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "b2919863-3930-4cba-94be-862920925b0c",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "11c41a14-a969-4bdf-a1d5-b81c9e10e37c": {
+              "points": [
+                {
+                  "id": "f19ecf80-8b4b-447f-8f45-5e966a22da46",
+                  "type": "point",
+                  "x": 389,
+                  "y": 392.94
+                },
+                {
+                  "id": "5e927c59-8b5d-4d00-ba05-159ebaf7af3e",
+                  "type": "point",
+                  "x": 443,
+                  "y": 452.63
+                }
+              ],
+              "id": "11c41a14-a969-4bdf-a1d5-b81c9e10e37c",
+              "type": "default",
+              "selected": false,
+              "source": "4294f8ff-d484-46a9-bdd3-db672ebca484",
+              "sourcePort": "clfjjtliv0008356do8lp4gzd",
+              "target": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+              "targetPort": "clfjjtoes000a356dc4t2a161",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "321a71db-1354-4226-83cd-29f9f2d19a1c": {
+              "points": [
+                {
+                  "id": "3f2ddff7-5d13-44c1-9bab-928a7264c790",
+                  "type": "point",
+                  "x": 597,
+                  "y": 452.63
+                },
+                {
+                  "id": "4e4e672e-a8ad-4bd7-8a0a-bad8030fbf88",
+                  "type": "point",
+                  "x": 660,
+                  "y": 457.94
+                }
+              ],
+              "id": "321a71db-1354-4226-83cd-29f9f2d19a1c",
+              "type": "default",
+              "selected": false,
+              "source": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+              "sourcePort": "clfjjtoes000c356dkwvwvtw4",
+              "target": "b8f3aaec-88ea-4597-8022-f15796956357",
+              "targetPort": "clfjkk7z7004y356dsc1tueay",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c274955a-8394-4245-82ef-43cc4ea81459": {
+              "points": [
+                {
+                  "id": "e1c8a0d9-50b7-4908-b534-4a2135ced77c",
+                  "type": "point",
+                  "x": 814,
+                  "y": 457.94
+                },
+                {
+                  "id": "224f55b6-1f24-4851-b570-74bedb99680f",
+                  "type": "point",
+                  "x": 870,
+                  "y": 462.94
+                }
+              ],
+              "id": "c274955a-8394-4245-82ef-43cc4ea81459",
+              "type": "default",
+              "selected": false,
+              "source": "b8f3aaec-88ea-4597-8022-f15796956357",
+              "sourcePort": "clfjkk7z70050356dsnjvpvis",
+              "target": "6499645e-f88d-4b13-8566-aea9af9702f9",
+              "targetPort": "clfjknxfd00cb356d8byeigbm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6a800d78-c688-423a-8859-aac3d7d1f88f": {
+              "points": [
+                {
+                  "id": "cc19ba9c-2995-4e15-8ffc-54d42b322653",
+                  "type": "point",
+                  "x": 1024,
+                  "y": 462.94
+                },
+                {
+                  "id": "2e9ad614-4371-4001-9cf3-1174ff798e6a",
+                  "type": "point",
+                  "x": 1075,
+                  "y": 462.94
+                }
+              ],
+              "id": "6a800d78-c688-423a-8859-aac3d7d1f88f",
+              "type": "default",
+              "selected": false,
+              "source": "6499645e-f88d-4b13-8566-aea9af9702f9",
+              "sourcePort": "clfjknxfd00cd356dva8a86jj",
+              "target": "23d112b3-8695-41f5-b371-3c0c29240e57",
+              "targetPort": "clfjkpqum00cu356dbpll74pd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a32e80fa-c1a2-4756-8ac3-3db8d299679f": {
+              "points": [
+                {
+                  "id": "dc625b97-b886-4fa2-a03d-dfaf6d5e2c8c",
+                  "type": "point",
+                  "x": 1229,
+                  "y": 462.94
+                },
+                {
+                  "id": "e920f4a9-a0e1-442f-80d2-ddaf94546dbd",
+                  "type": "point",
+                  "x": 1300,
+                  "y": 467.94
+                }
+              ],
+              "id": "a32e80fa-c1a2-4756-8ac3-3db8d299679f",
+              "type": "default",
+              "selected": false,
+              "source": "23d112b3-8695-41f5-b371-3c0c29240e57",
+              "sourcePort": "clfjkpqum00cw356d0u3nbptn",
+              "target": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+              "targetPort": "clfjksyld00hm356dhqpasbyb",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1468011e-88df-48f8-bfd1-6e4043a97839": {
+              "points": [
+                {
+                  "id": "ad9f3fb2-29f4-4b67-b3eb-d81a8bd4c3c0",
+                  "type": "point",
+                  "x": 1454,
+                  "y": 467.94
+                },
+                {
+                  "id": "fdd12208-f1c5-4d65-866c-71e53224a0ce",
+                  "type": "point",
+                  "x": 1525,
+                  "y": 477.94
+                }
+              ],
+              "id": "1468011e-88df-48f8-bfd1-6e4043a97839",
+              "type": "default",
+              "selected": false,
+              "source": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+              "sourcePort": "clfjksyld00ho356dyju48ldj",
+              "target": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+              "targetPort": "clfjl2eje00ny356dxeb39d9f",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "07967353-4557-4a0f-a8f1-22e270189375": {
+              "points": [
+                {
+                  "id": "9d66c761-448b-4a4b-b935-08f7ca86043e",
+                  "type": "point",
+                  "x": 1679,
+                  "y": 477.94
+                },
+                {
+                  "id": "44f8249f-e0f8-48ff-9c93-bd4de471e48f",
+                  "type": "point",
+                  "x": 1740,
+                  "y": 492.94
+                }
+              ],
+              "id": "07967353-4557-4a0f-a8f1-22e270189375",
+              "type": "default",
+              "selected": false,
+              "source": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+              "sourcePort": "clfjl2eje00o0356dpf1kdt6d",
+              "target": "3f733b6a-9fd0-4085-bc2a-376198c5d5c2",
+              "targetPort": "clfjlj7fd00ot356deqn58mwx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "3fb03150-1df3-475c-bc23-fef2b6526a07",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "4294f8ff-d484-46a9-bdd3-db672ebca484": {
+              "id": "4294f8ff-d484-46a9-bdd3-db672ebca484",
+              "type": "debugSource",
+              "selected": false,
+              "x": 235,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "clfjjtliv0008356do8lp4gzd",
+                  "type": "default",
+                  "x": 381,
+                  "y": 384.94,
+                  "name": "clfjjtliv0009356dvzepx9jk",
+                  "parentNode": "4294f8ff-d484-46a9-bdd3-db672ebca484",
+                  "links": [
+                    "11c41a14-a969-4bdf-a1d5-b81c9e10e37c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {},
+                "context": {},
+                "nextNodes": [
+                  "da6e4d73-b27e-4048-8b44-7acb62422a26"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "da6e4d73-b27e-4048-8b44-7acb62422a26": {
+              "id": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+              "type": "query",
+              "selected": true,
+              "x": 443,
+              "y": 409.7,
+              "ports": [
+                {
+                  "id": "clfjjtoes000a356dc4t2a161",
+                  "type": "default",
+                  "x": 435,
+                  "y": 444.63,
+                  "name": "clfjjtoes000b356dhqx0594r",
+                  "parentNode": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+                  "links": [
+                    "11c41a14-a969-4bdf-a1d5-b81c9e10e37c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjjtoes000c356dkwvwvtw4",
+                  "type": "default",
+                  "x": 589,
+                  "y": 444.63,
+                  "name": "clfjjtoes000d356d4z03sh8h",
+                  "parentNode": "da6e4d73-b27e-4048-8b44-7acb62422a26",
+                  "links": [
+                    "321a71db-1354-4226-83cd-29f9f2d19a1c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"productStrategyProcessId\": {\n      \"_in\":[\"clfh2j0fz00gz016p8o0bgnew\",\"clfh2z5e300h9016pd7kfer3u\"]\n    }\n  }\n}",
+                "query": "query Query($where: ResourceProcessListWhereInput, $orderBy: [ResourceProcessListOrderByInput!], $first: Int, $after: String) {\n  resourceProcessList(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        number\n        quantity\n        requireSerial\n        workOrderOnly\n        productStrategyProcessId\n        resourceId\n        resource {\n          id\n          quantity\n        }\n        workOrderProcess {\n          workOrderProcessDistributions {\n            edges {\n              node {\n          id scheduledStartAt scheduledFinishAt\n      }\n      }\n    }\n    }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "b8f3aaec-88ea-4597-8022-f15796956357"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query"
+            },
+            "61f722a5-847d-46aa-ab0c-cbf9b8ace016": {
+              "id": "61f722a5-847d-46aa-ab0c-cbf9b8ace016",
+              "type": "debugSource",
+              "selected": false,
+              "x": 460,
+              "y": 191.7,
+              "ports": [
+                {
+                  "id": "clfjk9cb7002y356dc61wernm",
+                  "type": "default",
+                  "x": 606,
+                  "y": 226.63,
+                  "name": "clfjk9cb7002z356df52g25b3",
+                  "parentNode": "61f722a5-847d-46aa-ab0c-cbf9b8ace016",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": [
+                  {
+                    "startAt": "2023-03-22T10:47:27.557Z",
+                    "workOrderId": "clfj4wwxh002q011hajepdr6h",
+                    "workOrderProcesses": [
+                      {
+                        "id": "__WO-2023-01-P1-100-clfh2j0fz00gz016p8o0bgnew",
+                        "code": "__WO-2023-01-P1-100-10",
+                        "order": 10,
+                        "quantity": 100,
+                        "productStrategyProcess": {
+                          "id": "clfh2j0fz00gz016p8o0bgnew",
+                          "standardRate": 18,
+                          "idealRate": 20,
+                          "setupRate": 0.05,
+                          "productionOperators": 1,
+                          "setupOperators": 1,
+                          "workcenter": {
+                            "id": "clfh8nuvn00ce016u13of5t1q",
+                            "calendarId": "clfh8nuvn00ce016u13of5t1q",
+                            "shiftGroup": {
+                              "id": "Default",
+                              "calendarId": "Default Shift Group"
+                            },
+                            "calendar": [
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-22T10:47:27.557Z",
+                                "end": "2023-03-22T20:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-22T20:00:00.000Z",
+                                "end": "2023-03-23T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T04:00:00.000Z",
+                                    "occursAt": "2023-03-22T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-23T04:00:00.000Z",
+                                "end": "2023-03-23T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-23T10:00:00.000Z",
+                                "end": "2023-03-23T16:03:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T20:00:00.000Z",
+                                    "occursAt": "2023-03-23T10:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unavailable",
+                                "start": "2023-03-23T16:03:00.000Z",
+                                "end": "2023-03-24T03:12:40.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T03:12:40.000Z",
+                                "end": "2023-03-24T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T04:00:00.000Z",
+                                    "occursAt": "2023-03-23T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-24T04:00:00.000Z",
+                                "end": "2023-03-24T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T10:00:00.000Z",
+                                "end": "2023-03-25T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T20:00:00.000Z",
+                                    "occursAt": "2023-03-24T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-25T04:00:00.000Z",
+                                    "occursAt": "2023-03-24T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-25T04:00:00.000Z",
+                                "end": "2023-03-27T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-27T10:00:00.000Z",
+                                "end": "2023-03-28T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-27T20:00:00.000Z",
+                                    "occursAt": "2023-03-27T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T04:00:00.000Z",
+                                    "occursAt": "2023-03-27T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-28T04:00:00.000Z",
+                                "end": "2023-03-28T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-28T10:00:00.000Z",
+                                "end": "2023-03-29T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T20:00:00.000Z",
+                                    "occursAt": "2023-03-28T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T04:00:00.000Z",
+                                    "occursAt": "2023-03-28T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-29T04:00:00.000Z",
+                                "end": "2023-03-29T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-29T10:00:00.000Z",
+                                "end": "2023-03-29T20:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T20:00:00.000Z",
+                                    "occursAt": "2023-03-29T10:00:00.000Z"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "workOrderProcessStatus": {
+                          "id": "New",
+                          "active": true,
+                          "completed": false,
+                          "hold": false,
+                          "name": "New",
+                          "new": true,
+                          "required": true,
+                          "started": false,
+                          "usable": true,
+                          "color": "#c7c7c7",
+                          "description": "",
+                          "externalId": ""
+                        },
+                        "distributions": {
+                          "edges": [
+                            {
+                              "node": {
+                                "id": "clfjiwg1x000501595fxw59f4",
+                                "calendarEventId": null,
+                                "workOrder": {
+                                  "number": "__WO-2023-01-P1-100"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "__WO-2023-01-P1-100-clfh8svpu00cf016u30v6dp6x",
+                        "code": "__WO-2023-01-P1-100-20",
+                        "order": 20,
+                        "quantity": 100,
+                        "productStrategyProcess": {
+                          "id": "clfh8svpu00cf016u30v6dp6x",
+                          "standardRate": 15,
+                          "idealRate": 18,
+                          "setupRate": 0.05,
+                          "productionOperators": 1,
+                          "setupOperators": 1,
+                          "workcenter": {
+                            "id": "clfh8sq6500dc017u09py900t",
+                            "calendarId": "clfh8sq6500dc017u09py900t",
+                            "shiftGroup": {
+                              "id": "Default",
+                              "calendarId": "Default Shift Group"
+                            },
+                            "calendar": [
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-22T10:47:27.557Z",
+                                "end": "2023-03-22T20:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-22T20:00:00.000Z",
+                                "end": "2023-03-23T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T04:00:00.000Z",
+                                    "occursAt": "2023-03-22T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-23T04:00:00.000Z",
+                                "end": "2023-03-23T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-23T10:00:00.000Z",
+                                "end": "2023-03-24T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T20:00:00.000Z",
+                                    "occursAt": "2023-03-23T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T04:00:00.000Z",
+                                    "occursAt": "2023-03-23T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-24T04:00:00.000Z",
+                                "end": "2023-03-24T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "unavailable",
+                                "start": "2023-03-24T10:00:00.000Z",
+                                "end": "2023-03-24T23:23:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T23:23:00.000Z",
+                                "end": "2023-03-25T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-25T04:00:00.000Z",
+                                    "occursAt": "2023-03-24T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-25T04:00:00.000Z",
+                                "end": "2023-03-27T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-27T10:00:00.000Z",
+                                "end": "2023-03-28T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-27T20:00:00.000Z",
+                                    "occursAt": "2023-03-27T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T04:00:00.000Z",
+                                    "occursAt": "2023-03-27T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-28T04:00:00.000Z",
+                                "end": "2023-03-28T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-28T10:00:00.000Z",
+                                "end": "2023-03-29T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T20:00:00.000Z",
+                                    "occursAt": "2023-03-28T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T04:00:00.000Z",
+                                    "occursAt": "2023-03-28T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-29T04:00:00.000Z",
+                                "end": "2023-03-29T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-29T10:00:00.000Z",
+                                "end": "2023-03-29T20:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T20:00:00.000Z",
+                                    "occursAt": "2023-03-29T10:00:00.000Z"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "workOrderProcessStatus": {
+                          "id": "New",
+                          "active": true,
+                          "completed": false,
+                          "hold": false,
+                          "name": "New",
+                          "new": true,
+                          "required": true,
+                          "started": false,
+                          "usable": true,
+                          "color": "#c7c7c7",
+                          "description": "",
+                          "externalId": ""
+                        },
+                        "distributions": {
+                          "edges": [
+                            {
+                              "node": {
+                                "id": "clfjiwg2200060159h7ceb76i",
+                                "calendarEventId": null,
+                                "workOrder": {
+                                  "number": "__WO-2023-01-P1-100"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "startAt": "2023-03-22T10:47:27.557Z",
+                    "workOrderId": "clfjitua10002012p71sg10tc",
+                    "workOrderProcesses": [
+                      {
+                        "id": "__WO-2023-02-P2-150-clfh2z5e300h9016pd7kfer3u",
+                        "code": "__WO-2023-02-P2-150-10",
+                        "order": 10,
+                        "quantity": 150,
+                        "productStrategyProcess": {
+                          "id": "clfh2z5e300h9016pd7kfer3u",
+                          "standardRate": 25,
+                          "idealRate": 30,
+                          "setupRate": 0.05,
+                          "productionOperators": 1,
+                          "setupOperators": 1,
+                          "workcenter": {
+                            "id": "clfh8nuvn00ce016u13of5t1q",
+                            "calendarId": "clfh8nuvn00ce016u13of5t1q",
+                            "shiftGroup": {
+                              "id": "Default",
+                              "calendarId": "Default Shift Group"
+                            },
+                            "calendar": [
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-22T10:47:27.557Z",
+                                "end": "2023-03-22T20:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-22T20:00:00.000Z",
+                                "end": "2023-03-23T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T04:00:00.000Z",
+                                    "occursAt": "2023-03-22T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-23T04:00:00.000Z",
+                                "end": "2023-03-23T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-23T10:00:00.000Z",
+                                "end": "2023-03-23T16:03:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T20:00:00.000Z",
+                                    "occursAt": "2023-03-23T10:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unavailable",
+                                "start": "2023-03-23T16:03:00.000Z",
+                                "end": "2023-03-24T03:12:40.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T03:12:40.000Z",
+                                "end": "2023-03-24T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T04:00:00.000Z",
+                                    "occursAt": "2023-03-23T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-24T04:00:00.000Z",
+                                "end": "2023-03-24T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T10:00:00.000Z",
+                                "end": "2023-03-25T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T20:00:00.000Z",
+                                    "occursAt": "2023-03-24T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-25T04:00:00.000Z",
+                                    "occursAt": "2023-03-24T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-25T04:00:00.000Z",
+                                "end": "2023-03-27T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-27T10:00:00.000Z",
+                                "end": "2023-03-28T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-27T20:00:00.000Z",
+                                    "occursAt": "2023-03-27T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T04:00:00.000Z",
+                                    "occursAt": "2023-03-27T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-28T04:00:00.000Z",
+                                "end": "2023-03-28T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-28T10:00:00.000Z",
+                                "end": "2023-03-29T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T20:00:00.000Z",
+                                    "occursAt": "2023-03-28T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T04:00:00.000Z",
+                                    "occursAt": "2023-03-28T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-29T04:00:00.000Z",
+                                "end": "2023-03-29T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-29T10:00:00.000Z",
+                                "end": "2023-03-29T20:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T20:00:00.000Z",
+                                    "occursAt": "2023-03-29T10:00:00.000Z"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "workOrderProcessStatus": {
+                          "id": "New",
+                          "active": true,
+                          "completed": false,
+                          "hold": false,
+                          "name": "New",
+                          "new": true,
+                          "required": true,
+                          "started": false,
+                          "usable": true,
+                          "color": "#c7c7c7",
+                          "description": "",
+                          "externalId": ""
+                        },
+                        "distributions": {
+                          "edges": [
+                            {
+                              "node": {
+                                "id": "clfjiwg2300070159fgr65jxf",
+                                "calendarEventId": null,
+                                "workOrder": {
+                                  "number": "__WO-2023-02-P2-150"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "id": "__WO-2023-02-P2-150-clfi3x8g000020129gz205hcx",
+                        "code": "__WO-2023-02-P2-150-20",
+                        "order": 20,
+                        "quantity": 150,
+                        "productStrategyProcess": {
+                          "id": "clfi3x8g000020129gz205hcx",
+                          "standardRate": 50,
+                          "idealRate": 60,
+                          "setupRate": 0.1,
+                          "productionOperators": 1,
+                          "setupOperators": 1,
+                          "workcenter": {
+                            "id": "clfh8sq6500dc017u09py900t",
+                            "calendarId": "clfh8sq6500dc017u09py900t",
+                            "shiftGroup": {
+                              "id": "Default",
+                              "calendarId": "Default Shift Group"
+                            },
+                            "calendar": [
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-22T10:47:27.557Z",
+                                "end": "2023-03-22T20:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-22T20:00:00.000Z",
+                                "end": "2023-03-23T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T04:00:00.000Z",
+                                    "occursAt": "2023-03-22T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-23T04:00:00.000Z",
+                                "end": "2023-03-23T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-23T10:00:00.000Z",
+                                "end": "2023-03-24T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-23T20:00:00.000Z",
+                                    "occursAt": "2023-03-23T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-24T04:00:00.000Z",
+                                    "occursAt": "2023-03-23T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-24T04:00:00.000Z",
+                                "end": "2023-03-24T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "unavailable",
+                                "start": "2023-03-24T10:00:00.000Z",
+                                "end": "2023-03-24T23:23:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-24T23:23:00.000Z",
+                                "end": "2023-03-25T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-25T04:00:00.000Z",
+                                    "occursAt": "2023-03-24T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-25T04:00:00.000Z",
+                                "end": "2023-03-27T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-27T10:00:00.000Z",
+                                "end": "2023-03-28T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-27T20:00:00.000Z",
+                                    "occursAt": "2023-03-27T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T04:00:00.000Z",
+                                    "occursAt": "2023-03-27T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-28T04:00:00.000Z",
+                                "end": "2023-03-28T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-28T10:00:00.000Z",
+                                "end": "2023-03-29T04:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-28T20:00:00.000Z",
+                                    "occursAt": "2023-03-28T10:00:00.000Z"
+                                  },
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 2",
+                                    "eventJson": {
+                                      "duration": 28800000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T20:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T20:00:00.000Z",
+                                      "end": "2023-01-02T04:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T04:00:00.000Z",
+                                    "occursAt": "2023-03-28T20:00:00.000Z"
+                                  }
+                                ]
+                              },
+                              {
+                                "groupEventType": "unallocated",
+                                "start": "2023-03-29T04:00:00.000Z",
+                                "end": "2023-03-29T10:00:00.000Z"
+                              },
+                              {
+                                "groupEventType": "available",
+                                "start": "2023-03-29T10:00:00.000Z",
+                                "end": "2023-03-29T20:00:00.000Z",
+                                "events": [
+                                  {
+                                    "calendarEventTypeId": "available",
+                                    "priority": 0,
+                                    "title": "Shift 1",
+                                    "eventJson": {
+                                      "duration": 36000000,
+                                      "rrule": {
+                                        "dtstart": "2023-01-01T10:00:00.000Z",
+                                        "freq": "daily",
+                                        "byweekday": [
+                                          0,
+                                          1,
+                                          2,
+                                          3,
+                                          4
+                                        ]
+                                      },
+                                      "allDay": false,
+                                      "recurring": true,
+                                      "start": "2023-01-01T10:00:00.000Z",
+                                      "end": "2023-01-01T20:00:00.000Z",
+                                      "display": "background"
+                                    },
+                                    "calendarEventGroups": [],
+                                    "endsAt": "2023-03-29T20:00:00.000Z",
+                                    "occursAt": "2023-03-29T10:00:00.000Z"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "workOrderProcessStatus": {
+                          "id": "New",
+                          "active": true,
+                          "completed": false,
+                          "hold": false,
+                          "name": "New",
+                          "new": true,
+                          "required": true,
+                          "started": false,
+                          "usable": true,
+                          "color": "#c7c7c7",
+                          "description": "",
+                          "externalId": ""
+                        },
+                        "distributions": {
+                          "edges": [
+                            {
+                              "node": {
+                                "id": "clfjiwg2300080159eoaw6y3j",
+                                "calendarEventId": null,
+                                "workOrder": {
+                                  "number": "__WO-2023-02-P2-150"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "context": {},
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "b8f3aaec-88ea-4597-8022-f15796956357": {
+              "id": "b8f3aaec-88ea-4597-8022-f15796956357",
+              "type": "setContext",
+              "selected": false,
+              "x": 660,
+              "y": 415,
+              "ports": [
+                {
+                  "id": "clfjkk7z7004y356dsc1tueay",
+                  "type": "default",
+                  "x": 652,
+                  "y": 449.94,
+                  "name": "clfjkk7z7004z356daam1u2jd",
+                  "parentNode": "b8f3aaec-88ea-4597-8022-f15796956357",
+                  "links": [
+                    "321a71db-1354-4226-83cd-29f9f2d19a1c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjkk7z70050356dsnjvpvis",
+                  "type": "default",
+                  "x": 806,
+                  "y": 449.94,
+                  "name": "clfjkk7z70051356dil2iftlb",
+                  "parentNode": "b8f3aaec-88ea-4597-8022-f15796956357",
+                  "links": [
+                    "c274955a-8394-4245-82ef-43cc4ea81459"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"LOCAL\": {\n    \"resources\": resourceProcessList.edges.node.{\n      \"resourceId\":resource.id,\n      \"total\": resource.quantity,\n      \"productStrategyProcessId\":productStrategyProcessId,\n      \"quantity\":quantity\n    }\n  }\n}",
+                "nextNodes": [
+                  "6499645e-f88d-4b13-8566-aea9af9702f9"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "be658787-3d94-4cf9-891b-1bd8989c75ba": {
+              "id": "be658787-3d94-4cf9-891b-1bd8989c75ba",
+              "type": "transform",
+              "selected": false,
+              "x": 780,
+              "y": 180,
+              "ports": [
+                {
+                  "id": "clfjkn60d00bz356d7trrnb22",
+                  "type": "default",
+                  "x": 772,
+                  "y": 214.94,
+                  "name": "clfjkn60d00c0356dmvdpwi3s",
+                  "parentNode": "be658787-3d94-4cf9-891b-1bd8989c75ba",
+                  "links": [],
+                  "in": true
+                },
+                {
+                  "id": "clfjkn60d00c1356dao8fjfrk",
+                  "type": "default",
+                  "x": 926,
+                  "y": 214.94,
+                  "name": "clfjkn60d00c2356dzfc5ozkz",
+                  "parentNode": "be658787-3d94-4cf9-891b-1bd8989c75ba",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata"
+            },
+            "6499645e-f88d-4b13-8566-aea9af9702f9": {
+              "id": "6499645e-f88d-4b13-8566-aea9af9702f9",
+              "type": "query",
+              "selected": false,
+              "x": 870,
+              "y": 420,
+              "ports": [
+                {
+                  "id": "clfjknxfd00cb356d8byeigbm",
+                  "type": "default",
+                  "x": 862,
+                  "y": 454.94,
+                  "name": "clfjknxfd00cc356dgerxsvfy",
+                  "parentNode": "6499645e-f88d-4b13-8566-aea9af9702f9",
+                  "links": [
+                    "c274955a-8394-4245-82ef-43cc4ea81459"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjknxfd00cd356dva8a86jj",
+                  "type": "default",
+                  "x": 1016,
+                  "y": 454.94,
+                  "name": "clfjknxfd00ce356d7l4mxvd6",
+                  "parentNode": "6499645e-f88d-4b13-8566-aea9af9702f9",
+                  "links": [
+                    "6a800d78-c688-423a-8859-aac3d7d1f88f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{}",
+                "query": "query Query($where: WorkOrderProcessDistributionWhereInput, $orderBy: [WorkOrderProcessDistributionOrderByInput!], $first: Int, $after: String) {\n  workOrderProcessDistribution(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        scheduledFinishAt\n        scheduledStartAt\n        workOrderProcess {\n          productStrategyProcessId\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "23d112b3-8695-41f5-b371-3c0c29240e57"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query"
+            },
+            "23d112b3-8695-41f5-b371-3c0c29240e57": {
+              "id": "23d112b3-8695-41f5-b371-3c0c29240e57",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1075,
+              "y": 420,
+              "ports": [
+                {
+                  "id": "clfjkpqum00cu356dbpll74pd",
+                  "type": "default",
+                  "x": 1067,
+                  "y": 454.94,
+                  "name": "clfjkpqum00cv356d4oe2w3pt",
+                  "parentNode": "23d112b3-8695-41f5-b371-3c0c29240e57",
+                  "links": [
+                    "6a800d78-c688-423a-8859-aac3d7d1f88f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjkpqum00cw356d0u3nbptn",
+                  "type": "default",
+                  "x": 1221,
+                  "y": 454.94,
+                  "name": "clfjkpqum00cx356dufsw7lay",
+                  "parentNode": "23d112b3-8695-41f5-b371-3c0c29240e57",
+                  "links": [
+                    "a32e80fa-c1a2-4756-8ac3-3db8d299679f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n\"LOCAL\": {\n  \"distributions\": \n    $.workOrderProcessDistribution.edges.node~>|$|{\"productStrategyProcessId\":workOrderProcess.productStrategyProcessId},[\"workOrderProcess\"]|\n  \n}\n\n}",
+                "nextNodes": [
+                  "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e": {
+              "id": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+              "type": "transform",
+              "selected": false,
+              "x": 1300,
+              "y": 425,
+              "ports": [
+                {
+                  "id": "clfjksyld00hm356dhqpasbyb",
+                  "type": "default",
+                  "x": 1292,
+                  "y": 459.94,
+                  "name": "clfjksyld00hn356docxdbb8l",
+                  "parentNode": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+                  "links": [
+                    "a32e80fa-c1a2-4756-8ac3-3db8d299679f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjksyld00ho356dyju48ldj",
+                  "type": "default",
+                  "x": 1446,
+                  "y": 459.94,
+                  "name": "clfjksyld00hp356dkjpf1c1w",
+                  "parentNode": "7ccc2655-9b3c-4f56-afd2-74cc3f19e88e",
+                  "links": [
+                    "1468011e-88df-48f8-bfd1-6e4043a97839"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n\n$d := $innerJoin( $state.context.LOCAL.resources, $state.context.LOCAL.distributions, 'productStrategyProcessId', 'productStrategyProcessId', 'dists', { 'grouped': true } );\n\n\n)",
+                "nextNodes": [
+                  "6f21aa26-c246-445b-b923-5eddf96bbefe"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata"
+            },
+            "6f21aa26-c246-445b-b923-5eddf96bbefe": {
+              "id": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+              "type": "javascriptTransform",
+              "selected": false,
+              "x": 1525,
+              "y": 435,
+              "ports": [
+                {
+                  "id": "clfjl2eje00ny356dxeb39d9f",
+                  "type": "default",
+                  "x": 1517,
+                  "y": 469.94,
+                  "name": "clfjl2eje00nz356dzbvgpjjd",
+                  "parentNode": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+                  "links": [
+                    "1468011e-88df-48f8-bfd1-6e4043a97839"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjl2eje00o0356dpf1kdt6d",
+                  "type": "default",
+                  "x": 1671,
+                  "y": 469.94,
+                  "name": "clfjl2eje00o1356dsr25rf9x",
+                  "parentNode": "6f21aa26-c246-445b-b923-5eddf96bbefe",
+                  "links": [
+                    "07967353-4557-4a0f-a8f1-22e270189375"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "function res(resources) {\n    const cal = []\n    const total = resources[0].total\n    for (let i = 0; i < resources.length; i++) {\n        for (let ii = 0; ii < resources[i].dists.length; ii++) {\n            cal.push({\n                \"quantity\": resources[i].quantity,\n                \"start\": resources[i].dists[ii].scheduledStartAt,\n                \"end\": resources[i].dists[ii].scheduledFinishAt,\n            })\n        }\n    }\n    return {\n        \"total\": total,\n        \"cal\": cal\n    }\n}\n\nreturn res($)",
+                "nextNodes": [
+                  "3f733b6a-9fd0-4085-bc2a-376198c5d5c2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JavaScript"
+            },
+            "3f733b6a-9fd0-4085-bc2a-376198c5d5c2": {
+              "id": "3f733b6a-9fd0-4085-bc2a-376198c5d5c2",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1740,
+              "y": 450,
+              "ports": [
+                {
+                  "id": "clfjlj7fd00ot356deqn58mwx",
+                  "type": "default",
+                  "x": 1732,
+                  "y": 484.94,
+                  "name": "clfjlj7fd00ou356dle9lvcez",
+                  "parentNode": "3f733b6a-9fd0-4085-bc2a-376198c5d5c2",
+                  "links": [
+                    "07967353-4557-4a0f-a8f1-22e270189375"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clfjlj7fd00ov356dylhrbj1u",
+                  "type": "default",
+                  "x": 1886,
+                  "y": 484.94,
+                  "name": "clfjlj7fd00ow356d5btpin3g",
+                  "parentNode": "3f733b6a-9fd0-4085-bc2a-376198c5d5c2",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"LOCAL\": {\n    \"resourceCalendar\": $\n  }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            }
+          }
+        }
+      ],
+      "name": "Resource Test",
+      "type": "System",
+      "version": "0.0.1",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

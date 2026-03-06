@@ -1,0 +1,3686 @@
+{
+  "header": {
+    "id": "screenGenerationColumnCreate",
+    "name": "Screen Generation Column Create",
+    "description": "Create the table Colums ",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cl0lder8d00010i7u3l375lgr",
+    "number": "0.0.3",
+    "description": "",
+    "dataFlowId": "screenGenerationColumnCreate",
+    "flow": {
+      "id": "cl0lder8d00010i7u3l375lgr",
+      "name": "Screen Generation Column Create",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+          "name": "Broadcast",
+          "type": "broadcast",
+          "data": {
+            "nextNodes": [
+              "86ac2baa-b1aa-4fcc-99db-9c38c6901e48"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+          "name": "Parse Column Type String",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $isList := $contains(type, \"[\");\n  $baseTypeMatch := $match(type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  {\n    \"field\": $,\n    \"isList\": $isList,\n    \"baseType\": $baseType,\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    })\n  }\n)",
+            "nextNodes": [
+              "e9dbd35e-c673-4306-8c02-9060f843a697"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+          "name": "Combine (table, columns)",
+          "type": "combine",
+          "data": {
+            "executionTimeout": 60,
+            "payloadCombinationStrategy": "index",
+            "contextCombinationStrategy": "first",
+            "nextNodes": [
+              "2eac4082-ac11-4d6b-89d1-31aab01f5db3"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+          "name": "Type is Scalar",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $model := $state.context.component.model;\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelField := $coalesce([$state.context.component.labelField, \"id\"]);\n\n  $scalarMap := {\n    \"String\": {\n      \"format\": $fieldName = \"description\" or $fieldName = \"note\" ? 'markdown' : 'text'\n    },\n    \"Email\": {\n      \"format\": 'text'\n    },\n    \"Boolean\": {\n      \"format\": 'checkmark'\n    },\n    \"DateTime\": {\n      \"format\": 'datetime'\n    },\n    \"Int\": {\n      \"format\": 'integer'\n    },\n    \"Float\": {\n      \"format\": 'float'\n    },\n    \"JSON\": {\n      \"format\": 'json'\n    },\n    \"JSONObject\": {\n      \"format\": 'json'\n    },\n    \"Address\": {\n      \"format\": 'address',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.lines',\n          $dataPath & '.city',\n          $dataPath & '.state',\n          $dataPath & '.postalCode',\n          $dataPath & '.country'\n        ]\n      }\n    },\n    \"Measure\": {\n      \"format\": 'measure',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.value',\n          $dataPath & '.unit.code',\n          $dataPath & '.unit.id'\n\n        ]\n      }\n    },\n    \"RatioMeasure\": {\n      \"format\": 'ratioMeasure',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.numeratorValue',\n          $dataPath & '.numeratorUnit.code',\n          $dataPath & '.numeratorUnit.id',\n          $dataPath & '.denominatorUnit.code',\n          $dataPath & '.denominatorUnit.id'\n        ]\n      }\n    }\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $map([$format ? $format : {}], function($v) {\n    $merge([\n      { \n        \"name\": $fieldName,\n        \"description\": field.description,\n        \"label\": $startCase($fieldName),\n        \"format\": \"text\",\n        \"dataPath\": $dataPath,\n        \"query\": {\n          \"fields\": [\n             $dataPath\n          ]\n        }\n      },\n      $v,\n      ($fieldName = $labelField or $fieldName = 'id') ? {\n        \"linkTarget\": {\n            \"__transform\": '\"/' \n              & $model.metadata.mfgx.module.group.id \n              & '/' \n              & $model.metadata.mfgx.module.id \n              & '/'\n              & $pluralize($lowerFirst($model.name),'en')\n              & '/'\n              & '\" & data.id'\n        },\n        \"query\": {\n          \"fields\": [\n             $dataPath,\n            \"id\"\n          ]\n        }\n      } : {}\n    ])\n  })  \n)",
+            "nextNodes": [
+              "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+          "name": "Type is Status",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]);\n  \n  {\n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"format\": 'text',\n    \"dataPath\": $fieldName & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseType),'en')\n        & '/'\n        & '\" & data.' \n        & $fieldName\n        & '.id'\n    },\n    \"query\": {\n      \"fields\": [\n        field.name & '.id',\n        $dataPath\n      ]\n    }\n  }\n)\n",
+            "nextNodes": [
+              "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+          "name": "Type is single Reference",
+          "type": "transform",
+          "data": {
+            "transform": "(\n    $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelDataPath := $dataPath & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]);\n\n  { \n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"format\": \"text\",\n    \"dataPath\": $labelDataPath,\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseType),'en')\n        & '/'\n        & '\" & data.' \n        & $dataPath \n        & '.id'\n    },\n    \"query\": {\n      \"fields\": [\n        $dataPath & \".id\",\n        $labelDataPath\n      ]\n    }\n  }\n)",
+            "nextNodes": [
+              "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+          "name": "Type is list Reference",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelField := $coalesce([\n    baseTypeModel.metadata.mfgx.isDataChangeModel ? undefined : baseTypeModel.metadata.mfgx.labelField, \n    \"id\"\n  ]);\n\n  { \n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"dataPath\": $dataPath & '.total',\n    \"dataQuery\": {\n      \"model\": baseType,\n      \"api\": $state.context.parameters.api,\n      \"fields\": [\"id\"]\n    },    \n    \"additionalFilter\": {\n      \"__transform\": '{\n        \"' & field.metadata.mfgx.relation.fields.to & '\": {\n          \"_eq\": data.id\n        }\n      }'\n    },\n    \"format\": 'dynamicListDialog',\n    \"columns\": [\n      {\n        \"name\": $labelField,\n        \"label\": $startCase($labelField),\n        \"dataPath\": $labelField,\n        \"format\": 'text',\n        \"linkTarget\": {\n          \"__transform\": '\"/' \n            & baseTypeModel.metadata.mfgx.module.group.id \n            & '/' \n            & baseTypeModel.metadata.mfgx.module.id \n            & '/'\n            & $pluralize($lowerFirst(baseType),'en')\n            & '/'\n            & '\" & data.id'\n        },\n        \"query\": {\n          \"fields\": $distinct([\n            \"id\",\n            $labelField\n          ])\n        }\n      }\n    ]\n  }\n)",
+            "nextNodes": [
+              "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "2eac4082-ac11-4d6b-89d1-31aab01f5db3",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "376c7d57-b18c-450e-b27e-4b00afd2a743",
+          "name": "Request (Column Create)",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "c620d8db-45e6-466b-8528-d5e1301777e0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "df32b08b-56f0-4166-876f-496c9b411e09",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "cfa1fe48-d2c0-4995-b281-a0d939c700ea"
+            ],
+            "transform": "{\n  \"isJoinTable\": payload.component.name ~> $contains('JoinTable'),\n  \"component\": payload.component\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+          "name": "Pluck Fields",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "f2d711c0-17ca-4a67-ac08-8f0fae814992"
+            ],
+            "transform": "$state.context.component.model.fields"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "c620d8db-45e6-466b-8528-d5e1301777e0",
+          "name": "Column Create Module",
+          "type": "when",
+          "data": {
+            "nextNodes": [
+              "df32b08b-56f0-4166-876f-496c9b411e09"
+            ],
+            "transform": "screenGeneration.module = 'columnCreate'"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+          "name": "If Join Table",
+          "type": "ifElse",
+          "data": {
+            "onFalseNextNodes": [
+              "c826e2ed-3c53-4966-86ac-74d2cbc4accf"
+            ],
+            "onTrueNextNodes": [
+              "8893399e-6bc4-4773-9284-e8448b25c778"
+            ],
+            "transform": "$state.context.isJoinTable"
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "8893399e-6bc4-4773-9284-e8448b25c778",
+          "name": "Transition",
+          "type": "echo",
+          "data": {
+            "pauseExecution": false,
+            "nextNodes": [
+              "8a0c1f28-2e80-4b11-9650-7fd26a4c4397"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+          "name": "Project fields of Joined Model",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $standardFields := [\n    'id',\n    'createdAt',\n    'createdByUser',\n    'createdByUserId',\n    'dataChanges',\n    'updatedAt',\n    'updatedByUser',\n    'updatedByUserId',\n    $state.context.component.parameterField\n  ];\n\n  $getFieldToExpand := function( $model) {(\n\n    $joinField := $filter($model.fields, function($v) {\n      $not($exists($standardFields[$=$v.name])) and \n      ($v.type = 'ID')\n    });\n    \n    $expandField := $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $joinField.name\n    ];\n    \n    $isNil($expandField) ?\n      $throw('Error generating the columns of the linked type.  \n      The field, ' & $joinField.name & ', does not realize to a type.') :\n      $expandField;\n\n  )};\n  \n  $fieldToExpand := payload.component.model ~> $getFieldToExpand;\n\n  $expandedFields := function($field) {(\n    $baseTypeMatch := $match($field.type, /\\[?(\\w+)!?\\]?!?/);\n    $baseType := $baseTypeMatch.groups[0];\n    \n    $prefix := $field.name & '.';\n    \n    $model := $executeTransform(\"getModelByName\", \n      {\n        \"api\": $state.context.parameters.api,\n        \"name\": $baseType\n      }\n    );\n  )}; \n  \n  $expandedModel := $fieldToExpand \n  ~> $expandedFields;\n  \n  {\n    \"model\": $expandedModel,\n    \"labelField\": $expandedModel.metadata.mfgx.( labelField ? labelField : 'id'),\n    \"joinPrefix\": $fieldToExpand.name\n  }\n)",
+            "nextNodes": [
+              "4452b958-0e99-4a48-b2d1-3b554e211342"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+          "name": "Pluck Fields of Join table",
+          "type": "transform",
+          "data": {
+            "transform": "model.fields",
+            "nextNodes": [
+              "f2d711c0-17ca-4a67-ac08-8f0fae814992"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "4452b958-0e99-4a48-b2d1-3b554e211342",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"component\": {\n    \"model\": model,\n    \"labelField\": labelField,\n    \"joinPrefix\": joinPrefix\n  }\n}",
+            "nextNodes": [
+              "1e77d0fe-bddd-45be-af6d-0088386b4655"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        },
+        {
+          "id": "e9dbd35e-c673-4306-8c02-9060f843a697",
+          "name": "Route",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Status Field",
+                "transform": "$match(baseType, /\\w+Status$/)",
+                "nextNodes": [
+                  "1844e6b6-7b37-4649-bb24-1b55650ab97f"
+                ]
+              },
+              {
+                "name": "Single Reference",
+                "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\" and isList = false",
+                "nextNodes": [
+                  "cd194bf5-19fd-4675-9ee7-e284a89138fe"
+                ]
+              },
+              {
+                "name": "Data Change Field",
+                "transform": "field.name = 'dataChanges'",
+                "nextNodes": [
+                  "2fbea62b-7fe9-4f18-8b57-203e3b7dc618"
+                ]
+              },
+              {
+                "name": "List Reference",
+                "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\" and isList = true",
+                "nextNodes": [
+                  "0fa7fc87-9c5b-41ba-a815-7e3620ee185c"
+                ]
+              },
+              {
+                "name": "Else (Scalars)",
+                "transform": "true",
+                "nextNodes": [
+                  "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          }
+        },
+        {
+          "id": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+          "name": "Data Changes",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $model := $state.context.component.model;\n {\n  \"name\": \"dataChanges\",\n  \"description\": \"A relation to the data changes for this document.\",\n  \"label\": \"Data Changes\",\n  \"dataPath\": \"dataChanges.total\",\n  \"dataQuery\": {\n    \"model\": $model.name & \"DataChange\",\n    \"api\": $state.context.parameters.api,\n    \"fields\": [\"id\"]\n  },\n  \"additionalFilter\": {\n    \"__transform\": \"{\\n        \\\"documentId\\\": {\\n          \\\"_eq\\\": data.id\\n        }\\n      }\"\n  },\n  \"format\": \"dynamicListDialog\",\n  \"defaultSort\": {\n    \"field\": \"changedAt\",\n    \"direction\": \"desc\"\n  },\n  \"columns\": [\n    {\n      \"name\": \"changedAt\",\n      \"description\": \"The date the change occurred at.\",\n      \"label\": \"Changed At\",\n      \"format\": \"datetime\",\n      \"dataPath\": \"changedAt\",\n      \"query\": {\n        \"fields\": [\"changedAt\", \"documentId\"]\n      },\n      \"linkTarget\": {\n        \"__transform\":  '\"/' \n              & $model.metadata.mfgx.module.group.id \n              & '/' \n              & $model.metadata.mfgx.module.id \n              & '/'\n              & $pluralize($lowerFirst($model.name),'en')\n              & '/\" & data.documentId & \"?component=DataChangeNestedTable\"'\n      }\n    },\n    {\n      \"name\": \"changedByUser\",\n      \"description\": \"A relation to the user who changed this data.\",\n      \"label\": \"Changed By User\",\n      \"format\": \"text\",\n      \"dataPath\": \"changedByUser.email\",\n      \"linkTarget\": {\n        \"__transform\": \"\\\"/system/accessControl/users/\\\" & data.changedByUser.id\"\n      },\n      \"query\": {\n        \"fields\": [\"changedByUser.id\", \"changedByUser.email\"]\n      }\n    }\n  ]\n}\n\n)\n",
+            "nextNodes": [
+              "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false
+          }
+        }
+      ],
+      "version": "0.0.2"
+    },
+    "diagram": {
+      "id": "cl0lder8d00010i7u3l375lgr",
+      "offsetX": -1941.18,
+      "offsetY": -221.67,
+      "zoom": 100,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "27d7b99c-ff5d-4255-981e-8bda597e1d9f",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "d3db8d58-a728-4cd0-a079-7444e1faecf0": {
+              "points": [
+                {
+                  "id": "f8758308-3768-4250-b2f5-9aeed67af9ce",
+                  "type": "point",
+                  "x": 1596,
+                  "y": 442.56
+                },
+                {
+                  "id": "b8526ffe-5f1f-4f0f-9d3d-1c0da29f046a",
+                  "type": "point",
+                  "x": 1642,
+                  "y": 447.56
+                }
+              ],
+              "id": "d3db8d58-a728-4cd0-a079-7444e1faecf0",
+              "type": "default",
+              "source": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+              "sourcePort": "ckyddu96r000i3865c8yu91ob",
+              "target": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+              "targetPort": "ckyddu96t000s3865detnr3qm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "41e8cb82-b362-4bb4-9abd-dbc6cf43e421": {
+              "points": [
+                {
+                  "id": "476c2423-af93-44ac-885e-32e667ca0be7",
+                  "type": "point",
+                  "x": 1826.6,
+                  "y": 447.56
+                },
+                {
+                  "id": "79a0d01e-9575-4ec5-9631-a27075120513",
+                  "type": "point",
+                  "x": 1857,
+                  "y": 447.56
+                }
+              ],
+              "id": "41e8cb82-b362-4bb4-9abd-dbc6cf43e421",
+              "type": "default",
+              "source": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+              "sourcePort": "ckyddu96t000u3865h3uu3lmh",
+              "target": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "targetPort": "ckyddu97w00783865fe5u5aim",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "27d8d60b-c23a-43d0-a638-07078c952de0": {
+              "points": [
+                {
+                  "id": "63bac06f-5bdf-4030-a724-e552d0022be9",
+                  "type": "point",
+                  "x": 2575.88,
+                  "y": 472.56
+                },
+                {
+                  "id": "79bd8ee4-87c5-4cf3-9032-a3e925ef2133",
+                  "type": "point",
+                  "x": 2652,
+                  "y": 472.56
+                }
+              ],
+              "id": "27d8d60b-c23a-43d0-a638-07078c952de0",
+              "type": "default",
+              "source": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "sourcePort": "ckyddu96v00163865dfyz8mm4",
+              "target": "2eac4082-ac11-4d6b-89d1-31aab01f5db3",
+              "targetPort": "ckyddu973002s386593cyjhkl",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "00b5327e-7f4d-48eb-b510-03c663360c0e": {
+              "points": [
+                {
+                  "id": "c83201fe-c3cc-4168-9069-0bb7a443c431",
+                  "type": "point",
+                  "x": 2271,
+                  "y": 597.56
+                },
+                {
+                  "id": "76853c14-f050-42f8-9110-c19d570ce55c",
+                  "type": "point",
+                  "x": 2392,
+                  "y": 472.56
+                }
+              ],
+              "id": "00b5327e-7f4d-48eb-b510-03c663360c0e",
+              "type": "default",
+              "source": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+              "sourcePort": "ckyddu96x001i38651609th5l",
+              "target": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "targetPort": "ckyddu96v00143865136y24nf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9625619d-7832-4a50-aaee-6815edb248ef": {
+              "points": [
+                {
+                  "id": "c322da8f-e0b4-452c-98c5-1ffc0cf76655",
+                  "type": "point",
+                  "x": 2271,
+                  "y": 367.56
+                },
+                {
+                  "id": "b384dae0-9bb0-4954-9d94-d13e6c70c48f",
+                  "type": "point",
+                  "x": 2392,
+                  "y": 472.56
+                }
+              ],
+              "id": "9625619d-7832-4a50-aaee-6815edb248ef",
+              "type": "default",
+              "source": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+              "sourcePort": "ckyddu96y001u3865vcq0fgfp",
+              "target": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "targetPort": "ckyddu96v00143865136y24nf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ae2666f3-59e3-4d79-b108-08b36329940f": {
+              "points": [
+                {
+                  "id": "d665fd73-a614-40f7-89ca-3832fa75b6ad",
+                  "type": "point",
+                  "x": 2293.02,
+                  "y": 427.56
+                },
+                {
+                  "id": "af134d90-5f8a-411d-9690-1eb9f736f677",
+                  "type": "point",
+                  "x": 2392,
+                  "y": 472.56
+                }
+              ],
+              "id": "ae2666f3-59e3-4d79-b108-08b36329940f",
+              "type": "default",
+              "source": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+              "sourcePort": "ckyddu971002638651alx0gxb",
+              "target": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "targetPort": "ckyddu96v00143865136y24nf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6c9e4ab1-6d06-49f9-9e5c-fe6cf164fd32": {
+              "points": [
+                {
+                  "id": "6963af4c-ed04-4a3e-9534-35b2e91656b7",
+                  "type": "point",
+                  "x": 2276.97,
+                  "y": 542.56
+                },
+                {
+                  "id": "ab801065-328f-4b09-be49-3a511e9a18a1",
+                  "type": "point",
+                  "x": 2392,
+                  "y": 472.56
+                }
+              ],
+              "id": "6c9e4ab1-6d06-49f9-9e5c-fe6cf164fd32",
+              "type": "default",
+              "source": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+              "sourcePort": "ckyddu972002i3865rh431u7w",
+              "target": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "targetPort": "ckyddu96v00143865136y24nf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1d36af0c-83e7-4fd7-86f8-09c6b743c6ea": {
+              "points": [
+                {
+                  "id": "cbd9cc1f-456a-4fb1-a99f-f832ef6e2149",
+                  "type": "point",
+                  "x": 503.06,
+                  "y": 442.56
+                },
+                {
+                  "id": "514441ef-edf3-4a97-b0e6-a7785639b21b",
+                  "type": "point",
+                  "x": 577,
+                  "y": 442.56
+                }
+              ],
+              "id": "1d36af0c-83e7-4fd7-86f8-09c6b743c6ea",
+              "type": "default",
+              "source": "376c7d57-b18c-450e-b27e-4b00afd2a743",
+              "sourcePort": "ckyddu975003038652btplfwl",
+              "target": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "targetPort": "ckyddu97a003y38658nly97co",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7a879e46-19f2-412c-99f6-1cc1a8bae8c9": {
+              "points": [
+                {
+                  "id": "93cbe1d5-d242-45a9-b8c3-905b1dc72ccc",
+                  "type": "point",
+                  "x": 979.45,
+                  "y": 442.56
+                },
+                {
+                  "id": "1c7bb8aa-81e8-4e77-822c-ebe6d1245bbd",
+                  "type": "point",
+                  "x": 1037,
+                  "y": 442.56
+                }
+              ],
+              "id": "7a879e46-19f2-412c-99f6-1cc1a8bae8c9",
+              "type": "default",
+              "source": "df32b08b-56f0-4166-876f-496c9b411e09",
+              "sourcePort": "ckyddu977003c3865znha7c66",
+              "target": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+              "targetPort": "ckyddu97j004q3865822qmyb6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "11bd0eaa-4cd1-47b7-99e2-78aabbc0d3ac": {
+              "points": [
+                {
+                  "id": "abc890bc-0c4f-4ea8-bc97-185316e5d8af",
+                  "type": "point",
+                  "x": 1401,
+                  "y": 442.56
+                },
+                {
+                  "id": "66fa4e40-796b-4c91-b8e6-1d45d35e001e",
+                  "type": "point",
+                  "x": 1442,
+                  "y": 442.56
+                }
+              ],
+              "id": "11bd0eaa-4cd1-47b7-99e2-78aabbc0d3ac",
+              "type": "default",
+              "source": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+              "sourcePort": "ckyddu979003o38652dhmfa5m",
+              "target": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+              "targetPort": "ckyddu96r000g3865jqdtjead",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8d6a1e05-1832-491f-881d-b93c6633a1cf": {
+              "points": [
+                {
+                  "id": "c2abcf0a-943a-4149-9ef6-f525038b7980",
+                  "type": "point",
+                  "x": 745.73,
+                  "y": 442.56
+                },
+                {
+                  "id": "0ec8fa8e-c4c4-45e5-bc03-493f0e8c7424",
+                  "type": "point",
+                  "x": 825.45,
+                  "y": 442.56
+                }
+              ],
+              "id": "8d6a1e05-1832-491f-881d-b93c6633a1cf",
+              "type": "default",
+              "source": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "sourcePort": "ckyddu97a00403865hbi0afw9",
+              "target": "df32b08b-56f0-4166-876f-496c9b411e09",
+              "targetPort": "ckyddu977003a3865p9kchxmr",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "212985be-4473-432c-ac7d-72d53aaf4e50": {
+              "points": [
+                {
+                  "id": "d2ea3bcb-f05f-4684-a28a-966d8cabd79a",
+                  "type": "point",
+                  "x": 479,
+                  "y": 309.73
+                },
+                {
+                  "id": "49d27ff0-95ab-40e1-a550-58b9b36e6389",
+                  "type": "point",
+                  "x": 577,
+                  "y": 442.56
+                }
+              ],
+              "id": "212985be-4473-432c-ac7d-72d53aaf4e50",
+              "type": "default",
+              "source": "ef4cff4e-2111-4975-bc5a-dc4ef2365a6f",
+              "sourcePort": "ckyddu97c004638657hoc8vz3",
+              "target": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "targetPort": "ckyddu97a003y38658nly97co",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8ac0807c-3ebb-45fd-aa1b-b4c99265389b": {
+              "points": [
+                {
+                  "id": "ff043c93-13bc-4dfa-b8ff-d251ba253691",
+                  "type": "point",
+                  "x": 491,
+                  "y": 537.56
+                },
+                {
+                  "id": "124fdff9-5859-414e-bde7-615357e690e9",
+                  "type": "point",
+                  "x": 577,
+                  "y": 442.56
+                }
+              ],
+              "id": "8ac0807c-3ebb-45fd-aa1b-b4c99265389b",
+              "type": "default",
+              "source": "f8a27a45-51dc-4145-83d8-bd50e22048a8",
+              "sourcePort": "ckyddu97f004c3865roz0rldj",
+              "target": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "targetPort": "ckyddu97a003y38658nly97co",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2e1c3a94-4378-4994-bf14-ce82c7345560": {
+              "points": [
+                {
+                  "id": "e76b43dd-976c-43da-b598-fc177db7ef36",
+                  "type": "point",
+                  "x": 1190.99,
+                  "y": 442.56
+                },
+                {
+                  "id": "5d7405d4-67e4-4c88-bb69-6993a9372a0b",
+                  "type": "point",
+                  "x": 892,
+                  "y": 762.56
+                }
+              ],
+              "id": "2e1c3a94-4378-4994-bf14-ce82c7345560",
+              "type": "default",
+              "selected": false,
+              "source": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+              "sourcePort": "ckyddu97k004s3865vxp3hj4p",
+              "target": "8893399e-6bc4-4773-9284-e8448b25c778",
+              "targetPort": "ckyddu97l00543865rvia672b",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "722dd7b6-f427-4bc7-b091-d642a2a4352d": {
+              "points": [
+                {
+                  "id": "0bb6b584-0894-4ee9-968c-e3cd21a394f1",
+                  "type": "point",
+                  "x": 1190.99,
+                  "y": 467.71
+                },
+                {
+                  "id": "bc9f057f-fb0f-4e6a-91e6-0e4f694bcee8",
+                  "type": "point",
+                  "x": 1247,
+                  "y": 442.56
+                }
+              ],
+              "id": "722dd7b6-f427-4bc7-b091-d642a2a4352d",
+              "type": "default",
+              "source": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+              "sourcePort": "ckyddu97k004u3865npe329mq",
+              "target": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+              "targetPort": "ckyddu979003m3865aegnjq00",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3f1980fd-39af-493d-9222-92c2763e900e": {
+              "points": [
+                {
+                  "id": "3a352837-f744-4766-a280-d6074ea800b6",
+                  "type": "point",
+                  "x": 1045.98,
+                  "y": 762.56
+                },
+                {
+                  "id": "ec7416c1-5f9c-431c-b28d-0b6b84c70a37",
+                  "type": "point",
+                  "x": 1102,
+                  "y": 762.56
+                }
+              ],
+              "id": "3f1980fd-39af-493d-9222-92c2763e900e",
+              "type": "default",
+              "source": "8893399e-6bc4-4773-9284-e8448b25c778",
+              "sourcePort": "ckyddu97l005638651agiqr35",
+              "target": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+              "targetPort": "ckyddu97n005g3865kgv1l11q",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5aab678d-6ec3-497c-a0af-d058f29e9c0c": {
+              "points": [
+                {
+                  "id": "7d4c0c92-2c63-4528-b0ec-90afcc684550",
+                  "type": "point",
+                  "x": 1309.33,
+                  "y": 762.56
+                },
+                {
+                  "id": "9b9c67d6-6e1e-48f3-abca-64dd669e075c",
+                  "type": "point",
+                  "x": 1357,
+                  "y": 762.56
+                }
+              ],
+              "id": "5aab678d-6ec3-497c-a0af-d058f29e9c0c",
+              "type": "default",
+              "source": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+              "sourcePort": "ckyddu97n005i3865vmj3nban",
+              "target": "4452b958-0e99-4a48-b2d1-3b554e211342",
+              "targetPort": "ckyddu97q00643865q2ejwebx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f67efa11-8e1d-4b56-bc9e-b36ed57d4450": {
+              "points": [
+                {
+                  "id": "6797b515-747c-4371-a19c-7239fab82c69",
+                  "type": "point",
+                  "x": 1747.9,
+                  "y": 767.56
+                },
+                {
+                  "id": "581049af-ef44-4acb-a9e8-6460dca0fe38",
+                  "type": "point",
+                  "x": 1442,
+                  "y": 442.56
+                }
+              ],
+              "id": "f67efa11-8e1d-4b56-bc9e-b36ed57d4450",
+              "type": "default",
+              "source": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+              "sourcePort": "ckyddu97o005u3865cg28eia1",
+              "target": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+              "targetPort": "ckyddu96r000g3865jqdtjead",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7e1f702a-2391-4add-95fa-7e6b664bb1f6": {
+              "points": [
+                {
+                  "id": "11b85719-38bb-468a-9fbc-59d3734b2753",
+                  "type": "point",
+                  "x": 1511,
+                  "y": 762.56
+                },
+                {
+                  "id": "617c4f80-571d-47b8-95b7-10a9b1a6d8d1",
+                  "type": "point",
+                  "x": 1567,
+                  "y": 767.56
+                }
+              ],
+              "id": "7e1f702a-2391-4add-95fa-7e6b664bb1f6",
+              "type": "default",
+              "source": "4452b958-0e99-4a48-b2d1-3b554e211342",
+              "sourcePort": "ckyddu97q00663865oz8lxwzu",
+              "target": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+              "targetPort": "ckyddu97o005s3865m3iofp6s",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "60266463-6668-4019-83a0-b8e49fa9a9ce": {
+              "points": [
+                {
+                  "id": "33cbb7b3-04d8-4894-83e3-8b1a84255eec",
+                  "type": "point",
+                  "x": 501,
+                  "y": 632.56
+                },
+                {
+                  "id": "c102e485-98d4-4224-ba51-8d11d1e54511",
+                  "type": "point",
+                  "x": 577,
+                  "y": 442.56
+                }
+              ],
+              "id": "60266463-6668-4019-83a0-b8e49fa9a9ce",
+              "type": "default",
+              "source": "0d39ad5e-0e3a-46fd-bd46-b0de225659f3",
+              "sourcePort": "ckyddu97s006c38658zs3t3qj",
+              "target": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "targetPort": "ckyddu97a003y38658nly97co",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9bdf4568-12c3-4e2a-b222-5e279c2ae121": {
+              "points": [
+                {
+                  "id": "174c15e9-8aaa-4ac4-82ac-6b16e9301e82",
+                  "type": "point",
+                  "x": 506,
+                  "y": 722.56
+                },
+                {
+                  "id": "9ae3ef43-bda1-443f-899d-2dab1f514d79",
+                  "type": "point",
+                  "x": 577,
+                  "y": 442.56
+                }
+              ],
+              "id": "9bdf4568-12c3-4e2a-b222-5e279c2ae121",
+              "type": "default",
+              "source": "3f5a2095-6b57-4c29-a5d4-2f5c5a24607d",
+              "sourcePort": "ckyddu97u006i3865lypsomc7",
+              "target": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "targetPort": "ckyddu97a003y38658nly97co",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b6681284-5a14-4593-ae02-bd17fe0a7b56": {
+              "points": [
+                {
+                  "id": "93f927e0-b224-4351-ba59-a5355d9ed8c0",
+                  "type": "point",
+                  "x": 2044.01,
+                  "y": 447.56
+                },
+                {
+                  "id": "1a039dd0-8a29-47ce-b50a-a118f1a5bd0c",
+                  "type": "point",
+                  "x": 2117,
+                  "y": 367.56
+                }
+              ],
+              "id": "b6681284-5a14-4593-ae02-bd17fe0a7b56",
+              "type": "default",
+              "source": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "sourcePort": "ckyddu97x007a386533o95qtw",
+              "target": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+              "targetPort": "ckyddu96y001s3865kspia3s2",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9e0b94b4-7f2b-4b87-9d86-871ff4f9a2b3": {
+              "points": [
+                {
+                  "id": "2ec1f29c-e97a-4396-99c4-358f9822e173",
+                  "type": "point",
+                  "x": 2044.01,
+                  "y": 472.71
+                },
+                {
+                  "id": "352ef567-cdf6-4812-8e55-5358cf95097b",
+                  "type": "point",
+                  "x": 2117,
+                  "y": 427.56
+                }
+              ],
+              "id": "9e0b94b4-7f2b-4b87-9d86-871ff4f9a2b3",
+              "type": "default",
+              "source": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "sourcePort": "ckyddu97x007c38657l0wnzz1",
+              "target": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+              "targetPort": "ckyddu97100243865zbyctqcd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "79cdc240-1d9a-4d40-9352-aaf262e65da4": {
+              "points": [
+                {
+                  "id": "457497e8-20d9-4da0-b4bc-00534bef2dca",
+                  "type": "point",
+                  "x": 2044.01,
+                  "y": 497.86
+                },
+                {
+                  "id": "7d41b6bd-8ae1-4f51-8f35-b64b74caf528",
+                  "type": "point",
+                  "x": 2117,
+                  "y": 482.56
+                }
+              ],
+              "id": "79cdc240-1d9a-4d40-9352-aaf262e65da4",
+              "type": "default",
+              "source": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "sourcePort": "ckyddu97x007e386573aivsmv",
+              "target": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+              "targetPort": "ckyddu97z007s3865abk7c4xn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "bcc3e938-a113-46f4-80aa-f78ab26fac50": {
+              "points": [
+                {
+                  "id": "c7ca0565-cc2d-47f1-94e9-aa679ce524f6",
+                  "type": "point",
+                  "x": 2044.01,
+                  "y": 523.01
+                },
+                {
+                  "id": "b84f405e-5bb2-43d8-bd9b-6fce24f951e1",
+                  "type": "point",
+                  "x": 2117,
+                  "y": 542.56
+                }
+              ],
+              "id": "bcc3e938-a113-46f4-80aa-f78ab26fac50",
+              "type": "default",
+              "source": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "sourcePort": "ckyddu97x007g3865yz8jle1l",
+              "target": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+              "targetPort": "ckyddu972002g3865ktbe0c6t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "089d6a86-7584-41e1-8fa8-7d8ef20a8528": {
+              "points": [
+                {
+                  "id": "c1ffd32b-bb71-491f-b5cd-b40755afb0ce",
+                  "type": "point",
+                  "x": 2044.01,
+                  "y": 548.16
+                },
+                {
+                  "id": "0d483c2a-9639-46fe-ab2f-50be7ab97667",
+                  "type": "point",
+                  "x": 2117,
+                  "y": 597.56
+                }
+              ],
+              "id": "089d6a86-7584-41e1-8fa8-7d8ef20a8528",
+              "type": "default",
+              "source": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "sourcePort": "ckyddu97x007i3865qru53qcp",
+              "target": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+              "targetPort": "ckyddu96x001g386568dimx02",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "bd16ee4f-3f09-4878-9f19-8737ad09fd08": {
+              "points": [
+                {
+                  "id": "20c4b958-5805-4b93-bc6b-1588925fec94",
+                  "type": "point",
+                  "x": 2271,
+                  "y": 482.56
+                },
+                {
+                  "id": "c1baad7b-b309-4c1d-b2cd-e42b01b8b7c3",
+                  "type": "point",
+                  "x": 2392,
+                  "y": 472.56
+                }
+              ],
+              "id": "bd16ee4f-3f09-4878-9f19-8737ad09fd08",
+              "type": "default",
+              "source": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+              "sourcePort": "ckyddu97z007u3865bwkavs7u",
+              "target": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "targetPort": "ckyddu96v00143865136y24nf",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "7c2ec95a-55ec-4e49-997e-692461770725",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "f2d711c0-17ca-4a67-ac08-8f0fae814992": {
+              "id": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+              "type": "broadcast",
+              "selected": false,
+              "x": 1442,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu96r000g3865jqdtjead",
+                  "type": "default",
+                  "x": 1434,
+                  "y": 434.56,
+                  "name": "ckyddu96r000h3865uiiy9e50",
+                  "parentNode": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+                  "links": [
+                    "11bd0eaa-4cd1-47b7-99e2-78aabbc0d3ac",
+                    "f67efa11-8e1d-4b56-bc9e-b36ed57d4450"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu96r000i3865c8yu91ob",
+                  "type": "default",
+                  "x": 1588,
+                  "y": 434.56,
+                  "name": "ckyddu96r000j3865ynu2pe84",
+                  "parentNode": "f2d711c0-17ca-4a67-ac08-8f0fae814992",
+                  "links": [
+                    "d3db8d58-a728-4cd0-a079-7444e1faecf0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "86ac2baa-b1aa-4fcc-99db-9c38c6901e48"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Broadcast"
+            },
+            "86ac2baa-b1aa-4fcc-99db-9c38c6901e48": {
+              "id": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+              "type": "transform",
+              "selected": false,
+              "x": 1642,
+              "y": 407.84,
+              "ports": [
+                {
+                  "id": "ckyddu96t000s3865detnr3qm",
+                  "type": "default",
+                  "x": 1634,
+                  "y": 439.56,
+                  "name": "ckyddu96t000t3865utu8wmg4",
+                  "parentNode": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+                  "links": [
+                    "d3db8d58-a728-4cd0-a079-7444e1faecf0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu96t000u3865h3uu3lmh",
+                  "type": "default",
+                  "x": 1818.6,
+                  "y": 439.56,
+                  "name": "ckyddu96t000v3865h2p1ncow",
+                  "parentNode": "86ac2baa-b1aa-4fcc-99db-9c38c6901e48",
+                  "links": [
+                    "41e8cb82-b362-4bb4-9abd-dbc6cf43e421"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $isList := $contains(type, \"[\");\n  $baseTypeMatch := $match(type, /\\[?(\\w+)!?\\]?!?/);\n  $baseType := $baseTypeMatch.groups[0];\n  \n  {\n    \"field\": $,\n    \"isList\": $isList,\n    \"baseType\": $baseType,\n    \"baseTypeModel\": $executeTransform(\"getModelByName\", {\n      \"api\": $state.context.parameters.api,\n      \"name\": $baseType\n    })\n  }\n)",
+                "nextNodes": [
+                  "e9dbd35e-c673-4306-8c02-9060f843a697"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Parse Column Type String"
+            },
+            "2eba45e5-a04f-43f9-87be-d9055bca0f27": {
+              "id": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+              "type": "combine",
+              "selected": false,
+              "x": 2392,
+              "y": 432.84,
+              "ports": [
+                {
+                  "id": "ckyddu96v00143865136y24nf",
+                  "type": "default",
+                  "x": 2384,
+                  "y": 464.56,
+                  "name": "ckyddu96v00153865nd9e817k",
+                  "parentNode": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+                  "links": [
+                    "00b5327e-7f4d-48eb-b510-03c663360c0e",
+                    "9625619d-7832-4a50-aaee-6815edb248ef",
+                    "ae2666f3-59e3-4d79-b108-08b36329940f",
+                    "6c9e4ab1-6d06-49f9-9e5c-fe6cf164fd32",
+                    "bd16ee4f-3f09-4878-9f19-8737ad09fd08"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu96v00163865dfyz8mm4",
+                  "type": "default",
+                  "x": 2567.88,
+                  "y": 464.56,
+                  "name": "ckyddu96v00173865x8pteob1",
+                  "parentNode": "2eba45e5-a04f-43f9-87be-d9055bca0f27",
+                  "links": [
+                    "27d8d60b-c23a-43d0-a638-07078c952de0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "executionTimeout": 60,
+                "payloadCombinationStrategy": "index",
+                "contextCombinationStrategy": "first",
+                "nextNodes": [
+                  "2eac4082-ac11-4d6b-89d1-31aab01f5db3"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Combine (table, columns)"
+            },
+            "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5": {
+              "id": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+              "type": "transform",
+              "selected": true,
+              "x": 2117,
+              "y": 557.84,
+              "ports": [
+                {
+                  "id": "ckyddu96x001g386568dimx02",
+                  "type": "default",
+                  "x": 2109,
+                  "y": 589.56,
+                  "name": "ckyddu96x001h3865xmh3dh4u",
+                  "parentNode": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+                  "links": [
+                    "089d6a86-7584-41e1-8fa8-7d8ef20a8528"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu96x001i38651609th5l",
+                  "type": "default",
+                  "x": 2263,
+                  "y": 589.56,
+                  "name": "ckyddu96x001j3865ewohgf9c",
+                  "parentNode": "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5",
+                  "links": [
+                    "00b5327e-7f4d-48eb-b510-03c663360c0e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $model := $state.context.component.model;\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelField := $coalesce([$state.context.component.labelField, \"id\"]);\n\n  $scalarMap := {\n    \"String\": {\n      \"format\": $fieldName = \"description\" or $fieldName = \"note\" ? 'markdown' : 'text'\n    },\n    \"Email\": {\n      \"format\": 'text'\n    },\n    \"Boolean\": {\n      \"format\": 'checkmark'\n    },\n    \"DateTime\": {\n      \"format\": 'datetime'\n    },\n    \"Int\": {\n      \"format\": 'integer'\n    },\n    \"Float\": {\n      \"format\": 'float'\n    },\n    \"JSON\": {\n      \"format\": 'json'\n    },\n    \"JSONObject\": {\n      \"format\": 'json'\n    },\n    \"Address\": {\n      \"format\": 'address',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.lines',\n          $dataPath & '.city',\n          $dataPath & '.state',\n          $dataPath & '.postalCode',\n          $dataPath & '.country'\n        ]\n      }\n    },\n    \"Measure\": {\n      \"format\": 'measure',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.value',\n          $dataPath & '.unit.code',\n          $dataPath & '.unit.id'\n\n        ]\n      }\n    },\n    \"RatioMeasure\": {\n      \"format\": 'ratioMeasure',\n      \"query\": {\n        \"fields\": [\n          $dataPath & '.numeratorValue',\n          $dataPath & '.numeratorUnit.code',\n          $dataPath & '.numeratorUnit.id',\n          $dataPath & '.denominatorUnit.code',\n          $dataPath & '.denominatorUnit.id'\n        ]\n      }\n    }\n  };\n  \n  $format := $lookup($scalarMap, baseType);\n\n  $map([$format ? $format : {}], function($v) {\n    $merge([\n      { \n        \"name\": $fieldName,\n        \"description\": field.description,\n        \"label\": $startCase($fieldName),\n        \"format\": \"text\",\n        \"dataPath\": $dataPath,\n        \"query\": {\n          \"fields\": [\n             $dataPath\n          ]\n        }\n      },\n      $v,\n      ($fieldName = $labelField or $fieldName = 'id') ? {\n        \"linkTarget\": {\n            \"__transform\": '\"/' \n              & $model.metadata.mfgx.module.group.id \n              & '/' \n              & $model.metadata.mfgx.module.id \n              & '/'\n              & $pluralize($lowerFirst($model.name),'en')\n              & '/'\n              & '\" & data.id'\n        },\n        \"query\": {\n          \"fields\": [\n             $dataPath,\n            \"id\"\n          ]\n        }\n      } : {}\n    ])\n  })  \n)",
+                "nextNodes": [
+                  "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is Scalar",
+              "note": "Edited 11/4/2020: Added Address Query fields to properly display the V3 Address model"
+            },
+            "1844e6b6-7b37-4649-bb24-1b55650ab97f": {
+              "id": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+              "type": "transform",
+              "selected": false,
+              "x": 2117,
+              "y": 327.84,
+              "ports": [
+                {
+                  "id": "ckyddu96y001s3865kspia3s2",
+                  "type": "default",
+                  "x": 2109,
+                  "y": 359.56,
+                  "name": "ckyddu96y001t38653bteto52",
+                  "parentNode": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+                  "links": [
+                    "b6681284-5a14-4593-ae02-bd17fe0a7b56"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu96y001u3865vcq0fgfp",
+                  "type": "default",
+                  "x": 2263,
+                  "y": 359.56,
+                  "name": "ckyddu96y001v386533zrerea",
+                  "parentNode": "1844e6b6-7b37-4649-bb24-1b55650ab97f",
+                  "links": [
+                    "9625619d-7832-4a50-aaee-6815edb248ef"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]);\n  \n  {\n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"format\": 'text',\n    \"dataPath\": $fieldName & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]),\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseType),'en')\n        & '/'\n        & '\" & data.' \n        & $fieldName\n        & '.id'\n    },\n    \"query\": {\n      \"fields\": [\n        field.name & '.id',\n        $dataPath\n      ]\n    }\n  }\n)\n",
+                "nextNodes": [
+                  "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is Status"
+            },
+            "cd194bf5-19fd-4675-9ee7-e284a89138fe": {
+              "id": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+              "type": "transform",
+              "selected": false,
+              "x": 2117,
+              "y": 387.84,
+              "ports": [
+                {
+                  "id": "ckyddu97100243865zbyctqcd",
+                  "type": "default",
+                  "x": 2109,
+                  "y": 419.56,
+                  "name": "ckyddu97100253865f8lr3kbg",
+                  "parentNode": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+                  "links": [
+                    "9e0b94b4-7f2b-4b87-9d86-871ff4f9a2b3"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu971002638651alx0gxb",
+                  "type": "default",
+                  "x": 2285.02,
+                  "y": 419.56,
+                  "name": "ckyddu97100273865hn80r6zk",
+                  "parentNode": "cd194bf5-19fd-4675-9ee7-e284a89138fe",
+                  "links": [
+                    "ae2666f3-59e3-4d79-b108-08b36329940f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n    $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelDataPath := $dataPath & '.' & $coalesce([baseTypeModel.metadata.mfgx.labelField, \"id\"]);\n\n  { \n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"format\": \"text\",\n    \"dataPath\": $labelDataPath,\n    \"linkTarget\": {\n      \"__transform\": '\"/' \n        & baseTypeModel.metadata.mfgx.module.group.id \n        & '/' \n        & baseTypeModel.metadata.mfgx.module.id \n        & '/'\n        & $pluralize($lowerFirst(baseType),'en')\n        & '/'\n        & '\" & data.' \n        & $dataPath \n        & '.id'\n    },\n    \"query\": {\n      \"fields\": [\n        $dataPath & \".id\",\n        $labelDataPath\n      ]\n    }\n  }\n)",
+                "nextNodes": [
+                  "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is single Reference"
+            },
+            "0fa7fc87-9c5b-41ba-a815-7e3620ee185c": {
+              "id": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+              "type": "transform",
+              "selected": false,
+              "x": 2117,
+              "y": 502.84,
+              "ports": [
+                {
+                  "id": "ckyddu972002g3865ktbe0c6t",
+                  "type": "default",
+                  "x": 2109,
+                  "y": 534.56,
+                  "name": "ckyddu972002h3865fho0sfrh",
+                  "parentNode": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+                  "links": [
+                    "bcc3e938-a113-46f4-80aa-f78ab26fac50"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu972002i3865rh431u7w",
+                  "type": "default",
+                  "x": 2268.97,
+                  "y": 534.56,
+                  "name": "ckyddu972002j3865z2mqcqv9",
+                  "parentNode": "0fa7fc87-9c5b-41ba-a815-7e3620ee185c",
+                  "links": [
+                    "6c9e4ab1-6d06-49f9-9e5c-fe6cf164fd32"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $fieldName := field.name;\n  $dataPath := $state.context.component.(\n    $exists(joinPrefix) ? joinPrefix & \".\"\n  ) & $fieldName;\n  $labelField := $coalesce([\n    baseTypeModel.metadata.mfgx.isDataChangeModel ? undefined : baseTypeModel.metadata.mfgx.labelField, \n    \"id\"\n  ]);\n\n  { \n    \"name\": $fieldName,\n    \"description\": field.description,\n    \"label\": $startCase($fieldName),\n    \"dataPath\": $dataPath & '.total',\n    \"dataQuery\": {\n      \"model\": baseType,\n      \"api\": $state.context.parameters.api,\n      \"fields\": [\"id\"]\n    },    \n    \"additionalFilter\": {\n      \"__transform\": '{\n        \"' & field.metadata.mfgx.relation.fields.to & '\": {\n          \"_eq\": data.id\n        }\n      }'\n    },\n    \"format\": 'dynamicListDialog',\n    \"columns\": [\n      {\n        \"name\": $labelField,\n        \"label\": $startCase($labelField),\n        \"dataPath\": $labelField,\n        \"format\": 'text',\n        \"linkTarget\": {\n          \"__transform\": '\"/' \n            & baseTypeModel.metadata.mfgx.module.group.id \n            & '/' \n            & baseTypeModel.metadata.mfgx.module.id \n            & '/'\n            & $pluralize($lowerFirst(baseType),'en')\n            & '/'\n            & '\" & data.id'\n        },\n        \"query\": {\n          \"fields\": $distinct([\n            \"id\",\n            $labelField\n          ])\n        }\n      }\n    ]\n  }\n)",
+                "nextNodes": [
+                  "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Type is list Reference",
+              "note": "Editied 11/5/2020: Removed the $not case wrapping the isDataChangeModel. This ternary would always make the id be the default value. "
+            },
+            "2eac4082-ac11-4d6b-89d1-31aab01f5db3": {
+              "id": "2eac4082-ac11-4d6b-89d1-31aab01f5db3",
+              "type": "response",
+              "selected": false,
+              "x": 2652,
+              "y": 432.84,
+              "ports": [
+                {
+                  "id": "ckyddu973002s386593cyjhkl",
+                  "type": "default",
+                  "x": 2644,
+                  "y": 464.56,
+                  "name": "ckyddu973002t3865i0woohif",
+                  "parentNode": "2eac4082-ac11-4d6b-89d1-31aab01f5db3",
+                  "links": [
+                    "27d8d60b-c23a-43d0-a638-07078c952de0"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "ckyddu973002u3865s0gpfkn5",
+                  "type": "default",
+                  "x": 2797.99,
+                  "y": 464.56,
+                  "name": "ckyddu973002v38653pm5d5wv",
+                  "parentNode": "2eac4082-ac11-4d6b-89d1-31aab01f5db3",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Response"
+            },
+            "376c7d57-b18c-450e-b27e-4b00afd2a743": {
+              "id": "376c7d57-b18c-450e-b27e-4b00afd2a743",
+              "type": "request",
+              "selected": false,
+              "x": 322,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu975003038652btplfwl",
+                  "type": "default",
+                  "x": 495.06,
+                  "y": 434.56,
+                  "name": "ckyddu97500313865igsusqxa",
+                  "parentNode": "376c7d57-b18c-450e-b27e-4b00afd2a743",
+                  "links": [
+                    "1d36af0c-83e7-4fd7-86f8-09c6b743c6ea"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "c620d8db-45e6-466b-8528-d5e1301777e0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Request (Column Create)",
+              "note": "When provided a payload of the shape below, this module will generate the table column configuration.\n\n```\n{\n    screenGeneration: {\n        module: 'columnCreate',\n        options: object\n    },\n    payload: {\n      component: object\n    }\n}\n```"
+            },
+            "df32b08b-56f0-4166-876f-496c9b411e09": {
+              "id": "df32b08b-56f0-4166-876f-496c9b411e09",
+              "type": "setContext",
+              "selected": false,
+              "x": 825.45,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu977003a3865p9kchxmr",
+                  "type": "default",
+                  "x": 817.45,
+                  "y": 434.56,
+                  "name": "ckyddu977003b3865tdf44eaf",
+                  "parentNode": "df32b08b-56f0-4166-876f-496c9b411e09",
+                  "links": [
+                    "8d6a1e05-1832-491f-881d-b93c6633a1cf"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu977003c3865znha7c66",
+                  "type": "default",
+                  "x": 971.45,
+                  "y": 434.56,
+                  "name": "ckyddu977003d3865xejud4ei",
+                  "parentNode": "df32b08b-56f0-4166-876f-496c9b411e09",
+                  "links": [
+                    "7a879e46-19f2-412c-99f6-1cc1a8bae8c9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "cfa1fe48-d2c0-4995-b281-a0d939c700ea"
+                ],
+                "transform": "{\n  \"isJoinTable\": payload.component.name ~> $contains('JoinTable'),\n  \"component\": payload.component\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Set Context"
+            },
+            "c826e2ed-3c53-4966-86ac-74d2cbc4accf": {
+              "id": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+              "type": "transform",
+              "selected": false,
+              "x": 1247,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu979003m3865aegnjq00",
+                  "type": "default",
+                  "x": 1239,
+                  "y": 434.56,
+                  "name": "ckyddu979003n3865nnqs47wg",
+                  "parentNode": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+                  "links": [
+                    "722dd7b6-f427-4bc7-b091-d642a2a4352d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu979003o38652dhmfa5m",
+                  "type": "default",
+                  "x": 1393,
+                  "y": 434.56,
+                  "name": "ckyddu979003p3865wz997gzk",
+                  "parentNode": "c826e2ed-3c53-4966-86ac-74d2cbc4accf",
+                  "links": [
+                    "11bd0eaa-4cd1-47b7-99e2-78aabbc0d3ac"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "f2d711c0-17ca-4a67-ac08-8f0fae814992"
+                ],
+                "transform": "$state.context.component.model.fields"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Pluck Fields"
+            },
+            "c620d8db-45e6-466b-8528-d5e1301777e0": {
+              "id": "c620d8db-45e6-466b-8528-d5e1301777e0",
+              "type": "when",
+              "selected": false,
+              "x": 577,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu97a003y38658nly97co",
+                  "type": "default",
+                  "x": 569,
+                  "y": 434.56,
+                  "name": "ckyddu97a003z386530tizz3v",
+                  "parentNode": "c620d8db-45e6-466b-8528-d5e1301777e0",
+                  "links": [
+                    "1d36af0c-83e7-4fd7-86f8-09c6b743c6ea",
+                    "212985be-4473-432c-ac7d-72d53aaf4e50",
+                    "8ac0807c-3ebb-45fd-aa1b-b4c99265389b",
+                    "60266463-6668-4019-83a0-b8e49fa9a9ce",
+                    "9bdf4568-12c3-4e2a-b222-5e279c2ae121"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97a00403865hbi0afw9",
+                  "type": "default",
+                  "x": 737.73,
+                  "y": 434.56,
+                  "name": "ckyddu97a00413865wjuk39es",
+                  "parentNode": "c620d8db-45e6-466b-8528-d5e1301777e0",
+                  "links": [
+                    "8d6a1e05-1832-491f-881d-b93c6633a1cf"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "df32b08b-56f0-4166-876f-496c9b411e09"
+                ],
+                "transform": "screenGeneration.module = 'columnCreate'"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Column Create Module"
+            },
+            "ef4cff4e-2111-4975-bc5a-dc4ef2365a6f": {
+              "id": "ef4cff4e-2111-4975-bc5a-dc4ef2365a6f",
+              "type": "debugSource",
+              "selected": false,
+              "x": 325,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "ckyddu97c004638657hoc8vz3",
+                  "type": "default",
+                  "x": 471,
+                  "y": 301.73,
+                  "name": "ckyddu97d00473865pokdclpe",
+                  "parentNode": "ef4cff4e-2111-4975-bc5a-dc4ef2365a6f",
+                  "links": [
+                    "212985be-4473-432c-ac7d-72d53aaf4e50"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "columnCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "LoadTable",
+                      "model": {
+                        "name": "Load",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "logistics",
+                              "group": {
+                                "id": "materialsManagement"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "enabled": true,
+                              "retentionDays": 120
+                            },
+                            "labelField": "number",
+                            "indices": [
+                              {
+                                "unique": true,
+                                "fields": [
+                                  "number"
+                                ]
+                              }
+                            ]
+                          },
+                          "mongo": {
+                            "collection": "load"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[LoadDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "number",
+                            "type": "Int!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                },
+                                "sequence": {
+                                  "id": "loadNumberSequence"
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "supplierId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "loadStatusId",
+                            "type": "ID!",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "truckNo",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "trailerNo",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "trackingNumber",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "transportationTypeId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "scheduledPickupAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "arrivalAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "departureAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "appointmentStartAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "appointmentEndAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "scheduledDeliveryAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "scheduledDepartureAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "actualDeliveryAt",
+                            "type": "DateTime",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "transportationType",
+                            "description": "",
+                            "type": "TransportationType",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "transportationTypeId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "loadStatus",
+                            "description": "",
+                            "type": "LoadStatus!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "loadStatusId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "supplier",
+                            "description": "",
+                            "type": "Supplier",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "supplierId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "customerShipments",
+                            "description": "",
+                            "type": "[CustomerShipment!]!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "loadId"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "orderNumber",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "poKey",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "shipperKey",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "poNo",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "number"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "c620d8db-45e6-466b-8528-d5e1301777e0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Source"
+            },
+            "f8a27a45-51dc-4145-83d8-bd50e22048a8": {
+              "id": "f8a27a45-51dc-4145-83d8-bd50e22048a8",
+              "type": "debugSource",
+              "selected": false,
+              "x": 337,
+              "y": 497.84,
+              "ports": [
+                {
+                  "id": "ckyddu97f004c3865roz0rldj",
+                  "type": "default",
+                  "x": 483,
+                  "y": 529.56,
+                  "name": "ckyddu97f004d3865xbjwjcmk",
+                  "parentNode": "f8a27a45-51dc-4145-83d8-bd50e22048a8",
+                  "links": [
+                    "8ac0807c-3ebb-45fd-aa1b-b4c99265389b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "columnCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "SalesOrderIntegrationRequestTable",
+                      "model": {
+                        "name": "SalesOrderIntegrationRequest",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "sales",
+                              "group": {
+                                "id": "customerRelationshipManagement"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "exposed": true,
+                              "retentionDays": 120
+                            }
+                          },
+                          "mongo": {
+                            "collection": "salesOrderIntegrationRequest"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[SalesOrderIntegrationRequestDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "integrationRequestId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "salesOrderId",
+                            "type": "ID",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "salesOrder",
+                            "description": "",
+                            "type": "SalesOrder",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "salesOrderId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "integrationRequest",
+                            "description": "",
+                            "type": "IntegrationRequest",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "integrationRequestId",
+                                    "to": "id"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "id"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "c620d8db-45e6-466b-8528-d5e1301777e0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Join Tables"
+            },
+            "cfa1fe48-d2c0-4995-b281-a0d939c700ea": {
+              "id": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+              "type": "ifElse",
+              "selected": false,
+              "x": 1037,
+              "y": 402.84,
+              "ports": [
+                {
+                  "id": "ckyddu97j004q3865822qmyb6",
+                  "type": "default",
+                  "x": 1029,
+                  "y": 434.56,
+                  "name": "ckyddu97j004r38658ec9u325",
+                  "parentNode": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+                  "links": [
+                    "7a879e46-19f2-412c-99f6-1cc1a8bae8c9"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97k004s3865vxp3hj4p",
+                  "type": "default",
+                  "x": 1182.99,
+                  "y": 434.56,
+                  "name": "ckyddu97k004t3865p8hwbbrc",
+                  "parentNode": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+                  "links": [
+                    "2e1c3a94-4378-4994-bf14-ce82c7345560"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "ckyddu97k004u3865npe329mq",
+                  "type": "default",
+                  "x": 1182.99,
+                  "y": 459.71,
+                  "name": "ckyddu97k004v3865745y8zq4",
+                  "parentNode": "cfa1fe48-d2c0-4995-b281-a0d939c700ea",
+                  "links": [
+                    "722dd7b6-f427-4bc7-b091-d642a2a4352d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onFalseNextNodes": [
+                  "c826e2ed-3c53-4966-86ac-74d2cbc4accf"
+                ],
+                "onTrueNextNodes": [
+                  "8893399e-6bc4-4773-9284-e8448b25c778"
+                ],
+                "transform": "$state.context.isJoinTable"
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "If Join Table"
+            },
+            "8893399e-6bc4-4773-9284-e8448b25c778": {
+              "id": "8893399e-6bc4-4773-9284-e8448b25c778",
+              "type": "debugTransition",
+              "selected": false,
+              "x": 892,
+              "y": 722.84,
+              "ports": [
+                {
+                  "id": "ckyddu97l00543865rvia672b",
+                  "type": "default",
+                  "x": 884,
+                  "y": 754.56,
+                  "name": "ckyddu97l00553865fi0lconu",
+                  "parentNode": "8893399e-6bc4-4773-9284-e8448b25c778",
+                  "links": [
+                    "2e1c3a94-4378-4994-bf14-ce82c7345560"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97l005638651agiqr35",
+                  "type": "default",
+                  "x": 1037.98,
+                  "y": 754.56,
+                  "name": "ckyddu97l00573865pw8rswqp",
+                  "parentNode": "8893399e-6bc4-4773-9284-e8448b25c778",
+                  "links": [
+                    "3f1980fd-39af-493d-9222-92c2763e900e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "pauseExecution": false,
+                "nextNodes": [
+                  "8a0c1f28-2e80-4b11-9650-7fd26a4c4397"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Transition"
+            },
+            "8a0c1f28-2e80-4b11-9650-7fd26a4c4397": {
+              "id": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+              "type": "transform",
+              "selected": false,
+              "x": 1102,
+              "y": 722.84,
+              "ports": [
+                {
+                  "id": "ckyddu97n005g3865kgv1l11q",
+                  "type": "default",
+                  "x": 1094,
+                  "y": 754.56,
+                  "name": "ckyddu97n005h3865e92uu8z6",
+                  "parentNode": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+                  "links": [
+                    "3f1980fd-39af-493d-9222-92c2763e900e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97n005i3865vmj3nban",
+                  "type": "default",
+                  "x": 1301.33,
+                  "y": 754.56,
+                  "name": "ckyddu97n005j3865iucv29b8",
+                  "parentNode": "8a0c1f28-2e80-4b11-9650-7fd26a4c4397",
+                  "links": [
+                    "5aab678d-6ec3-497c-a0af-d058f29e9c0c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $standardFields := [\n    'id',\n    'createdAt',\n    'createdByUser',\n    'createdByUserId',\n    'dataChanges',\n    'updatedAt',\n    'updatedByUser',\n    'updatedByUserId',\n    $state.context.component.parameterField\n  ];\n\n  $getFieldToExpand := function( $model) {(\n\n    $joinField := $filter($model.fields, function($v) {\n      $not($exists($standardFields[$=$v.name])) and \n      ($v.type = 'ID')\n    });\n    \n    $expandField := $model.fields[\n      metadata.mfgx.relation.fields.from =\n      $joinField.name\n    ];\n    \n    $isNil($expandField) ?\n      $throw('Error generating the columns of the linked type.  \n      The field, ' & $joinField.name & ', does not realize to a type.') :\n      $expandField;\n\n  )};\n  \n  $fieldToExpand := payload.component.model ~> $getFieldToExpand;\n\n  $expandedFields := function($field) {(\n    $baseTypeMatch := $match($field.type, /\\[?(\\w+)!?\\]?!?/);\n    $baseType := $baseTypeMatch.groups[0];\n    \n    $prefix := $field.name & '.';\n    \n    $model := $executeTransform(\"getModelByName\", \n      {\n        \"api\": $state.context.parameters.api,\n        \"name\": $baseType\n      }\n    );\n  )}; \n  \n  $expandedModel := $fieldToExpand \n  ~> $expandedFields;\n  \n  {\n    \"model\": $expandedModel,\n    \"labelField\": $expandedModel.metadata.mfgx.( labelField ? labelField : 'id'),\n    \"joinPrefix\": $fieldToExpand.name\n  }\n)",
+                "nextNodes": [
+                  "4452b958-0e99-4a48-b2d1-3b554e211342"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Project fields of Joined Model"
+            },
+            "1e77d0fe-bddd-45be-af6d-0088386b4655": {
+              "id": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+              "type": "transform",
+              "selected": false,
+              "x": 1567,
+              "y": 727.84,
+              "ports": [
+                {
+                  "id": "ckyddu97o005s3865m3iofp6s",
+                  "type": "default",
+                  "x": 1559,
+                  "y": 759.56,
+                  "name": "ckyddu97o005t3865gvt21s80",
+                  "parentNode": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+                  "links": [
+                    "7e1f702a-2391-4add-95fa-7e6b664bb1f6"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97o005u3865cg28eia1",
+                  "type": "default",
+                  "x": 1739.9,
+                  "y": 759.56,
+                  "name": "ckyddu97o005v38652lhl60qb",
+                  "parentNode": "1e77d0fe-bddd-45be-af6d-0088386b4655",
+                  "links": [
+                    "f67efa11-8e1d-4b56-bc9e-b36ed57d4450"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "model.fields",
+                "nextNodes": [
+                  "f2d711c0-17ca-4a67-ac08-8f0fae814992"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Pluck Fields of Join table"
+            },
+            "4452b958-0e99-4a48-b2d1-3b554e211342": {
+              "id": "4452b958-0e99-4a48-b2d1-3b554e211342",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1357,
+              "y": 722.84,
+              "ports": [
+                {
+                  "id": "ckyddu97q00643865q2ejwebx",
+                  "type": "default",
+                  "x": 1349,
+                  "y": 754.56,
+                  "name": "ckyddu97q00653865b54rpfrl",
+                  "parentNode": "4452b958-0e99-4a48-b2d1-3b554e211342",
+                  "links": [
+                    "5aab678d-6ec3-497c-a0af-d058f29e9c0c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97q00663865oz8lxwzu",
+                  "type": "default",
+                  "x": 1503,
+                  "y": 754.56,
+                  "name": "ckyddu97q00673865mh5mlwgq",
+                  "parentNode": "4452b958-0e99-4a48-b2d1-3b554e211342",
+                  "links": [
+                    "7e1f702a-2391-4add-95fa-7e6b664bb1f6"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"component\": {\n    \"model\": model,\n    \"labelField\": labelField,\n    \"joinPrefix\": joinPrefix\n  }\n}",
+                "nextNodes": [
+                  "1e77d0fe-bddd-45be-af6d-0088386b4655"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Merge Context"
+            },
+            "0d39ad5e-0e3a-46fd-bd46-b0de225659f3": {
+              "id": "0d39ad5e-0e3a-46fd-bd46-b0de225659f3",
+              "type": "debugSource",
+              "selected": false,
+              "x": 347,
+              "y": 592.84,
+              "ports": [
+                {
+                  "id": "ckyddu97s006c38658zs3t3qj",
+                  "type": "default",
+                  "x": 493,
+                  "y": 624.56,
+                  "name": "ckyddu97s006d38659xhpmnfq",
+                  "parentNode": "0d39ad5e-0e3a-46fd-bd46-b0de225659f3",
+                  "links": [
+                    "60266463-6668-4019-83a0-b8e49fa9a9ce"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "columnCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "UserTable",
+                      "model": {
+                        "name": "User",
+                        "description": "The User model represents a user account in MFGx.",
+                        "kind": "Reference",
+                        "metadata": {
+                          "mongo": {
+                            "collection": "users"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          },
+                          "mfgx": {
+                            "labelField": "email",
+                            "mutable": false,
+                            "module": {
+                              "id": "accessControl",
+                              "group": {
+                                "id": "system"
+                              }
+                            },
+                            "dataChangeCapture": {
+                              "exposed": false
+                            }
+                          }
+                        },
+                        "fields": [
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User.",
+                            "metadata": {
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "email",
+                            "type": "String!",
+                            "description": "The email address of the User.  The email is also used as the username.",
+                            "metadata": {
+                              "unique": true,
+                              "mfgx": {
+                                "mutations": {
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "firstName",
+                            "type": "String!",
+                            "description": "The first name of the User.",
+                            "metadata": {
+                              "mfgx": {
+                                "defaultValue": ""
+                              }
+                            }
+                          },
+                          {
+                            "name": "middleName",
+                            "type": "String!",
+                            "description": "The middle name of the User.",
+                            "metadata": {
+                              "mfgx": {
+                                "defaultValue": ""
+                              }
+                            }
+                          },
+                          {
+                            "name": "lastName",
+                            "type": "String!",
+                            "description": "The last name of the User.",
+                            "metadata": {
+                              "mfgx": {
+                                "defaultValue": ""
+                              }
+                            }
+                          },
+                          {
+                            "name": "active",
+                            "type": "Boolean!",
+                            "description": "Whether the User account is active.  Inactive users aren't allowed to log into MFGx or access MFGx APIs.",
+                            "metadata": {
+                              "mfgx": {
+                                "defaultValue": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "labelField": "email"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "c620d8db-45e6-466b-8528-d5e1301777e0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Error #1"
+            },
+            "3f5a2095-6b57-4c29-a5d4-2f5c5a24607d": {
+              "id": "3f5a2095-6b57-4c29-a5d4-2f5c5a24607d",
+              "type": "debugSource",
+              "selected": false,
+              "x": 352,
+              "y": 682.84,
+              "ports": [
+                {
+                  "id": "ckyddu97u006i3865lypsomc7",
+                  "type": "default",
+                  "x": 498,
+                  "y": 714.56,
+                  "name": "ckyddu97u006j3865pey59ma1",
+                  "parentNode": "3f5a2095-6b57-4c29-a5d4-2f5c5a24607d",
+                  "links": [
+                    "9bdf4568-12c3-4e2a-b222-5e279c2ae121"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "screenGeneration": {
+                    "module": "columnCreate",
+                    "options": {}
+                  },
+                  "payload": {
+                    "component": {
+                      "type": "table",
+                      "name": "EmailTable",
+                      "model": {
+                        "name": "Email",
+                        "metadata": {
+                          "mfgx": {
+                            "module": {
+                              "id": "configuration",
+                              "group": {
+                                "id": "system"
+                              }
+                            },
+                            "exposed": true,
+                            "mutable": true,
+                            "mutations": {
+                              "create": true,
+                              "update": true,
+                              "del": true
+                            },
+                            "dataChangeCapture": {
+                              "enabled": true,
+                              "retentionDays": 120
+                            }
+                          },
+                          "mongo": {
+                            "collection": "email"
+                          },
+                          "graphql": {
+                            "type": "Object"
+                          }
+                        },
+                        "kind": "Reference",
+                        "fields": [
+                          {
+                            "name": "dataChanges",
+                            "type": "[EmailDataChange!]",
+                            "description": "A relation to the data changes for this document.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "documentId"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was created.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "createdByUser",
+                            "type": "User!",
+                            "description": "The User who created this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "createdByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedAt",
+                            "type": "DateTime!",
+                            "description": "The date and time the record was last updated.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUserId",
+                            "type": "ID!",
+                            "description": "The unique identifier of the User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": false
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "updatedByUser",
+                            "type": "User!",
+                            "description": "The User who last updated this record.",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "updatedByUserId",
+                                    "to": "id"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "id",
+                            "type": "ID!",
+                            "description": "The primary unique ID of the record.  Every model should have an id field.",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": false
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": true
+                            }
+                          },
+                          {
+                            "name": "email",
+                            "type": "String",
+                            "description": "",
+                            "metadata": {
+                              "mfgx": {
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          },
+                          {
+                            "name": "emailUserEmails",
+                            "description": "",
+                            "type": "[UserEmail!]!",
+                            "metadata": {
+                              "mfgx": {
+                                "relation": {
+                                  "fields": {
+                                    "from": "id",
+                                    "to": "emailId"
+                                  }
+                                },
+                                "mutations": {
+                                  "create": {
+                                    "include": true
+                                  },
+                                  "update": {
+                                    "include": true
+                                  }
+                                },
+                                "queries": {
+                                  "include": true
+                                },
+                                "where": {
+                                  "include": true
+                                }
+                              },
+                              "unique": false
+                            }
+                          }
+                        ],
+                        "description": ""
+                      },
+                      "labelField": "id"
+                    }
+                  }
+                },
+                "nextNodes": [
+                  "c620d8db-45e6-466b-8528-d5e1301777e0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Error #2"
+            },
+            "e9dbd35e-c673-4306-8c02-9060f843a697": {
+              "id": "e9dbd35e-c673-4306-8c02-9060f843a697",
+              "type": "switch",
+              "selected": false,
+              "x": 1857,
+              "y": 407.84,
+              "ports": [
+                {
+                  "id": "ckyddu97w00783865fe5u5aim",
+                  "type": "default",
+                  "x": 1849,
+                  "y": 439.56,
+                  "name": "ckyddu97w00793865kbfr4g6i",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "41e8cb82-b362-4bb4-9abd-dbc6cf43e421"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97x007a386533o95qtw",
+                  "type": "default",
+                  "x": 2036.01,
+                  "y": 439.56,
+                  "name": "ckyddu97x007b38658niwp0l4",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "b6681284-5a14-4593-ae02-bd17fe0a7b56"
+                  ],
+                  "in": false,
+                  "groupName": "Status Field",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckyddu97x007c38657l0wnzz1",
+                  "type": "default",
+                  "x": 2036.01,
+                  "y": 464.71,
+                  "name": "ckyddu97x007d3865b2eghffm",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "9e0b94b4-7f2b-4b87-9d86-871ff4f9a2b3"
+                  ],
+                  "in": false,
+                  "groupName": "Single Reference",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckyddu97x007e386573aivsmv",
+                  "type": "default",
+                  "x": 2036.01,
+                  "y": 489.86,
+                  "name": "ckyddu97x007f386592dffgqa",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "79cdc240-1d9a-4d40-9352-aaf262e65da4"
+                  ],
+                  "in": false,
+                  "groupName": "Data Change Field",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckyddu97x007g3865yz8jle1l",
+                  "type": "default",
+                  "x": 2036.01,
+                  "y": 515.01,
+                  "name": "ckyddu97x007h3865539sfrfr",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "bcc3e938-a113-46f4-80aa-f78ab26fac50"
+                  ],
+                  "in": false,
+                  "groupName": "List Reference",
+                  "groupIndex": 3,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "ckyddu97x007i3865qru53qcp",
+                  "type": "default",
+                  "x": 2036.01,
+                  "y": 540.16,
+                  "name": "ckyddu97x007j3865fq4rhcb5",
+                  "parentNode": "e9dbd35e-c673-4306-8c02-9060f843a697",
+                  "links": [
+                    "089d6a86-7584-41e1-8fa8-7d8ef20a8528"
+                  ],
+                  "in": false,
+                  "groupName": "Else (Scalars)",
+                  "groupIndex": 4,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Status Field",
+                    "transform": "$match(baseType, /\\w+Status$/)",
+                    "nextNodes": [
+                      "1844e6b6-7b37-4649-bb24-1b55650ab97f"
+                    ]
+                  },
+                  {
+                    "name": "Single Reference",
+                    "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\" and isList = false",
+                    "nextNodes": [
+                      "cd194bf5-19fd-4675-9ee7-e284a89138fe"
+                    ]
+                  },
+                  {
+                    "name": "Data Change Field",
+                    "transform": "field.name = 'dataChanges'",
+                    "nextNodes": [
+                      "2fbea62b-7fe9-4f18-8b57-203e3b7dc618"
+                    ]
+                  },
+                  {
+                    "name": "List Reference",
+                    "transform": "$exists(baseTypeModel.kind) and baseTypeModel.kind = \"Reference\" and isList = true",
+                    "nextNodes": [
+                      "0fa7fc87-9c5b-41ba-a815-7e3620ee185c"
+                    ]
+                  },
+                  {
+                    "name": "Else (Scalars)",
+                    "transform": "true",
+                    "nextNodes": [
+                      "13f76b19-3bf7-4c8f-b2cf-4c0fb73612e5"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "name": "Route"
+            },
+            "2fbea62b-7fe9-4f18-8b57-203e3b7dc618": {
+              "id": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+              "type": "transform",
+              "selected": false,
+              "x": 2117,
+              "y": 442.84,
+              "ports": [
+                {
+                  "id": "ckyddu97z007s3865abk7c4xn",
+                  "type": "default",
+                  "x": 2109,
+                  "y": 474.56,
+                  "name": "ckyddu97z007t3865u754lz24",
+                  "parentNode": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+                  "links": [
+                    "79cdc240-1d9a-4d40-9352-aaf262e65da4"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "ckyddu97z007u3865bwkavs7u",
+                  "type": "default",
+                  "x": 2263,
+                  "y": 474.56,
+                  "name": "ckyddu97z007v3865u156ktkj",
+                  "parentNode": "2fbea62b-7fe9-4f18-8b57-203e3b7dc618",
+                  "links": [
+                    "bd16ee4f-3f09-4878-9f19-8737ad09fd08"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $model := $state.context.component.model;\n {\n  \"name\": \"dataChanges\",\n  \"description\": \"A relation to the data changes for this document.\",\n  \"label\": \"Data Changes\",\n  \"dataPath\": \"dataChanges.total\",\n  \"dataQuery\": {\n    \"model\": $model.name & \"DataChange\",\n    \"api\": $state.context.parameters.api,\n    \"fields\": [\"id\"]\n  },\n  \"additionalFilter\": {\n    \"__transform\": \"{\\n        \\\"documentId\\\": {\\n          \\\"_eq\\\": data.id\\n        }\\n      }\"\n  },\n  \"format\": \"dynamicListDialog\",\n  \"defaultSort\": {\n    \"field\": \"changedAt\",\n    \"direction\": \"desc\"\n  },\n  \"columns\": [\n    {\n      \"name\": \"changedAt\",\n      \"description\": \"The date the change occurred at.\",\n      \"label\": \"Changed At\",\n      \"format\": \"datetime\",\n      \"dataPath\": \"changedAt\",\n      \"query\": {\n        \"fields\": [\"changedAt\", \"documentId\"]\n      },\n      \"linkTarget\": {\n        \"__transform\":  '\"/' \n              & $model.metadata.mfgx.module.group.id \n              & '/' \n              & $model.metadata.mfgx.module.id \n              & '/'\n              & $pluralize($lowerFirst($model.name),'en')\n              & '/\" & data.documentId & \"?component=DataChangeNestedTable\"'\n      }\n    },\n    {\n      \"name\": \"changedByUser\",\n      \"description\": \"A relation to the user who changed this data.\",\n      \"label\": \"Changed By User\",\n      \"format\": \"text\",\n      \"dataPath\": \"changedByUser.email\",\n      \"linkTarget\": {\n        \"__transform\": \"\\\"/system/accessControl/users/\\\" & data.changedByUser.id\"\n      },\n      \"query\": {\n        \"fields\": [\"changedByUser.id\", \"changedByUser.email\"]\n      }\n    }\n  ]\n}\n\n)\n",
+                "nextNodes": [
+                  "2eba45e5-a04f-43f9-87be-d9055bca0f27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false
+              },
+              "name": "Data Changes"
+            }
+          }
+        }
+      ],
+      "name": "Screen Generation Column Create",
+      "type": "System",
+      "version": "0.0.2",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

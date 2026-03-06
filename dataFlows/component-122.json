@@ -1,0 +1,2726 @@
+{
+  "header": {
+    "id": "splitContainerInFuuz",
+    "name": "Split Container in Fuuz",
+    "description": "This data flow will Split containers based on the serial number and a provided quantity.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "clyrlsm3j0d9o01b44nnx0dqe",
+    "number": "0.0.38",
+    "description": "Adjusting any nodes mutating \"Inventory Transaction\"\n\nAdjust CustomData to handle cases where a user triggered a parent flow that called this flow using ExecuteFlow.\n\nCustomData checks if CLAIMS was passed in at the request node, if not then it uses the claims passed from the users request. \n\n",
+    "dataFlowId": "splitContainerInFuuz",
+    "flow": {
+      "id": "clyrlsm3j0d9o01b44nnx0dqe",
+      "name": "Split Container in Fuuz",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "d61c589e-bb38-411a-bec0-6cfef6f569df"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$state.context",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+          "name": "Query Inventory Details",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"inventoryNumber\": $state.context.REQUEST.fromInventory.number\n}",
+            "nextNodes": [],
+            "query": "query Query($inventoryNumber: String!) {\n  inventory(where: {number:{_eq:$inventoryNumber} active:{_eq:true}}) {\n    edges {\n      node {\n        id\n\t\t\t\tactive\n        number\n        transactionTypeId\n        location {\n          id\n          name\n          locationType {\n            id\n            name\n            inventory\n            qualityHold\n          }\n        }\n        inventoryStatus {\n          id\n          name\n          active\n          suspect\n        }\n        quantity {\n          value\n          unitId\n        }\n        weightUnit {\n          id\n          code\n        }\n        grossWeight\n        netWeight\n        tareWeight\n        inventoryStatus {\n          id\n          name\n          active\n          moveLock\n          mergeLock\n          splitLock\n        }\n        masterInventory {\n          id\n          number\n          masterInventoryStatus {\n            id\n            name\n            active\n            moveLock\n            mergeLock\n          }\n        }\n        supplier {\n          id\n          name\n          externalId\n          status\n        }\n        productStrategyProcess {\n          id\n          code          \n          unitWeight\n          productStrategy {\n            id\n            code\n            name\n            product {\n              id\n              code\n              name\n            }\n          }\n        }\n      }\n    }\n  }\n  productionSetupMaterial(where:{inventory:{number:{_eq:$inventoryNumber}}}) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  transactionType(where:{inventorySplit:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "22605136-99de-4c3a-8412-606a31e5f70c",
+          "name": "Create New Split Inventory and Update Source Container",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  /* Grab Information about the Request */\n  $numberOfContainers := $state.context.REQUEST.numberOfContainers;\n  $quantityPerContainer := $state.context.REQUEST.quantityPerContainer;\n  \n  /* Grab information about the inventory currently in the system */\n  $fromInventory := $state.context.QUERY.inventory.edges.node.id;\n  $originalContainerQuantity := $state.context.QUERY.inventory.edges.node.quantity.value;\n  $inventoryStatusId := $state.context.QUERY.inventory.edges.node.inventoryStatus.id;\n  $inventoryLocationId := $state.context.QUERY.inventory.edges.node.locationId;\n  $productStrategyProcess := $state.context.QUERY.inventory.edges.node.productStrategyProcessId;\n  $quantityUnitId := $state.context.QUERY.inventory.edges.node.quantity.unitId;\n  $weightUnitId := $state.context.QUERY.inventory.edges.node.weightUnit.id;\n  $quantityUnitId := $state.context.QUERY.inventory.edges.node.quantity.unitId;\n  $grossWeight := $coalesce([$state.context.QUERY.inventory.edges.node.grossWeight,0]);\n  $netWeight := $coalesce([$state.context.QUERY.inventory.edges.node.netWeight,0]);\n  $tareWeight := $coalesce([$state.context.QUERY.inventory.edges.node.tareWeight,0]);\n  \n  /* Grab information about the transaction type to use for new containers */\n  $newTransactionTypeId := $state.context.QUERY.transactionType.edges.node.id;\n  \n  /* Calculate the quantity being used per new container*/\n  $quantityConsumed := $numberOfContainers * $quantityPerContainer;\n  \n  /* Calculate the average weight of each unit on the existing container */\n  $weightPerUnit := $netWeight/$originalContainerQuantity;\n  \n  /* Calculate the original container's new values */\n  $originalContainerNewQuantity := ($originalContainerQuantity - $quantityConsumed);\n  $originalContainerNewNetWeight := $originalContainerNewQuantity * $weightPerUnit;\n  $originalContainerNewGrossWeight := $originalContainerNewNetWeight + $tareWeight;\n  $originalContainerNewActiveFlag := $originalContainerNewQuantity>0;\n  \n  /* Calculate new weights, assume the same tare weight and unit of measure */\n  $newContainerNetWeight := $quantityPerContainer * $weightPerUnit;\n  $newContainerTareWeight := $tareWeight;\n  $newContainerGrossWeight := $newContainerNetWeight + $newContainerTareWeight;\n  $newContainerWeightUnitId := $weightUnitId;\n  \n  {\n    \"createPayload\": [1..$numberOfContainers].{\n      \"create\": {\n        \"inventoryStatusId\": $inventoryStatusId,\n        \"locationId\": $inventoryLocationId,\n        \"productStrategyProcessId\": $productStrategyProcess,\n        \"inventoryTypeId\": $state.context.QUERY.inventory.edges.node.inventoryTypeId,\n        \"weightUnitId\": $weightUnitId,\n        \"netWeight\": $newContainerNetWeight,\n        \"tareWeight\": $newContainerTareWeight,\n        \"grossWeight\": $newContainerGrossWeight,\n        \"quantity\": {\n          \"value\": $quantityPerContainer,\n          \"unitId\": $quantityUnitId\n        }\n      }\n    },\n    \"updatePayload\": {\n      \"update\": {\n        \"active\": $originalContainerNewActiveFlag,\n        \"netWeight\": $originalContainerNewNetWeight,\n        \"grossWeight\": $originalContainerNewGrossWeight,\n        \"quantity\": {\n          \"value\": $originalContainerNewQuantity,\n          \"unitId\": $quantityUnitId\n        }\n      },\n      \"where\": {\n        \"id\": $fromInventory\n      }\n    }\n  }\n)",
+            "nextNodes": [
+              "3487e3bd-496a-4436-94be-58e85912b661"
+            ],
+            "mutation": "mutation createUpdateInventory($createPayload:[InventoryCreatePayloadInput!]!,$updatePayload:[InventoryUpdatePayloadInput!]!){\n  createInventory(payload:$createPayload){\n    id\n    number\n    productStrategyProcessId\n    inventoryStatusId\n    locationId\n  }\n  updateInventory(payload:$updatePayload){\n    id\n    number\n    productStrategyProcessId\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+          "name": "Save REQUEST",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "7f330673-043e-42d9-9e57-86b8f63a1765"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+          "name": "Create Inventory Transaction",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  {\n    \"payload\": [\n      $.createInventory.{\n        \"create\": {\n          \"transactionTypeId\": $state.context.QUERY.transactionType.edges.node.id,\n          \"customData\": $state.context.CLAIMS ? $state.context.CLAIMS : $state.claims,\n          \"sourceQuantity\": {\n            \"value\": $state.context.REQUEST.quantityPerContainer,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"sourceLocationId\": locationId,\n          \"sourceInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"sourceInventoryStatusId\": inventoryStatusId,      \n          \"sourceProductStrategyProcessId\": productStrategyProcessId,\n\n          \"destinationQuantity\": {\n            \"value\": $state.context.REQUEST.quantityPerContainer,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"destinationLocationId\": locationId,\n          \"destinationInventoryId\": id,\n          \"destinationInventoryStatusId\": inventoryStatusId,\n          \"destinationProductStrategyProcessId\": productStrategyProcessId\n        }\n      }\n    ]\n  }\n)",
+            "mutation": "mutation($payload: [InventoryTransactionCreatePayloadInput!]! ){\n  createInventoryTransaction(payload: $payload){\n    id\n    sourceInventoryId\n    destinationInventoryId\n  }\n}",
+            "nextNodes": [
+              "433c9121-483a-493a-a171-2a7e4ca04323"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+          "name": "Validate Request",
+          "type": "validate",
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "REQUEST": {
+                  "type": "object",
+                  "properties": {
+                    "fromInventory": {
+                      "type": "object",
+                      "properties": {
+                        "number": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "number"
+                      ]
+                    },
+                    "numberOfContainers": {
+                      "type": "integer"
+                    },
+                    "quantityPerContainer": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "fromInventory",
+                    "numberOfContainers",
+                    "quantityPerContainer"
+                  ]
+                }
+              },
+              "required": [
+                "REQUEST"
+              ]
+            },
+            "nextNodes": [
+              "fe95f5e0-7946-40cb-bf63-ea39139e948a"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "d96702f0-535f-473b-aac4-efb7cb398db9",
+          "name": "Loaded to Workcenter",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is loaded to workcenter (\" & $.productionSetupMaterial.edges.node.productionSetup.workcenter.name & \") and cannot be split.  Please unload it first.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "5f88f024-b3e8-4257-a61c-b594435e0af0",
+          "name": "Inventory not found",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $state.context.REQUEST.fromInventory.number & \") was not found or is it not active.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "0e73184f-8f30-47de-8851-d1ce915d6065",
+          "name": "Validate Request",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Zero Quantity",
+                "transform": "$state.context.REQUEST.quantityPerContainer <= 0",
+                "nextNodes": [
+                  "bba85a97-cf5b-4701-92ba-60c6b15a8208"
+                ]
+              },
+              {
+                "name": "Inventory Not Found",
+                "nextNodes": [
+                  "5f88f024-b3e8-4257-a61c-b594435e0af0"
+                ],
+                "transform": "$count($.inventory.edges.node)=0"
+              },
+              {
+                "name": "Inventory Loaded",
+                "transform": "$count($.productionSetupMaterial.edges.node)>0",
+                "nextNodes": [
+                  "d96702f0-535f-473b-aac4-efb7cb398db9"
+                ]
+              },
+              {
+                "name": "Status Does Not Allow Split",
+                "nextNodes": [
+                  "d87d3dd7-bc26-42cc-9782-f5e33aee517b"
+                ],
+                "transform": "$.inventory.edges.node.inventoryStatus.splitLock"
+              },
+              {
+                "name": "Not Enough Source",
+                "transform": "$.inventory.edges.node.quantity.value<($state.context.REQUEST.numberOfContainers*$state.context.REQUEST.quantityPerContainer)",
+                "nextNodes": [
+                  "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe"
+                ]
+              },
+              {
+                "name": "Passed",
+                "transform": "true",
+                "nextNodes": [
+                  "22605136-99de-4c3a-8412-606a31e5f70c"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+          "name": "Save QUERY",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"QUERY\": $\n}",
+            "nextNodes": [
+              "0e73184f-8f30-47de-8851-d1ce915d6065"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+          "name": "Not Enough Source",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") has a quantity of (\" & $.inventory.edges.node.quantity.value & \" \" & $.inventory.edges.node.quantity.unitId & \") and cannot be split into (\" & $state.context.REQUEST.numberOfContainers & \") containers of (\" & $state.context.REQUEST.quantityPerContainer & \").\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+          "name": "Status Does Not Allow Split",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is in a restricted status (\" & $.inventory.edges.node.inventoryStatus.name & \") and cannot be split.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "bba85a97-cf5b-4701-92ba-60c6b15a8208",
+          "name": "Zero Quantity",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$state.context",
+            "messageTransform": "\"The request is impossible inventory cannot be split <= Zero.\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3487e3bd-496a-4436-94be-58e85912b661",
+          "name": "Save INVENTORY",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01"
+            ],
+            "transform": "{\n  \"INVENTORY\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "433c9121-483a-493a-a171-2a7e4ca04323",
+          "name": "Save TRANSACTIONS",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad"
+            ],
+            "transform": "{\n  \"TRANSACTIONS\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "7f330673-043e-42d9-9e57-86b8f63a1765",
+          "name": "Query Inventory",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"whereI\": {\n    \"number\": {\n      \"_eq\": $state.context.REQUEST.fromInventory.number\n    }\n  },\n  \"wherePSM\": {\n    \"inventory\": {\n      \"number\": {\n        \"_eq\":  $state.context.REQUEST.fromInventory.number\n      }\n    }\n  }\n}",
+            "query": "query Query($whereI: InventoryWhereInput, $wherePSM: ProductionSetupMaterialWhereInput) {\n  inventory(where: $whereI) {\n    edges {\n      node {\n        id\n        quantity {\n      value\n      unitId\n    }\n        grossWeight\n        \n        netWeight\n        tareWeight\n        theoreticalWeight\n        inventoryTypeId\n        active\n        barcode\n        note\n        trackingNumber\n        customData\n        inventoryStatus {\n          id\n          active\n          defective\n          loaded\n          materialLoadAllow\n          mergeLock\n          moveLock\n          name\n          productionHold\n          received\n          scrap\n          shipHold\n          shippable\n          shipped\n          splitLock\n          staged\n          suspect\n          usable\n          color\n          externalId\n          receivable\n        }\n        locationId\n        productStrategyProcessId\n        lotId\n        masterInventoryId\n        packagingMaterialId\n        \n        supplierId\n        weightUnitId\n        workOrderId\n        workOrderProcessId\n        locationId\n      }\n    }\n},\n   productionSetupMaterial(where:$wherePSM) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  transactionType(where:{inventorySplit:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "fdf11b7b-4930-4423-9ce0-31c4a91de2f7"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.37"
+    },
+    "diagram": {
+      "id": "clyrlsm3j0d9o01b44nnx0dqe",
+      "offsetX": 746.16,
+      "offsetY": -77.75,
+      "zoom": 88.9,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "66f52f14-25d6-4944-b939-aab629cadb4e",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "a0721793-4d8d-4418-be8e-03326a30ba01": {
+              "points": [
+                {
+                  "id": "68480c94-7c0d-42e3-aa4b-ff8c6c08ee9b",
+                  "type": "point",
+                  "x": -1366,
+                  "y": 374.73
+                },
+                {
+                  "id": "e4e43f25-f9f7-4fd5-90d3-b61963810292",
+                  "type": "point",
+                  "x": -1325,
+                  "y": 374.73
+                }
+              ],
+              "id": "a0721793-4d8d-4418-be8e-03326a30ba01",
+              "type": "default",
+              "selected": false,
+              "source": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "sourcePort": "cl9rl9tut00af356e23lubl3i",
+              "target": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+              "targetPort": "cl97caozw00nh356eh4kcw6sx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f4214602-402d-4ce5-b550-e48d71a7db4b": {
+              "points": [
+                {
+                  "id": "f7fedf12-13d4-4699-abac-3a8c5f75887e",
+                  "type": "point",
+                  "x": -1571,
+                  "y": 309.73
+                },
+                {
+                  "id": "398baa0d-b3cf-4997-a2c3-7c2fb551cff2",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "f4214602-402d-4ce5-b550-e48d71a7db4b",
+              "type": "default",
+              "selected": false,
+              "source": "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+              "sourcePort": "cl97bq0s4001n356ef41nehvp",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e7b3c0d8-6aa1-42f1-ba5c-7d22c795eb0c": {
+              "points": [
+                {
+                  "id": "84da9f6e-4b0f-4cca-9941-7486cb6e3001",
+                  "type": "point",
+                  "x": -1571.42,
+                  "y": 379.73
+                },
+                {
+                  "id": "165f6425-5a6f-4a1f-a598-593d0d0de7db",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "e7b3c0d8-6aa1-42f1-ba5c-7d22c795eb0c",
+              "type": "default",
+              "selected": false,
+              "source": "fee248ea-a2f1-4155-91fa-ce2024960ef5",
+              "sourcePort": "cl9rlb31c00bt356exb00t032",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4c2941dc-4a7a-4fb0-a577-a17d6eed6d8d": {
+              "points": [
+                {
+                  "id": "d18d3079-38ae-471a-ac1b-c3290cb32494",
+                  "type": "point",
+                  "x": -1571.02,
+                  "y": 444.73
+                },
+                {
+                  "id": "0bc7c263-40f6-49e7-95b1-e109b1e06647",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "4c2941dc-4a7a-4fb0-a577-a17d6eed6d8d",
+              "type": "default",
+              "selected": false,
+              "source": "9f3cf0da-bdea-4300-a634-5ee0fcbe3db0",
+              "sourcePort": "cl9rlboo500fb356erevysvw5",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c2a1f5a0-ba27-4519-87e5-0d660b7fe323": {
+              "points": [
+                {
+                  "id": "a9e4192a-4650-4ee5-9ad3-023d71b50ce1",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 399.89
+                },
+                {
+                  "id": "45e5f053-edec-4be6-b14c-c3a145fcd5ea",
+                  "type": "point",
+                  "x": -385,
+                  "y": 374.73
+                }
+              ],
+              "id": "c2a1f5a0-ba27-4519-87e5-0d660b7fe323",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcj9fx6d00ba306d4tzvywpo",
+              "target": "5f88f024-b3e8-4257-a61c-b594435e0af0",
+              "targetPort": "clacl232g00rg356eqy040se1",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "76be6f5d-39d3-4b06-b845-04169cc00f80": {
+              "points": [
+                {
+                  "id": "a86f436b-2cca-49f0-857c-a8b97c5e6764",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 425.05
+                },
+                {
+                  "id": "25b85ed7-b998-4cf1-b37d-b486272ea43c",
+                  "type": "point",
+                  "x": -385,
+                  "y": 449.73
+                }
+              ],
+              "id": "76be6f5d-39d3-4b06-b845-04169cc00f80",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcj9ha8s00dj306ddulojk57",
+              "target": "d96702f0-535f-473b-aac4-efb7cb398db9",
+              "targetPort": "clacl1px200ra356efm2g3ozd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b600f394-8a21-4450-984d-3834aacefc22": {
+              "points": [
+                {
+                  "id": "b31246a2-d036-4263-8dfe-001ac0ccdab0",
+                  "type": "point",
+                  "x": -1567.83,
+                  "y": 519.73
+                },
+                {
+                  "id": "5098efe4-a86a-448d-b1aa-418597de8811",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "b600f394-8a21-4450-984d-3834aacefc22",
+              "type": "default",
+              "selected": false,
+              "source": "a82f6269-00e5-4d27-bf8c-6796f74760dc",
+              "sourcePort": "clcj9ia8l00fp306ds8i2yy0d",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c977d895-894f-4eeb-a278-9966976f6409": {
+              "points": [
+                {
+                  "id": "bcc01019-2f56-492c-808f-926eed39f261",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 475.36
+                },
+                {
+                  "id": "22d55f4e-0d46-4496-87ad-a49fb4e6dc79",
+                  "type": "point",
+                  "x": -385,
+                  "y": 599.73
+                }
+              ],
+              "id": "c977d895-894f-4eeb-a278-9966976f6409",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcj9jyqb00hn306diz176wvo",
+              "target": "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+              "targetPort": "clcj9k83700hv306dytjwac4s",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "fc8ff727-3d4a-4b48-b706-ed7be462882d": {
+              "points": [
+                {
+                  "id": "a15155ba-18ca-4f9a-87b8-e2a78b448347",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 450.2
+                },
+                {
+                  "id": "e4cdd37b-0ec4-4816-af3c-4f444c986914",
+                  "type": "point",
+                  "x": -385,
+                  "y": 524.73
+                }
+              ],
+              "id": "fc8ff727-3d4a-4b48-b706-ed7be462882d",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcj9nfxy00kj306dunfshmej",
+              "target": "d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+              "targetPort": "clcj9k83b00i1306dlk2skqc7",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f36bf2bd-4776-48e5-a867-319791a65120": {
+              "points": [
+                {
+                  "id": "69d3a00e-4e9f-40ec-bcdc-b98d56e7586d",
+                  "type": "point",
+                  "x": -766,
+                  "y": 374.73
+                },
+                {
+                  "id": "10aa32e4-9b04-4dc2-b0c3-497763e72883",
+                  "type": "point",
+                  "x": -715,
+                  "y": 374.73
+                }
+              ],
+              "id": "f36bf2bd-4776-48e5-a867-319791a65120",
+              "type": "default",
+              "selected": false,
+              "source": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+              "sourcePort": "clcj9jk4d00h2306dca6429fe",
+              "target": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "targetPort": "clcj9agd8008y306dl7884ty5",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ff8ac08c-e28a-4daa-99b1-5d5ecf837d85": {
+              "points": [
+                {
+                  "id": "1fcccaf0-fd85-417d-8a4b-47f7c799e211",
+                  "type": "point",
+                  "x": -1561.02,
+                  "y": 589.73
+                },
+                {
+                  "id": "84c9a579-54eb-4d40-b2f4-960bb956adbf",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "ff8ac08c-e28a-4daa-99b1-5d5ecf837d85",
+              "type": "default",
+              "selected": false,
+              "source": "12589c21-baa0-4459-a8a0-9cbfe357bff2",
+              "sourcePort": "clcj9w9th00ob306dkzf1sj84",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f15f663b-a2bd-4c32-a409-3fb3102228a9": {
+              "points": [
+                {
+                  "id": "dcb7a892-7311-4ade-b70c-2709a73bac9f",
+                  "type": "point",
+                  "x": -1561.02,
+                  "y": 659.73
+                },
+                {
+                  "id": "756336f0-558d-4b55-84b5-7c7f1069e351",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "f15f663b-a2bd-4c32-a409-3fb3102228a9",
+              "type": "default",
+              "selected": false,
+              "source": "ae0fa9e9-c4fa-4834-a282-39176f459cb6",
+              "sourcePort": "clcja93yq0156306dnejvi7pg",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3e6f6767-768d-4dc8-a2da-07f91ca62ffc": {
+              "points": [
+                {
+                  "id": "0d32d158-382a-40ff-9da2-dfd21bba773f",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 500.52
+                },
+                {
+                  "id": "6ff26399-c013-4974-be23-70b474f02378",
+                  "type": "point",
+                  "x": -390,
+                  "y": 669.73
+                }
+              ],
+              "id": "3e6f6767-768d-4dc8-a2da-07f91ca62ffc",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcja8kxt013v306d8zk0bhy3",
+              "target": "22605136-99de-4c3a-8412-606a31e5f70c",
+              "targetPort": "cl97bq0sj0039356emr8efgl4",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "cd3e6c58-1cb2-452d-9871-52aae064b60d": {
+              "points": [
+                {
+                  "id": "456d74f5-55c3-4b87-9800-6519c9d0a826",
+                  "type": "point",
+                  "x": -1560.42,
+                  "y": 729.73
+                },
+                {
+                  "id": "b1f9bb32-5a5d-4c64-83af-1b7a9b210845",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "cd3e6c58-1cb2-452d-9871-52aae064b60d",
+              "type": "default",
+              "selected": false,
+              "source": "e8140408-e337-4342-b19b-57c8f0da9df2",
+              "sourcePort": "clcjcd8kw029u306dwthks6et",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "0a1e10b6-5690-45e9-9f09-e4914f12c149": {
+              "points": [
+                {
+                  "id": "e1e9df9f-2313-4c9e-aedb-863afe641694",
+                  "type": "point",
+                  "x": -477.87,
+                  "y": 374.73
+                },
+                {
+                  "id": "92bceaa4-fc5a-48d4-8503-335c2f64d834",
+                  "type": "point",
+                  "x": -385,
+                  "y": 304.73
+                }
+              ],
+              "id": "0a1e10b6-5690-45e9-9f09-e4914f12c149",
+              "type": "default",
+              "selected": false,
+              "source": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "sourcePort": "clcjcmmhr02dy306d898mcqem",
+              "target": "bba85a97-cf5b-4701-92ba-60c6b15a8208",
+              "targetPort": "clcjco0gy02f2306dr3nu9n99",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "527ce278-3820-483b-882c-ec076fcaa478": {
+              "points": [
+                {
+                  "id": "8d6f32fe-4e46-4ef6-ab2c-b2acb4831e26",
+                  "type": "point",
+                  "x": 179,
+                  "y": 669.73
+                },
+                {
+                  "id": "d3bc00d7-ff52-40a6-a25b-d1395208deef",
+                  "type": "point",
+                  "x": 245,
+                  "y": 669.73
+                }
+              ],
+              "id": "527ce278-3820-483b-882c-ec076fcaa478",
+              "type": "default",
+              "source": "3487e3bd-496a-4436-94be-58e85912b661",
+              "sourcePort": "clcjcrl7q0087306dfe05lq6o",
+              "target": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+              "targetPort": "cl97elcd403gl356e9kc1xlwt",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ac8a8309-9a32-4566-bebf-d0b1e3f06763": {
+              "points": [
+                {
+                  "id": "3a10d365-491e-440b-a314-b57bd4c78e54",
+                  "type": "point",
+                  "x": -39.88,
+                  "y": 669.73
+                },
+                {
+                  "id": "a57e49c2-47f6-4e17-b308-f24a36b7d19d",
+                  "type": "point",
+                  "x": 25,
+                  "y": 669.73
+                }
+              ],
+              "id": "ac8a8309-9a32-4566-bebf-d0b1e3f06763",
+              "type": "default",
+              "source": "22605136-99de-4c3a-8412-606a31e5f70c",
+              "sourcePort": "cl97bq0sj003b356e93c1z79x",
+              "target": "3487e3bd-496a-4436-94be-58e85912b661",
+              "targetPort": "clcjcrl7q0085306dldpo2nhp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "8fc79c58-3a4e-4066-b2ad-3aebbaf4c4e9": {
+              "points": [
+                {
+                  "id": "d982271e-013b-4877-a40f-de4b52f5cf3b",
+                  "type": "point",
+                  "x": 445.31,
+                  "y": 669.73
+                },
+                {
+                  "id": "34e5e83c-b78f-46de-81a6-3b99c48de2c3",
+                  "type": "point",
+                  "x": 490,
+                  "y": 669.73
+                }
+              ],
+              "id": "8fc79c58-3a4e-4066-b2ad-3aebbaf4c4e9",
+              "type": "default",
+              "selected": false,
+              "source": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+              "sourcePort": "cl97elcd403gn356ea963cyiv",
+              "target": "433c9121-483a-493a-a171-2a7e4ca04323",
+              "targetPort": "clcjcuvxi00bh306dds2bsx5m",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e1f6b6c3-f1a3-46c5-88cc-141eb4ab3974": {
+              "points": [
+                {
+                  "id": "9b57358d-a0da-4e80-b38a-9acbb1787299",
+                  "type": "point",
+                  "x": 652.38,
+                  "y": 669.73
+                },
+                {
+                  "id": "e569c159-91fc-4efc-b009-f88096d91492",
+                  "type": "point",
+                  "x": 705,
+                  "y": 669.73
+                }
+              ],
+              "id": "e1f6b6c3-f1a3-46c5-88cc-141eb4ab3974",
+              "type": "default",
+              "selected": false,
+              "source": "433c9121-483a-493a-a171-2a7e4ca04323",
+              "sourcePort": "clcjcuvxi00bj306dg46n423v",
+              "target": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+              "targetPort": "cl97bq0s6001x356egwhn95ai",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "19dd6a70-68e9-4e16-b42c-d544b0b1c20d": {
+              "points": [
+                {
+                  "id": "b986f032-ba08-4e66-bbc0-5b44847d7929",
+                  "type": "point",
+                  "x": -1561.02,
+                  "y": 799.73
+                },
+                {
+                  "id": "7f875753-eb42-44f8-bdce-a5adc84cce2f",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "19dd6a70-68e9-4e16-b42c-d544b0b1c20d",
+              "type": "default",
+              "selected": false,
+              "source": "34c690ed-24b8-46a8-a390-e891ffd92640",
+              "sourcePort": "clcjcw9ds00e9306d7kjz223n",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6c50d016-0678-47be-bc1d-db529a05fd47": {
+              "points": [
+                {
+                  "id": "4c5da5f2-ed8f-49d3-86ff-13ca834d7b78",
+                  "type": "point",
+                  "x": -1171,
+                  "y": 374.73
+                },
+                {
+                  "id": "8d71a8c0-6e65-4e30-b26d-5a45d6ec46cf",
+                  "type": "point",
+                  "x": -1120,
+                  "y": 389.73
+                }
+              ],
+              "id": "6c50d016-0678-47be-bc1d-db529a05fd47",
+              "type": "default",
+              "selected": false,
+              "source": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+              "sourcePort": "cl97caozx00nj356elw2zsrr0",
+              "target": "7f330673-043e-42d9-9e57-86b8f63a1765",
+              "targetPort": "clgfan0bb004z356kb451u7od",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9e58852b-b218-4b15-97c3-844751757fbd": {
+              "points": [
+                {
+                  "id": "8d4ca692-79c0-45cf-aa97-65d4297cd842",
+                  "type": "point",
+                  "x": -966,
+                  "y": 389.73
+                },
+                {
+                  "id": "56b73c7b-bb0c-41df-b3d9-c5efc7253a6c",
+                  "type": "point",
+                  "x": -920,
+                  "y": 374.73
+                }
+              ],
+              "id": "9e58852b-b218-4b15-97c3-844751757fbd",
+              "type": "default",
+              "selected": false,
+              "source": "7f330673-043e-42d9-9e57-86b8f63a1765",
+              "sourcePort": "clgfan0bc0051356kyznxd70v",
+              "target": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+              "targetPort": "clcj9jk4d00h0306d2qka5jhr",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "2ebfb469-2940-4426-8e43-63224802e23a": {
+              "points": [
+                {
+                  "id": "53708fdc-cdd6-42a9-bf2d-0314dd447e88",
+                  "type": "point",
+                  "x": -1571.01,
+                  "y": 244.73
+                },
+                {
+                  "id": "ffba76b6-9df0-4f78-93f7-5ac16dbf48ca",
+                  "type": "point",
+                  "x": -1520,
+                  "y": 374.73
+                }
+              ],
+              "id": "2ebfb469-2940-4426-8e43-63224802e23a",
+              "type": "default",
+              "selected": false,
+              "source": "bf3f80f7-0138-481c-9f85-ad6ca9469742",
+              "sourcePort": "clgfb2g0n00h6356k3scgujs7",
+              "target": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "targetPort": "cl9rl9tut00ad356etj5b2otg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "65f4e484-7f14-4bd5-84c4-d6034ef9090c",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a": {
+              "id": "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+              "type": "request",
+              "selected": false,
+              "x": -1725,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cl97bq0s4001n356ef41nehvp",
+                  "type": "default",
+                  "x": -1579,
+                  "y": 301.73,
+                  "name": "cl97bq0s4001o356eg8d5fzae",
+                  "parentNode": "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+                  "links": [
+                    "f4214602-402d-4ce5-b550-e48d71a7db4b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request",
+              "note": "Request from screen or flow."
+            },
+            "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad": {
+              "id": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+              "type": "response",
+              "selected": false,
+              "x": 705,
+              "y": 630,
+              "ports": [
+                {
+                  "id": "cl97bq0s6001x356egwhn95ai",
+                  "type": "default",
+                  "x": 697,
+                  "y": 661.73,
+                  "name": "cl97bq0s6001y356ebk7kfl3e",
+                  "parentNode": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+                  "links": [
+                    "e1f6b6c3-f1a3-46c5-88cc-141eb4ab3974"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cl97bq0s6001z356eimim9eec",
+                  "type": "default",
+                  "x": 850.98,
+                  "y": 661.73,
+                  "name": "cl97bq0s60020356e3wpcruiv",
+                  "parentNode": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$state.context",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Response",
+              "note": "Respond to the process that requested a split."
+            },
+            "deb5a3db-94ef-4eeb-ba5b-641e5895174e": {
+              "id": "deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+              "type": "query",
+              "selected": false,
+              "x": -1160,
+              "y": 115,
+              "ports": [
+                {
+                  "id": "cl97bq0sc002f356ey14at0o8",
+                  "type": "default",
+                  "x": -1168,
+                  "y": 146.73,
+                  "name": "cl97bq0sc002g356ejkq6vgq8",
+                  "parentNode": "deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+                  "links": [],
+                  "in": true
+                },
+                {
+                  "id": "cl97bq0sc002h356ed8ag331t",
+                  "type": "default",
+                  "x": -998.25,
+                  "y": 146.73,
+                  "name": "cl97bq0sc002i356efzd5bi91",
+                  "parentNode": "deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"inventoryNumber\": $state.context.REQUEST.fromInventory.number\n}",
+                "nextNodes": [],
+                "query": "query Query($inventoryNumber: String!) {\n  inventory(where: {number:{_eq:$inventoryNumber} active:{_eq:true}}) {\n    edges {\n      node {\n        id\n\t\t\t\tactive\n        number\n        transactionTypeId\n        location {\n          id\n          name\n          locationType {\n            id\n            name\n            inventory\n            qualityHold\n          }\n        }\n        inventoryStatus {\n          id\n          name\n          active\n          suspect\n        }\n        quantity {\n          value\n          unitId\n        }\n        weightUnit {\n          id\n          code\n        }\n        grossWeight\n        netWeight\n        tareWeight\n        inventoryStatus {\n          id\n          name\n          active\n          moveLock\n          mergeLock\n          splitLock\n        }\n        masterInventory {\n          id\n          number\n          masterInventoryStatus {\n            id\n            name\n            active\n            moveLock\n            mergeLock\n          }\n        }\n        supplier {\n          id\n          name\n          externalId\n          status\n        }\n        productStrategyProcess {\n          id\n          code          \n          unitWeight\n          productStrategy {\n            id\n            code\n            name\n            product {\n              id\n              code\n              name\n            }\n          }\n        }\n      }\n    }\n  }\n  productionSetupMaterial(where:{inventory:{number:{_eq:$inventoryNumber}}}) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  transactionType(where:{inventorySplit:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query Inventory Details",
+              "note": "Query Inventory, default transaction type, and production setup materials."
+            },
+            "22605136-99de-4c3a-8412-606a31e5f70c": {
+              "id": "22605136-99de-4c3a-8412-606a31e5f70c",
+              "type": "mutate",
+              "selected": false,
+              "x": -390,
+              "y": 630,
+              "ports": [
+                {
+                  "id": "cl97bq0sj0039356emr8efgl4",
+                  "type": "default",
+                  "x": -398,
+                  "y": 661.73,
+                  "name": "cl97bq0sj003a356et004kpcx",
+                  "parentNode": "22605136-99de-4c3a-8412-606a31e5f70c",
+                  "links": [
+                    "3e6f6767-768d-4dc8-a2da-07f91ca62ffc"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl97bq0sj003b356e93c1z79x",
+                  "type": "default",
+                  "x": -47.88,
+                  "y": 661.73,
+                  "name": "cl97bq0sj003c356e9v8i2ycc",
+                  "parentNode": "22605136-99de-4c3a-8412-606a31e5f70c",
+                  "links": [
+                    "ac8a8309-9a32-4566-bebf-d0b1e3f06763"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  /* Grab Information about the Request */\n  $numberOfContainers := $state.context.REQUEST.numberOfContainers;\n  $quantityPerContainer := $state.context.REQUEST.quantityPerContainer;\n  \n  /* Grab information about the inventory currently in the system */\n  $fromInventory := $state.context.QUERY.inventory.edges.node.id;\n  $originalContainerQuantity := $state.context.QUERY.inventory.edges.node.quantity.value;\n  $inventoryStatusId := $state.context.QUERY.inventory.edges.node.inventoryStatus.id;\n  $inventoryLocationId := $state.context.QUERY.inventory.edges.node.locationId;\n  $productStrategyProcess := $state.context.QUERY.inventory.edges.node.productStrategyProcessId;\n  $quantityUnitId := $state.context.QUERY.inventory.edges.node.quantity.unitId;\n  $weightUnitId := $state.context.QUERY.inventory.edges.node.weightUnit.id;\n  $quantityUnitId := $state.context.QUERY.inventory.edges.node.quantity.unitId;\n  $grossWeight := $coalesce([$state.context.QUERY.inventory.edges.node.grossWeight,0]);\n  $netWeight := $coalesce([$state.context.QUERY.inventory.edges.node.netWeight,0]);\n  $tareWeight := $coalesce([$state.context.QUERY.inventory.edges.node.tareWeight,0]);\n  \n  /* Grab information about the transaction type to use for new containers */\n  $newTransactionTypeId := $state.context.QUERY.transactionType.edges.node.id;\n  \n  /* Calculate the quantity being used per new container*/\n  $quantityConsumed := $numberOfContainers * $quantityPerContainer;\n  \n  /* Calculate the average weight of each unit on the existing container */\n  $weightPerUnit := $netWeight/$originalContainerQuantity;\n  \n  /* Calculate the original container's new values */\n  $originalContainerNewQuantity := ($originalContainerQuantity - $quantityConsumed);\n  $originalContainerNewNetWeight := $originalContainerNewQuantity * $weightPerUnit;\n  $originalContainerNewGrossWeight := $originalContainerNewNetWeight + $tareWeight;\n  $originalContainerNewActiveFlag := $originalContainerNewQuantity>0;\n  \n  /* Calculate new weights, assume the same tare weight and unit of measure */\n  $newContainerNetWeight := $quantityPerContainer * $weightPerUnit;\n  $newContainerTareWeight := $tareWeight;\n  $newContainerGrossWeight := $newContainerNetWeight + $newContainerTareWeight;\n  $newContainerWeightUnitId := $weightUnitId;\n  \n  {\n    \"createPayload\": [1..$numberOfContainers].{\n      \"create\": {\n        \"inventoryStatusId\": $inventoryStatusId,\n        \"locationId\": $inventoryLocationId,\n        \"productStrategyProcessId\": $productStrategyProcess,\n        \"inventoryTypeId\": $state.context.QUERY.inventory.edges.node.inventoryTypeId,\n        \"weightUnitId\": $weightUnitId,\n        \"netWeight\": $newContainerNetWeight,\n        \"tareWeight\": $newContainerTareWeight,\n        \"grossWeight\": $newContainerGrossWeight,\n        \"quantity\": {\n          \"value\": $quantityPerContainer,\n          \"unitId\": $quantityUnitId\n        }\n      }\n    },\n    \"updatePayload\": {\n      \"update\": {\n        \"active\": $originalContainerNewActiveFlag,\n        \"netWeight\": $originalContainerNewNetWeight,\n        \"grossWeight\": $originalContainerNewGrossWeight,\n        \"quantity\": {\n          \"value\": $originalContainerNewQuantity,\n          \"unitId\": $quantityUnitId\n        }\n      },\n      \"where\": {\n        \"id\": $fromInventory\n      }\n    }\n  }\n)",
+                "nextNodes": [
+                  "3487e3bd-496a-4436-94be-58e85912b661"
+                ],
+                "mutation": "mutation createUpdateInventory($createPayload:[InventoryCreatePayloadInput!]!,$updatePayload:[InventoryUpdatePayloadInput!]!){\n  createInventory(payload:$createPayload){\n    id\n    number\n    productStrategyProcessId\n    inventoryStatusId\n    locationId\n  }\n  updateInventory(payload:$updatePayload){\n    id\n    number\n    productStrategyProcessId\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Create New Split Inventory and Update Source Container",
+              "note": "Mutation to modify all inventory records in one round trip."
+            },
+            "fe95f5e0-7946-40cb-bf63-ea39139e948a": {
+              "id": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+              "type": "setContext",
+              "selected": false,
+              "x": -1325,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "cl97caozw00nh356eh4kcw6sx",
+                  "type": "default",
+                  "x": -1333,
+                  "y": 366.73,
+                  "name": "cl97caozx00ni356e27v3ct0m",
+                  "parentNode": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+                  "links": [
+                    "a0721793-4d8d-4418-be8e-03326a30ba01"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl97caozx00nj356elw2zsrr0",
+                  "type": "default",
+                  "x": -1179,
+                  "y": 366.73,
+                  "name": "cl97caozx00nk356eerysfrm4",
+                  "parentNode": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+                  "links": [
+                    "6c50d016-0678-47be-bc1d-db529a05fd47"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "7f330673-043e-42d9-9e57-86b8f63a1765"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save REQUEST",
+              "note": "Save the REQUEST to memory."
+            },
+            "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01": {
+              "id": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+              "type": "mutate",
+              "selected": false,
+              "x": 245,
+              "y": 630,
+              "ports": [
+                {
+                  "id": "cl97elcd403gl356e9kc1xlwt",
+                  "type": "default",
+                  "x": 237,
+                  "y": 661.73,
+                  "name": "cl97elcd403gm356e83gglrz2",
+                  "parentNode": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+                  "links": [
+                    "527ce278-3820-483b-882c-ec076fcaa478"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl97elcd403gn356ea963cyiv",
+                  "type": "default",
+                  "x": 437.31,
+                  "y": 661.73,
+                  "name": "cl97elcd403go356eqgb5rs0s",
+                  "parentNode": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+                  "links": [
+                    "8fc79c58-3a4e-4066-b2ad-3aebbaf4c4e9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  {\n    \"payload\": [\n      $.createInventory.{\n        \"create\": {\n          \"transactionTypeId\": $state.context.QUERY.transactionType.edges.node.id,\n          \"customData\": $state.context.CLAIMS ? $state.context.CLAIMS : $state.claims,\n          \"sourceQuantity\": {\n            \"value\": $state.context.REQUEST.quantityPerContainer,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"sourceLocationId\": locationId,\n          \"sourceInventoryId\": $state.context.QUERY.inventory.edges.node.id,\n          \"sourceInventoryStatusId\": inventoryStatusId,      \n          \"sourceProductStrategyProcessId\": productStrategyProcessId,\n\n          \"destinationQuantity\": {\n            \"value\": $state.context.REQUEST.quantityPerContainer,\n            \"unitId\": $state.context.QUERY.inventory.edges.node.quantity.unitId\n          },\n          \"destinationLocationId\": locationId,\n          \"destinationInventoryId\": id,\n          \"destinationInventoryStatusId\": inventoryStatusId,\n          \"destinationProductStrategyProcessId\": productStrategyProcessId\n        }\n      }\n    ]\n  }\n)",
+                "mutation": "mutation($payload: [InventoryTransactionCreatePayloadInput!]! ){\n  createInventoryTransaction(payload: $payload){\n    id\n    sourceInventoryId\n    destinationInventoryId\n  }\n}",
+                "nextNodes": [
+                  "433c9121-483a-493a-a171-2a7e4ca04323"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Create Inventory Transaction",
+              "note": "Create inventory transaction record(s) for traceability."
+            },
+            "d61c589e-bb38-411a-bec0-6cfef6f569df": {
+              "id": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+              "type": "validate",
+              "selected": false,
+              "x": -1520,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "cl9rl9tut00ad356etj5b2otg",
+                  "type": "default",
+                  "x": -1528,
+                  "y": 366.73,
+                  "name": "cl9rl9tut00ae356ecdkdwad9",
+                  "parentNode": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+                  "links": [
+                    "f4214602-402d-4ce5-b550-e48d71a7db4b",
+                    "e7b3c0d8-6aa1-42f1-ba5c-7d22c795eb0c",
+                    "4c2941dc-4a7a-4fb0-a577-a17d6eed6d8d",
+                    "b600f394-8a21-4450-984d-3834aacefc22",
+                    "ff8ac08c-e28a-4daa-99b1-5d5ecf837d85",
+                    "f15f663b-a2bd-4c32-a409-3fb3102228a9",
+                    "cd3e6c58-1cb2-452d-9871-52aae064b60d",
+                    "19dd6a70-68e9-4e16-b42c-d544b0b1c20d",
+                    "2ebfb469-2940-4426-8e43-63224802e23a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl9rl9tut00af356e23lubl3i",
+                  "type": "default",
+                  "x": -1374,
+                  "y": 366.73,
+                  "name": "cl9rl9tut00ag356ebfdd7o7p",
+                  "parentNode": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+                  "links": [
+                    "a0721793-4d8d-4418-be8e-03326a30ba01"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "REQUEST": {
+                      "type": "object",
+                      "properties": {
+                        "fromInventory": {
+                          "type": "object",
+                          "properties": {
+                            "number": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "number"
+                          ]
+                        },
+                        "numberOfContainers": {
+                          "type": "integer"
+                        },
+                        "quantityPerContainer": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "fromInventory",
+                        "numberOfContainers",
+                        "quantityPerContainer"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "REQUEST"
+                  ]
+                },
+                "nextNodes": [
+                  "fe95f5e0-7946-40cb-bf63-ea39139e948a"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Validate Request",
+              "note": "JSON Validation of the request object."
+            },
+            "fee248ea-a2f1-4155-91fa-ce2024960ef5": {
+              "id": "fee248ea-a2f1-4155-91fa-ce2024960ef5",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1815,
+              "y": 340,
+              "ports": [
+                {
+                  "id": "cl9rlb31c00bt356exb00t032",
+                  "type": "default",
+                  "x": -1579.42,
+                  "y": 371.73,
+                  "name": "cl9rlb31c00bu356efalcztos",
+                  "parentNode": "fee248ea-a2f1-4155-91fa-ce2024960ef5",
+                  "links": [
+                    "e7b3c0d8-6aa1-42f1-ba5c-7d22c795eb0c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {},
+                    "numberOfContainers": 2,
+                    "quantityPerContainer": 100,
+                    "printerDevice": {},
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Bad Request Missing From Inventory",
+              "note": "Sample request"
+            },
+            "9f3cf0da-bdea-4300-a634-5ee0fcbe3db0": {
+              "id": "9f3cf0da-bdea-4300-a634-5ee0fcbe3db0",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1725,
+              "y": 405,
+              "ports": [
+                {
+                  "id": "cl9rlboo500fb356erevysvw5",
+                  "type": "default",
+                  "x": -1579.02,
+                  "y": 436.73,
+                  "name": "cl9rlboo500fc356eu40lfk4b",
+                  "parentNode": "9f3cf0da-bdea-4300-a634-5ee0fcbe3db0",
+                  "links": [
+                    "4c2941dc-4a7a-4fb0-a577-a17d6eed6d8d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000544"
+                    },
+                    "numberOfContainers": 5,
+                    "quantityPerContainer": 100,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Missing Inventory",
+              "note": "Sample request"
+            },
+            "d96702f0-535f-473b-aac4-efb7cb398db9": {
+              "id": "d96702f0-535f-473b-aac4-efb7cb398db9",
+              "type": "throwError",
+              "selected": false,
+              "x": -385,
+              "y": 410,
+              "ports": [
+                {
+                  "id": "clacl1px200ra356efm2g3ozd",
+                  "type": "default",
+                  "x": -393,
+                  "y": 441.73,
+                  "name": "clacl1px200rb356em8o5iz9b",
+                  "parentNode": "d96702f0-535f-473b-aac4-efb7cb398db9",
+                  "links": [
+                    "76be6f5d-39d3-4b06-b845-04169cc00f80"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is loaded to workcenter (\" & $.productionSetupMaterial.edges.node.productionSetup.workcenter.name & \") and cannot be split.  Please unload it first.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Loaded to Workcenter",
+              "note": "Inventory cannot be loaded in a work center."
+            },
+            "5f88f024-b3e8-4257-a61c-b594435e0af0": {
+              "id": "5f88f024-b3e8-4257-a61c-b594435e0af0",
+              "type": "throwError",
+              "selected": false,
+              "x": -385,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "clacl232g00rg356eqy040se1",
+                  "type": "default",
+                  "x": -393,
+                  "y": 366.73,
+                  "name": "clacl232g00rh356e5nze1ehz",
+                  "parentNode": "5f88f024-b3e8-4257-a61c-b594435e0af0",
+                  "links": [
+                    "c2a1f5a0-ba27-4519-87e5-0d660b7fe323"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $state.context.REQUEST.fromInventory.number & \") was not found or is it not active.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Inventory not found",
+              "note": "Inventory must exist in Fuuz and be active."
+            },
+            "0e73184f-8f30-47de-8851-d1ce915d6065": {
+              "id": "0e73184f-8f30-47de-8851-d1ce915d6065",
+              "type": "switch",
+              "selected": false,
+              "x": -715,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "clcj9agd8008y306dl7884ty5",
+                  "type": "default",
+                  "x": -723,
+                  "y": 366.73,
+                  "name": "clcj9agd8008z306dlgkiiqmx",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "f36bf2bd-4776-48e5-a867-319791a65120"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcj9fx6d00ba306d4tzvywpo",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 391.89,
+                  "name": "clcj9fx6d00bb306d5pa3kd5h",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "c2a1f5a0-ba27-4519-87e5-0d660b7fe323"
+                  ],
+                  "in": false,
+                  "groupName": "Inventory Not Found",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcj9ha8s00dj306ddulojk57",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 417.05,
+                  "name": "clcj9ha8s00dk306dgalciz1u",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "76be6f5d-39d3-4b06-b845-04169cc00f80"
+                  ],
+                  "in": false,
+                  "groupName": "Inventory Loaded",
+                  "groupIndex": 2,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcj9jyqb00hn306diz176wvo",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 467.36,
+                  "name": "clcj9jyqb00ho306db9os0rox",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "c977d895-894f-4eeb-a278-9966976f6409"
+                  ],
+                  "in": false,
+                  "groupName": "Not Enough Source",
+                  "groupIndex": 4,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcj9nfxy00kj306dunfshmej",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 442.2,
+                  "name": "clcj9nfxy00kk306dbrl1fm73",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "fc8ff727-3d4a-4b48-b706-ed7be462882d"
+                  ],
+                  "in": false,
+                  "groupName": "Status Does Not Allow Split",
+                  "groupIndex": 3,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcja8kxt013v306d8zk0bhy3",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 492.52,
+                  "name": "clcja8kxt013w306d10zw98zl",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "3e6f6767-768d-4dc8-a2da-07f91ca62ffc"
+                  ],
+                  "in": false,
+                  "groupName": "Passed",
+                  "groupIndex": 5,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clcjcmmhr02dy306d898mcqem",
+                  "type": "default",
+                  "x": -485.87,
+                  "y": 366.73,
+                  "name": "clcjcmmhr02dz306d4w8p44cc",
+                  "parentNode": "0e73184f-8f30-47de-8851-d1ce915d6065",
+                  "links": [
+                    "0a1e10b6-5690-45e9-9f09-e4914f12c149"
+                  ],
+                  "in": false,
+                  "groupName": "Zero Quantity",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Zero Quantity",
+                    "transform": "$state.context.REQUEST.quantityPerContainer <= 0",
+                    "nextNodes": [
+                      "bba85a97-cf5b-4701-92ba-60c6b15a8208"
+                    ]
+                  },
+                  {
+                    "name": "Inventory Not Found",
+                    "nextNodes": [
+                      "5f88f024-b3e8-4257-a61c-b594435e0af0"
+                    ],
+                    "transform": "$count($.inventory.edges.node)=0"
+                  },
+                  {
+                    "name": "Inventory Loaded",
+                    "transform": "$count($.productionSetupMaterial.edges.node)>0",
+                    "nextNodes": [
+                      "d96702f0-535f-473b-aac4-efb7cb398db9"
+                    ]
+                  },
+                  {
+                    "name": "Status Does Not Allow Split",
+                    "nextNodes": [
+                      "d87d3dd7-bc26-42cc-9782-f5e33aee517b"
+                    ],
+                    "transform": "$.inventory.edges.node.inventoryStatus.splitLock"
+                  },
+                  {
+                    "name": "Not Enough Source",
+                    "transform": "$.inventory.edges.node.quantity.value<($state.context.REQUEST.numberOfContainers*$state.context.REQUEST.quantityPerContainer)",
+                    "nextNodes": [
+                      "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe"
+                    ]
+                  },
+                  {
+                    "name": "Passed",
+                    "transform": "true",
+                    "nextNodes": [
+                      "22605136-99de-4c3a-8412-606a31e5f70c"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Validate Request",
+              "note": "Validate all conditions in a single spot."
+            },
+            "a82f6269-00e5-4d27-bf8c-6796f74760dc": {
+              "id": "a82f6269-00e5-4d27-bf8c-6796f74760dc",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1785,
+              "y": 480,
+              "ports": [
+                {
+                  "id": "clcj9ia8l00fp306ds8i2yy0d",
+                  "type": "default",
+                  "x": -1575.83,
+                  "y": 511.73,
+                  "name": "clcj9ia8m00fq306dmtk5lpx6",
+                  "parentNode": "a82f6269-00e5-4d27-bf8c-6796f74760dc",
+                  "links": [
+                    "b600f394-8a21-4450-984d-3834aacefc22"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "TEST1228_SHT00001"
+                    },
+                    "numberOfContainers": 5,
+                    "quantityPerContainer": 100,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Inventory Loaded to Workcenter",
+              "note": "Sample request"
+            },
+            "fdf11b7b-4930-4423-9ce0-31c4a91de2f7": {
+              "id": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+              "type": "mergeContext",
+              "selected": false,
+              "x": -920,
+              "y": 335,
+              "ports": [
+                {
+                  "id": "clcj9jk4d00h0306d2qka5jhr",
+                  "type": "default",
+                  "x": -928,
+                  "y": 366.73,
+                  "name": "clcj9jk4d00h1306dd2o89siz",
+                  "parentNode": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+                  "links": [
+                    "9e58852b-b218-4b15-97c3-844751757fbd"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcj9jk4d00h2306dca6429fe",
+                  "type": "default",
+                  "x": -774,
+                  "y": 366.73,
+                  "name": "clcj9jk4d00h3306df7hx7lui",
+                  "parentNode": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+                  "links": [
+                    "f36bf2bd-4776-48e5-a867-319791a65120"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"QUERY\": $\n}",
+                "nextNodes": [
+                  "0e73184f-8f30-47de-8851-d1ce915d6065"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save QUERY",
+              "note": "Save the QUERY results to memory."
+            },
+            "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe": {
+              "id": "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+              "type": "throwError",
+              "selected": false,
+              "x": -385,
+              "y": 560,
+              "ports": [
+                {
+                  "id": "clcj9k83700hv306dytjwac4s",
+                  "type": "default",
+                  "x": -393,
+                  "y": 591.73,
+                  "name": "clcj9k83700hw306dxuaw9lwq",
+                  "parentNode": "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+                  "links": [
+                    "c977d895-894f-4eeb-a278-9966976f6409"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") has a quantity of (\" & $.inventory.edges.node.quantity.value & \" \" & $.inventory.edges.node.quantity.unitId & \") and cannot be split into (\" & $state.context.REQUEST.numberOfContainers & \") containers of (\" & $state.context.REQUEST.quantityPerContainer & \").\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Not Enough Source",
+              "note": "The math of the request exceeds the remaining inventory."
+            },
+            "d87d3dd7-bc26-42cc-9782-f5e33aee517b": {
+              "id": "d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+              "type": "throwError",
+              "selected": false,
+              "x": -385,
+              "y": 485,
+              "ports": [
+                {
+                  "id": "clcj9k83b00i1306dlk2skqc7",
+                  "type": "default",
+                  "x": -393,
+                  "y": 516.73,
+                  "name": "clcj9k83b00i2306def44j8dj",
+                  "parentNode": "d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+                  "links": [
+                    "fc8ff727-3d4a-4b48-b706-ed7be462882d"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"Inventory (\" & $.inventory.edges.node.number & \") is in a restricted status (\" & $.inventory.edges.node.inventoryStatus.name & \") and cannot be split.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Status Does Not Allow Split",
+              "note": "Some Inventory status values have splitLock preventing splits."
+            },
+            "12589c21-baa0-4459-a8a0-9cbfe357bff2": {
+              "id": "12589c21-baa0-4459-a8a0-9cbfe357bff2",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1715,
+              "y": 550,
+              "ports": [
+                {
+                  "id": "clcj9w9th00ob306dkzf1sj84",
+                  "type": "default",
+                  "x": -1569.02,
+                  "y": 581.73,
+                  "name": "clcj9w9th00oc306d0vtc7x69",
+                  "parentNode": "12589c21-baa0-4459-a8a0-9cbfe357bff2",
+                  "links": [
+                    "ff8ac08c-e28a-4daa-99b1-5d5ecf837d85"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000961"
+                    },
+                    "numberOfContainers": 5,
+                    "quantityPerContainer": 100,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Split too large",
+              "note": "Sample request"
+            },
+            "ae0fa9e9-c4fa-4834-a282-39176f459cb6": {
+              "id": "ae0fa9e9-c4fa-4834-a282-39176f459cb6",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1715,
+              "y": 620,
+              "ports": [
+                {
+                  "id": "clcja93yq0156306dnejvi7pg",
+                  "type": "default",
+                  "x": -1569.02,
+                  "y": 651.73,
+                  "name": "clcja93yq0157306dylkg8pko",
+                  "parentNode": "ae0fa9e9-c4fa-4834-a282-39176f459cb6",
+                  "links": [
+                    "f15f663b-a2bd-4c32-a409-3fb3102228a9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000961"
+                    },
+                    "numberOfContainers": 2,
+                    "quantityPerContainer": 25,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Split should work",
+              "note": "Sample request"
+            },
+            "e8140408-e337-4342-b19b-57c8f0da9df2": {
+              "id": "e8140408-e337-4342-b19b-57c8f0da9df2",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1725,
+              "y": 690,
+              "ports": [
+                {
+                  "id": "clcjcd8kw029u306dwthks6et",
+                  "type": "default",
+                  "x": -1568.42,
+                  "y": 721.73,
+                  "name": "clcjcd8kw029v306dq9z9j0dz",
+                  "parentNode": "e8140408-e337-4342-b19b-57c8f0da9df2",
+                  "links": [
+                    "cd3e6c58-1cb2-452d-9871-52aae064b60d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000962"
+                    },
+                    "numberOfContainers": 2,
+                    "quantityPerContainer": 0,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Splits with no quantity",
+              "note": "Sample request"
+            },
+            "bba85a97-cf5b-4701-92ba-60c6b15a8208": {
+              "id": "bba85a97-cf5b-4701-92ba-60c6b15a8208",
+              "type": "throwError",
+              "selected": false,
+              "x": -385,
+              "y": 265,
+              "ports": [
+                {
+                  "id": "clcjco0gy02f2306dr3nu9n99",
+                  "type": "default",
+                  "x": -393,
+                  "y": 296.73,
+                  "name": "clcjco0gy02f3306dsszesb9a",
+                  "parentNode": "bba85a97-cf5b-4701-92ba-60c6b15a8208",
+                  "links": [
+                    "0a1e10b6-5690-45e9-9f09-e4914f12c149"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$state.context",
+                "messageTransform": "\"The request is impossible inventory cannot be split <= Zero.\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Zero Quantity",
+              "note": "Users cannot split into containers of 0 quantity."
+            },
+            "3487e3bd-496a-4436-94be-58e85912b661": {
+              "id": "3487e3bd-496a-4436-94be-58e85912b661",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 25,
+              "y": 630,
+              "ports": [
+                {
+                  "id": "clcjcrl7q0085306dldpo2nhp",
+                  "type": "default",
+                  "x": 17,
+                  "y": 661.73,
+                  "name": "clcjcrl7q0086306dn0e4wiac",
+                  "parentNode": "3487e3bd-496a-4436-94be-58e85912b661",
+                  "links": [
+                    "ac8a8309-9a32-4566-bebf-d0b1e3f06763"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcjcrl7q0087306dfe05lq6o",
+                  "type": "default",
+                  "x": 171,
+                  "y": 661.73,
+                  "name": "clcjcrl7q0088306dkzw92igq",
+                  "parentNode": "3487e3bd-496a-4436-94be-58e85912b661",
+                  "links": [
+                    "527ce278-3820-483b-882c-ec076fcaa478"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01"
+                ],
+                "transform": "{\n  \"INVENTORY\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save INVENTORY",
+              "note": "Save the results of INVENTORY mutations to memory."
+            },
+            "433c9121-483a-493a-a171-2a7e4ca04323": {
+              "id": "433c9121-483a-493a-a171-2a7e4ca04323",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 490,
+              "y": 630,
+              "ports": [
+                {
+                  "id": "clcjcuvxi00bh306dds2bsx5m",
+                  "type": "default",
+                  "x": 482,
+                  "y": 661.73,
+                  "name": "clcjcuvxi00bi306df1zy0v75",
+                  "parentNode": "433c9121-483a-493a-a171-2a7e4ca04323",
+                  "links": [
+                    "8fc79c58-3a4e-4066-b2ad-3aebbaf4c4e9"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clcjcuvxi00bj306dg46n423v",
+                  "type": "default",
+                  "x": 644.38,
+                  "y": 661.73,
+                  "name": "clcjcuvxi00bk306d8aorbmb8",
+                  "parentNode": "433c9121-483a-493a-a171-2a7e4ca04323",
+                  "links": [
+                    "e1f6b6c3-f1a3-46c5-88cc-141eb4ab3974"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad"
+                ],
+                "transform": "{\n  \"TRANSACTIONS\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Save TRANSACTIONS",
+              "note": "Save the transaction results to memory."
+            },
+            "34c690ed-24b8-46a8-a390-e891ffd92640": {
+              "id": "34c690ed-24b8-46a8-a390-e891ffd92640",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1715,
+              "y": 760,
+              "ports": [
+                {
+                  "id": "clcjcw9ds00e9306d7kjz223n",
+                  "type": "default",
+                  "x": -1569.02,
+                  "y": 791.73,
+                  "name": "clcjcw9ds00ea306dw9n3agxf",
+                  "parentNode": "34c690ed-24b8-46a8-a390-e891ffd92640",
+                  "links": [
+                    "19dd6a70-68e9-4e16-b42c-d544b0b1c20d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000962"
+                    },
+                    "numberOfContainers": 3,
+                    "quantityPerContainer": 1,
+                    "printLabels": false,
+                    "reprintSource": false,
+                    "toLogisticalUnit": ""
+                  }
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Split should work",
+              "note": "Sample request"
+            },
+            "7f330673-043e-42d9-9e57-86b8f63a1765": {
+              "id": "7f330673-043e-42d9-9e57-86b8f63a1765",
+              "type": "query",
+              "selected": false,
+              "x": -1120,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "clgfan0bb004z356kb451u7od",
+                  "type": "default",
+                  "x": -1128,
+                  "y": 381.73,
+                  "name": "clgfan0bc0050356k7b0mqnxp",
+                  "parentNode": "7f330673-043e-42d9-9e57-86b8f63a1765",
+                  "links": [
+                    "6c50d016-0678-47be-bc1d-db529a05fd47"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clgfan0bc0051356kyznxd70v",
+                  "type": "default",
+                  "x": -974,
+                  "y": 381.73,
+                  "name": "clgfan0bc0052356ka77ppl5w",
+                  "parentNode": "7f330673-043e-42d9-9e57-86b8f63a1765",
+                  "links": [
+                    "9e58852b-b218-4b15-97c3-844751757fbd"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"whereI\": {\n    \"number\": {\n      \"_eq\": $state.context.REQUEST.fromInventory.number\n    }\n  },\n  \"wherePSM\": {\n    \"inventory\": {\n      \"number\": {\n        \"_eq\":  $state.context.REQUEST.fromInventory.number\n      }\n    }\n  }\n}",
+                "query": "query Query($whereI: InventoryWhereInput, $wherePSM: ProductionSetupMaterialWhereInput) {\n  inventory(where: $whereI) {\n    edges {\n      node {\n        id\n        quantity {\n      value\n      unitId\n    }\n        grossWeight\n        \n        netWeight\n        tareWeight\n        theoreticalWeight\n        inventoryTypeId\n        active\n        barcode\n        note\n        trackingNumber\n        customData\n        inventoryStatus {\n          id\n          active\n          defective\n          loaded\n          materialLoadAllow\n          mergeLock\n          moveLock\n          name\n          productionHold\n          received\n          scrap\n          shipHold\n          shippable\n          shipped\n          splitLock\n          staged\n          suspect\n          usable\n          color\n          externalId\n          receivable\n        }\n        locationId\n        productStrategyProcessId\n        lotId\n        masterInventoryId\n        packagingMaterialId\n        \n        supplierId\n        weightUnitId\n        workOrderId\n        workOrderProcessId\n        locationId\n      }\n    }\n},\n   productionSetupMaterial(where:$wherePSM) {\n    edges {\n      node {\n        id\n        number\n        productionSetup {\n          id\n          workcenter {\n            name\n          }\n        }\n      }\n    }\n  }\n  transactionType(where:{inventorySplit:{_eq:true}} first:1) {\n    edges {\n      node {\n        id\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "fdf11b7b-4930-4423-9ce0-31c4a91de2f7"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Inventory"
+            },
+            "bf3f80f7-0138-481c-9f85-ad6ca9469742": {
+              "id": "bf3f80f7-0138-481c-9f85-ad6ca9469742",
+              "type": "debugSource",
+              "selected": false,
+              "x": -1725,
+              "y": 205,
+              "ports": [
+                {
+                  "id": "clgfb2g0n00h6356k3scgujs7",
+                  "type": "default",
+                  "x": -1579.01,
+                  "y": 236.73,
+                  "name": "clgfb2g0n00h7356kyxqdm4kz",
+                  "parentNode": "bf3f80f7-0138-481c-9f85-ad6ca9469742",
+                  "links": [
+                    "2ebfb469-2940-4426-8e43-63224802e23a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "fromInventory": {
+                      "number": "VCF00000962"
+                    },
+                    "numberOfContainers": 2,
+                    "quantityPerContainer": 1,
+                    "print": {
+                      "from": false,
+                      "to": false,
+                      "silent": false,
+                      "deviceId": ""
+                    }
+                  },
+                  "CLAIMS": {
+                    "userId": "Dsdsfdxzvdasfcvdsa"
+                  },
+                  "ACTION": "SPLIT"
+                },
+                "context": {},
+                "nextNodes": [
+                  "d61c589e-bb38-411a-bec0-6cfef6f569df"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Split Container in Fuuz",
+      "type": "System",
+      "version": "0.0.37",
+      "walkthrough": {
+        "steps": [
+          {
+            "id": "ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+            "target": "#mfgx-node-ea5ce55a-9b22-43aa-a36a-b7ffbd228a0a",
+            "title": "Request",
+            "subtitle": "Request",
+            "content": "Request from screen or flow."
+          },
+          {
+            "id": "fee248ea-a2f1-4155-91fa-ce2024960ef5",
+            "target": "#mfgx-node-fee248ea-a2f1-4155-91fa-ce2024960ef5",
+            "title": "Bad Request Missing From Inventory",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "9f3cf0da-bdea-4300-a634-5ee0fcbe3db0",
+            "target": "#mfgx-node-9f3cf0da-bdea-4300-a634-5ee0fcbe3db0",
+            "title": "Missing Inventory",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "a82f6269-00e5-4d27-bf8c-6796f74760dc",
+            "target": "#mfgx-node-a82f6269-00e5-4d27-bf8c-6796f74760dc",
+            "title": "Inventory Loaded to Workcenter",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "12589c21-baa0-4459-a8a0-9cbfe357bff2",
+            "target": "#mfgx-node-12589c21-baa0-4459-a8a0-9cbfe357bff2",
+            "title": "Split too large",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "ae0fa9e9-c4fa-4834-a282-39176f459cb6",
+            "target": "#mfgx-node-ae0fa9e9-c4fa-4834-a282-39176f459cb6",
+            "title": "Split should work",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "e8140408-e337-4342-b19b-57c8f0da9df2",
+            "target": "#mfgx-node-e8140408-e337-4342-b19b-57c8f0da9df2",
+            "title": "Splits with no quantity",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "34c690ed-24b8-46a8-a390-e891ffd92640",
+            "target": "#mfgx-node-34c690ed-24b8-46a8-a390-e891ffd92640",
+            "title": "Split should work",
+            "subtitle": "Source",
+            "content": "Sample request"
+          },
+          {
+            "id": "d61c589e-bb38-411a-bec0-6cfef6f569df",
+            "target": "#mfgx-node-d61c589e-bb38-411a-bec0-6cfef6f569df",
+            "title": "Validate Request",
+            "subtitle": "Validate",
+            "content": "JSON Validation of the request object."
+          },
+          {
+            "id": "fe95f5e0-7946-40cb-bf63-ea39139e948a",
+            "target": "#mfgx-node-fe95f5e0-7946-40cb-bf63-ea39139e948a",
+            "title": "Save REQUEST",
+            "subtitle": "Set Context",
+            "content": "Save the REQUEST to memory."
+          },
+          {
+            "id": "deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+            "target": "#mfgx-node-deb5a3db-94ef-4eeb-ba5b-641e5895174e",
+            "title": "Query Inventory Details",
+            "subtitle": "Query",
+            "content": "Query Inventory, default transaction type, and production setup materials."
+          },
+          {
+            "id": "fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+            "target": "#mfgx-node-fdf11b7b-4930-4423-9ce0-31c4a91de2f7",
+            "title": "Save QUERY",
+            "subtitle": "Merge Context",
+            "content": "Save the QUERY results to memory."
+          },
+          {
+            "id": "0e73184f-8f30-47de-8851-d1ce915d6065",
+            "target": "#mfgx-node-0e73184f-8f30-47de-8851-d1ce915d6065",
+            "title": "Validate Request",
+            "subtitle": "Route",
+            "content": "Validate all conditions in a single spot."
+          },
+          {
+            "id": "bba85a97-cf5b-4701-92ba-60c6b15a8208",
+            "target": "#mfgx-node-bba85a97-cf5b-4701-92ba-60c6b15a8208",
+            "title": "Zero Quantity",
+            "subtitle": "Throw Error",
+            "content": "Users cannot split into containers of 0 quantity."
+          },
+          {
+            "id": "5f88f024-b3e8-4257-a61c-b594435e0af0",
+            "target": "#mfgx-node-5f88f024-b3e8-4257-a61c-b594435e0af0",
+            "title": "Inventory not found",
+            "subtitle": "Throw Error",
+            "content": "Inventory must exist in Fuuz and be active."
+          },
+          {
+            "id": "d96702f0-535f-473b-aac4-efb7cb398db9",
+            "target": "#mfgx-node-d96702f0-535f-473b-aac4-efb7cb398db9",
+            "title": "Loaded to Workcenter",
+            "subtitle": "Throw Error",
+            "content": "Inventory cannot be loaded in a work center."
+          },
+          {
+            "id": "d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+            "target": "#mfgx-node-d87d3dd7-bc26-42cc-9782-f5e33aee517b",
+            "title": "Status Does Not Allow Split",
+            "subtitle": "Throw Error",
+            "content": "Some Inventory status values have splitLock preventing splits."
+          },
+          {
+            "id": "cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+            "target": "#mfgx-node-cb0d52c8-19ca-4c3b-ae22-e6eb0aa0d5fe",
+            "title": "Not Enough Source",
+            "subtitle": "Throw Error",
+            "content": "The math of the request exceeds the remaining inventory."
+          },
+          {
+            "id": "22605136-99de-4c3a-8412-606a31e5f70c",
+            "target": "#mfgx-node-22605136-99de-4c3a-8412-606a31e5f70c",
+            "title": "Create New Split Inventory and Update Source Container",
+            "subtitle": "Mutate",
+            "content": "Mutation to modify all inventory records in one round trip."
+          },
+          {
+            "id": "3487e3bd-496a-4436-94be-58e85912b661",
+            "target": "#mfgx-node-3487e3bd-496a-4436-94be-58e85912b661",
+            "title": "Save INVENTORY",
+            "subtitle": "Merge Context",
+            "content": "Save the results of INVENTORY mutations to memory."
+          },
+          {
+            "id": "bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+            "target": "#mfgx-node-bedf4dfa-649b-4cdc-8a73-9ff4a72e3e01",
+            "title": "Create Inventory Transaction",
+            "subtitle": "Mutate",
+            "content": "Create inventory transaction record(s) for traceability."
+          },
+          {
+            "id": "433c9121-483a-493a-a171-2a7e4ca04323",
+            "target": "#mfgx-node-433c9121-483a-493a-a171-2a7e4ca04323",
+            "title": "Save TRANSACTIONS",
+            "subtitle": "Merge Context",
+            "content": "Save the transaction results to memory."
+          },
+          {
+            "id": "29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+            "target": "#mfgx-node-29e7cb85-e991-4c5e-9aca-cd3cf855a4ad",
+            "title": "Response",
+            "subtitle": "Response",
+            "content": "Respond to the process that requested a split."
+          }
+        ],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

@@ -1,0 +1,507 @@
+{
+  "header": {
+    "id": "backFillEndDatesOfWorkcenterHistory",
+    "name": "Back Fill End Dates of Workcenter History",
+    "description": "Scheduled flow to back fill workcenter history end dates and duration",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "workcenters"
+  },
+  "version": {
+    "id": "cm6tpdhap00ml0775adqm7ab6",
+    "number": "0.0.2",
+    "description": "",
+    "dataFlowId": "backFillEndDatesOfWorkcenterHistory",
+    "flow": {
+      "id": "cm6tpdhap00ml0775adqm7ab6",
+      "name": "Back Fill End Dates of Workcenter History",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "a3c57a14-54da-4c34-8254-89266111d7b0",
+          "name": "Get History without end dates",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{}",
+            "query": "{\n  workcenterHistory(\n    where:{\n      endAt:{_isNull: true}\n    }\n  ) {\n    edges {\n      node {\n        id\n        workcenterId\n        occurAt\n      }\n    }\n  }\n}",
+            "nextNodes": [
+              "4c85b26b-e965-47ac-bf12-4a7125057f70"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+          "name": "Calculate End Dates",
+          "type": "transform",
+          "data": {
+            "transform": "$groupBy([workcenterHistory.edges.node[$isNil(occurAt)~>$not]^(occurAt)], $path(?, \"workcenterId\"))\n~>$mapValues(function($j){\n  $count($j) > 1?(\n    $map($j, function($v, $i, $arr){(\n \n    $arr[$i +1]?(\n     $start := $moment($v.occurAt);\n     $end := $moment($arr[$i +1].occurAt);\n\n     {\n        \"where\":{ \"id\": $v.id},\n        \"update\":{\n          \"endAt\": $end.format(),\n          \"duration\": $end.diff($start, \"seconds\")\n        }\n      }\n    )\n    )})\n  )\n})\n~>$values\n~>$filter($isNil~>$not)\n~>$flatten()\n\n\n",
+            "nextNodes": [
+              "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8",
+          "name": "Update End Dates",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": $\n}",
+            "mutation": "mutation ($payload: [WorkcenterHistoryUpdatePayloadInput!]!){\n  updateWorkcenterHistory(payload:$payload){ id }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": true,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "ec11e8bd-86c6-45bd-8d1d-af0cb19161b6",
+          "name": "Schedule",
+          "type": "schedule",
+          "data": {
+            "configure": "Open Schedule Editor",
+            "nextNodes": [
+              "a3c57a14-54da-4c34-8254-89266111d7b0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.1"
+    },
+    "diagram": {
+      "id": "cm6tpdhap00ml0775adqm7ab6",
+      "offsetX": -231,
+      "offsetY": 4,
+      "zoom": 100,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "a7e6dc74-eb7a-4466-97a4-51b2360c8895",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "fb77a710-b9e9-48aa-8e5e-1279ab8e6c42": {
+              "points": [
+                {
+                  "id": "0cfa123c-e34c-4d69-827c-da5f3d4acbce",
+                  "type": "point",
+                  "x": 408.98,
+                  "y": 378.56
+                },
+                {
+                  "id": "030ffd61-3728-4fbc-b895-9f17a490d9fa",
+                  "type": "point",
+                  "x": 445,
+                  "y": 378.56
+                }
+              ],
+              "id": "fb77a710-b9e9-48aa-8e5e-1279ab8e6c42",
+              "type": "default",
+              "source": "1fed004f-9816-41a7-a3ff-271e16c380c5",
+              "sourcePort": "cm5mxncjr002h3j6jdies61gw",
+              "target": "a3c57a14-54da-4c34-8254-89266111d7b0",
+              "targetPort": "cm5mxncjs002r3j6jts3m7v9w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "47fae512-23f9-478f-a8b3-6a5ab09fbef5": {
+              "points": [
+                {
+                  "id": "ce634892-6e0a-42b8-81db-4618f655909b",
+                  "type": "point",
+                  "x": 650.56,
+                  "y": 378.56
+                },
+                {
+                  "id": "4471f66c-c0e1-4ea6-b9dc-10d37feea96f",
+                  "type": "point",
+                  "x": 690,
+                  "y": 378.56
+                }
+              ],
+              "id": "47fae512-23f9-478f-a8b3-6a5ab09fbef5",
+              "type": "default",
+              "source": "a3c57a14-54da-4c34-8254-89266111d7b0",
+              "sourcePort": "cm5mxncjs002t3j6j04is3mjc",
+              "target": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+              "targetPort": "cm5mxncjs00333j6jcjv73dgw",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a451ed13-a47e-43fd-a30a-170cef1b93c9": {
+              "points": [
+                {
+                  "id": "95c5e749-34fa-4824-b8dc-7af3d180f034",
+                  "type": "point",
+                  "x": 844,
+                  "y": 378.56
+                },
+                {
+                  "id": "8a7d270a-b33f-4998-900a-03bde9bc864e",
+                  "type": "point",
+                  "x": 900,
+                  "y": 378.56
+                }
+              ],
+              "id": "a451ed13-a47e-43fd-a30a-170cef1b93c9",
+              "type": "default",
+              "source": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+              "sourcePort": "cm5mxncjs00353j6jcllcvru9",
+              "target": "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8",
+              "targetPort": "cm5mxncjt003f3j6j117wjks9",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "714bb908-ab43-442d-abfe-5db2152af7a1": {
+              "points": [
+                {
+                  "id": "bfab99a0-f237-4af8-8498-46db81a2ecec",
+                  "type": "point",
+                  "x": 409,
+                  "y": 313.56
+                },
+                {
+                  "id": "441c497e-a72a-4c7c-9391-5cd6aafbb1da",
+                  "type": "point",
+                  "x": 445,
+                  "y": 378.56
+                }
+              ],
+              "id": "714bb908-ab43-442d-abfe-5db2152af7a1",
+              "type": "default",
+              "source": "ec11e8bd-86c6-45bd-8d1d-af0cb19161b6",
+              "sourcePort": "cm5mxncju003n3j6jfp5ld5ig",
+              "target": "a3c57a14-54da-4c34-8254-89266111d7b0",
+              "targetPort": "cm5mxncjs002r3j6jts3m7v9w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "f05f51b3-58c6-4503-b410-f1e683aff2c1",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "1fed004f-9816-41a7-a3ff-271e16c380c5": {
+              "id": "1fed004f-9816-41a7-a3ff-271e16c380c5",
+              "type": "debugSource",
+              "selected": false,
+              "x": 255,
+              "y": 338.84,
+              "ports": [
+                {
+                  "id": "cm5mxncjr002h3j6jdies61gw",
+                  "type": "default",
+                  "x": 400.98,
+                  "y": 370.56,
+                  "name": "cm5mxncjr002i3j6j15hpzsua",
+                  "parentNode": "1fed004f-9816-41a7-a3ff-271e16c380c5",
+                  "links": [
+                    "fb77a710-b9e9-48aa-8e5e-1279ab8e6c42"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {},
+                "context": {},
+                "nextNodes": [
+                  "a3c57a14-54da-4c34-8254-89266111d7b0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "a3c57a14-54da-4c34-8254-89266111d7b0": {
+              "id": "a3c57a14-54da-4c34-8254-89266111d7b0",
+              "type": "query",
+              "selected": false,
+              "x": 445,
+              "y": 338.84,
+              "ports": [
+                {
+                  "id": "cm5mxncjs002r3j6jts3m7v9w",
+                  "type": "default",
+                  "x": 437,
+                  "y": 370.56,
+                  "name": "cm5mxncjs002s3j6j0gws26rh",
+                  "parentNode": "a3c57a14-54da-4c34-8254-89266111d7b0",
+                  "links": [
+                    "fb77a710-b9e9-48aa-8e5e-1279ab8e6c42",
+                    "714bb908-ab43-442d-abfe-5db2152af7a1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm5mxncjs002t3j6j04is3mjc",
+                  "type": "default",
+                  "x": 642.56,
+                  "y": 370.56,
+                  "name": "cm5mxncjs002u3j6jyh93lamp",
+                  "parentNode": "a3c57a14-54da-4c34-8254-89266111d7b0",
+                  "links": [
+                    "47fae512-23f9-478f-a8b3-6a5ab09fbef5"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{}",
+                "query": "{\n  workcenterHistory(\n    where:{\n      endAt:{_isNull: true}\n    }\n  ) {\n    edges {\n      node {\n        id\n        workcenterId\n        occurAt\n      }\n    }\n  }\n}",
+                "nextNodes": [
+                  "4c85b26b-e965-47ac-bf12-4a7125057f70"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Get History without end dates"
+            },
+            "4c85b26b-e965-47ac-bf12-4a7125057f70": {
+              "id": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+              "type": "transform",
+              "selected": true,
+              "x": 690,
+              "y": 338.84,
+              "ports": [
+                {
+                  "id": "cm5mxncjs00333j6jcjv73dgw",
+                  "type": "default",
+                  "x": 682,
+                  "y": 370.56,
+                  "name": "cm5mxncjs00343j6jq867mqy1",
+                  "parentNode": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+                  "links": [
+                    "47fae512-23f9-478f-a8b3-6a5ab09fbef5"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm5mxncjs00353j6jcllcvru9",
+                  "type": "default",
+                  "x": 836,
+                  "y": 370.56,
+                  "name": "cm5mxncjs00363j6jr7yuk04i",
+                  "parentNode": "4c85b26b-e965-47ac-bf12-4a7125057f70",
+                  "links": [
+                    "a451ed13-a47e-43fd-a30a-170cef1b93c9"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$groupBy([workcenterHistory.edges.node[$isNil(occurAt)~>$not]^(occurAt)], $path(?, \"workcenterId\"))\n~>$mapValues(function($j){\n  $count($j) > 1?(\n    $map($j, function($v, $i, $arr){(\n \n    $arr[$i +1]?(\n     $start := $moment($v.occurAt);\n     $end := $moment($arr[$i +1].occurAt);\n\n     {\n        \"where\":{ \"id\": $v.id},\n        \"update\":{\n          \"endAt\": $end.format(),\n          \"duration\": $end.diff($start, \"seconds\")\n        }\n      }\n    )\n    )})\n  )\n})\n~>$values\n~>$filter($isNil~>$not)\n~>$flatten()\n\n\n",
+                "nextNodes": [
+                  "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Calculate End Dates"
+            },
+            "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8": {
+              "id": "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8",
+              "type": "mutate",
+              "selected": false,
+              "x": 900,
+              "y": 338.84,
+              "ports": [
+                {
+                  "id": "cm5mxncjt003f3j6j117wjks9",
+                  "type": "default",
+                  "x": 892,
+                  "y": 370.56,
+                  "name": "cm5mxncjt003g3j6jc2y9q025",
+                  "parentNode": "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8",
+                  "links": [
+                    "a451ed13-a47e-43fd-a30a-170cef1b93c9"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm5mxncjt003h3j6jqcec9wzr",
+                  "type": "default",
+                  "x": 1046,
+                  "y": 370.56,
+                  "name": "cm5mxncjt003i3j6j140cj7n4",
+                  "parentNode": "e74e9188-23ba-4c90-b2b6-69d4afbf5cd8",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": $\n}",
+                "mutation": "mutation ($payload: [WorkcenterHistoryUpdatePayloadInput!]!){\n  updateWorkcenterHistory(payload:$payload){ id }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": true,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Update End Dates"
+            },
+            "ec11e8bd-86c6-45bd-8d1d-af0cb19161b6": {
+              "id": "ec11e8bd-86c6-45bd-8d1d-af0cb19161b6",
+              "type": "schedule",
+              "selected": false,
+              "x": 255,
+              "y": 273.84,
+              "ports": [
+                {
+                  "id": "cm5mxncju003n3j6jfp5ld5ig",
+                  "type": "default",
+                  "x": 401,
+                  "y": 305.56,
+                  "name": "cm5mxncju003o3j6jk021absx",
+                  "parentNode": "ec11e8bd-86c6-45bd-8d1d-af0cb19161b6",
+                  "links": [
+                    "714bb908-ab43-442d-abfe-5db2152af7a1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "configure": "Open Schedule Editor",
+                "nextNodes": [
+                  "a3c57a14-54da-4c34-8254-89266111d7b0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Schedule"
+            }
+          }
+        }
+      ],
+      "name": "Back Fill End Dates of Workcenter History",
+      "type": "System",
+      "version": "0.0.1",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

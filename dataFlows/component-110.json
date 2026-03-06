@@ -1,0 +1,2704 @@
+{
+  "header": {
+    "id": "scheduleVariations",
+    "name": "Schedule Variations",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "planning"
+  },
+  "version": {
+    "id": "cllvvm3x70003017b6fxpab9m",
+    "number": "0.0.9",
+    "description": "",
+    "dataFlowId": "scheduleVariations",
+    "flow": {
+      "id": "cllvvm3x70003017b6fxpab9m",
+      "name": "Schedule Variations",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+          "name": "JavaScript",
+          "type": "javascriptTransform",
+          "data": {
+            "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\n\n\nfunction scheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(6, 0, 0, 0);\n\n    let normalShiftDurationMillisecs = 12 * 60 * 60 * 1000;\n    let totalShiftDurationMillisecs = (12 + overtime) * 60 * 60 * 1000;\n\n    let earliestStartDate = null;\n    let latestEndDate = null;\n\n    for (let workOrder of workOrders) {\n        let lastTaskEndTimeInThisWorkOrder = new Date(currentDateTime);\n\n        for (let process of workOrder.processes) {\n            let taskDurationMillisecs = (workOrder.quantity / process.rate) * 60 * 60 * 1000;\n\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n\n            let taskStart = new Date(Math.max(lastTaskEndTimeInThisWorkOrder.getTime(), processAvailableTime.getTime()));\n            \n            let shiftStart = new Date(taskStart);\n            shiftStart.setHours(6, 0, 0, 0);\n            \n            let shiftEnd = new Date(shiftStart);\n            shiftEnd.setTime(shiftStart.getTime() + totalShiftDurationMillisecs);\n\n            if (taskStart > shiftEnd) {\n                shiftStart.setDate(shiftStart.getDate() + 1);\n                shiftEnd.setDate(shiftEnd.getDate() + 1);\n                taskStart = new Date(shiftStart);\n            }\n\n            let taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n\n            if (taskEnd > shiftEnd) {\n                let overtimeUsedMillisecs = taskEnd - shiftEnd;\n\n                if (overtimeUsedMillisecs <= overtime * 60 * 60 * 1000) {\n                    accumulatedOvertime += overtimeUsedMillisecs / (60 * 60 * 1000);\n                } else {\n                    shiftStart.setDate(shiftStart.getDate() + 1);\n                    shiftEnd.setDate(shiftEnd.getDate() + 1);\n                    taskStart = new Date(shiftStart);\n                    taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n                }\n            }\n\n            tasks.push({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\": workOrder.color\n            });\n\n            if (!earliestStartDate || taskStart < earliestStartDate) {\n                earliestStartDate = taskStart;\n            }\n\n            if (!latestEndDate || taskEnd > latestEndDate) {\n                latestEndDate = taskEnd;\n            }\n\n            lastTaskEndTimeInThisWorkOrder = new Date(taskEnd);\n            schedule[process.id] = taskEnd;\n        }\n    }\n\n    return { \n        \"tasks\": tasks, \n        \"accumulatedOvertime\": accumulatedOvertime,\n        \"earliestStartDate\": earliestStartDate,\n        \"latestEndDate\": latestEndDate\n    };\n};\n\n\n const {tasks, accumulatedOvertime, earliestStartDate, latestEndDate} = scheduleWorkOrders($,$state.context.ot)\n\n\n\nfunction reverseScheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let shiftStart = 9;  // 9 AM\n    let shiftEnd = 17;  // 5 PM\n\n    // Sort the work orders by promise date in descending order\n    workOrders.sort((a, b) => b.promiseDate - a.promiseDate);\n\n    // Initialize the current date time to the promise date of the first work order (which is the latest)\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(shiftEnd);\n    currentDateTime.setMinutes(0);\n    currentDateTime.setSeconds(0);\n\n    for (let workOrder of workOrders) {\n        for (let i = workOrder.processes.length - 1; i >= 0; i--) {\n            let process = workOrder.processes[i];\n            let taskDurationHours = workOrder.quantity / process.rate;\n            let taskDurationMillisecs = taskDurationHours * 60 * 60 * 1000;\n\n            // Determine the latest available time for this process\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n            // The task can end either before the next task starts or when the process is available, whichever is earlier\n            let taskEnd = new Date(Math.min(currentDateTime, processAvailableTime));\n            let taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n\n            // Check if the task start time extends before the current shift, if so, extend to the previous shift\n            if (taskStart.getHours() < shiftStart || (taskStart.getHours() === shiftStart && taskStart.getMinutes() < 0)) {\n                // If overtime is allowed and the task start time is within the overtime window, accumulate the overtime\n                if (overtime > 0 && taskStart.getHours() >= shiftStart - overtime) {\n                    let overtimeUsed = shiftStart - taskStart.getHours() - (taskStart.getMinutes() < 0 ? 1 : 0);\n                    accumulatedOvertime += overtimeUsed;\n                } else {\n                    // If no overtime is allowed or the task start time is beyond the overtime window, move the task to the next shift\n                    taskEnd.setDate(taskEnd.getDate() - 1);\n                    taskEnd.setHours(shiftEnd);\n                    taskEnd.setMinutes(0);\n                    taskEnd.setSeconds(0);\n                    taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n                }\n            }\n\n            tasks.unshift({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\":workOrder.color\n            });\n\n            // Update the current date time to the start of this task\n            currentDateTime = new Date(taskStart);\n            // Update the schedule array with the start time of this task for this process\n            schedule[process.id] = taskStart;\n        }\n    }\n\n    return { \"tasks\": tasks, \"accumulatedOvertime\": accumulatedOvertime };\n};\n\n//const {tasks: reverseTasks, accumulatedOvertime: reverseAccumulatedOvertime} = reverseScheduleWorkOrders(workorders,1)\n\n\nconst processes = [\n    {\n      \"label\": \"Preprocess\",\n      \"id\": \"1\"\n    },\n    {\n      \"label\": \"Mix A\",\n      \"id\": \"2\"\n    },\n    {\n      \"label\": \"Mix B\",\n      \"id\": \"3\"\n    },\n    {\n      \"label\": \"Mix C\",\n      \"id\": \"4\"\n    },\n    {\n      \"label\": \"QC\",\n      \"id\": \"5\"\n    },\n    {\n      \"label\": \"Dispense\",\n      \"id\": \"6\"\n    }\n  ];\n\n\nfunction format(date, minsToSubtract = 0) {\n    const d = new Date(date);\n    d.setMinutes(d.getMinutes() - minsToSubtract);\n    \n    let month = '' + (d.getMonth() + 1);\n    let day = '' + d.getDate();\n    let year = d.getFullYear();\n\n    let hour = '' + d.getHours();\n    let minute = '' + d.getMinutes();\n\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    if (hour.length < 2) hour = '0' + hour;\n    if (minute.length < 2) minute = '0' + minute;\n\n    return [year, month, day].join('-') + ' ' + [hour, minute].join(':');\n}\n\nfunction gen(workOrdersArray){\n//generate single category from time span of all work orders: {start,end,label }\n    const categories = {\n        category: [\n            {\n                start: format(earliestStartDate),\n                end: format(latestEndDate),\n                label: \"Work Orders\" + format(earliestStartDate) + \"-\" + format(latestEndDate)\n            }\n        ]\n    };\n\n\n    let tasks = {\n        task: workOrdersArray.map((workOrder, i) => {\n            const startDate = format(new Date(workOrder.start));\n            const endDate = format(new Date(workOrder.end),5);\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            return {\n                start: startDate,\n                end: endDate,\n                processid: `${processId}`,\n                id: `${processId}-${workOrder.workOrderId}`,\n                label: `Work Order ${workOrder.workOrderId}`,\n                color: workOrder.color,\n                alpha: \"100\",\n                height: \"75%\"\n            }\n        })\n    };\n    \n    let connectors = {\n        connector: workOrdersArray.map((workOrder, i, array) => {\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            const workOrderId = `${processId}-${workOrder.workOrderId}`;\n            \n            // Find next task with the same work order ID\n            let nextTaskIndex = array.findIndex((nextWorkOrder, j) => j > i && nextWorkOrder.workOrderId === workOrder.workOrderId);\n            let toTaskId = nextTaskIndex !== -1 ? `${processes.findIndex(processLabel => processLabel.label === array[nextTaskIndex].processLabel) + 1}-${array[nextTaskIndex].workOrderId}` : undefined;\n\n            return {\n                fromtaskid: workOrderId,\n                totaskid: toTaskId,\n                color: workOrder.color,\n                thickness: \"2\"\n            }\n        }).filter(connector => connector.totaskid !== undefined) // Filter out connectors without a toTaskId\n    };\n    \n    let dataSource = {\n        chart: {\n            dateformat: \"yyyy-mm-dd hh:mn\",\n            caption: \"Work Orders Scheduling\",\n            theme: \"fusion\",\n            canvasBorderAlpha: \"40\",\n        },\n        categories: [categories],\n        processes: {\n            process: processes\n        },\n        tasks: tasks,\n        connectors: connectors\n    };\n    \n    return dataSource\n}\n \n        const chart = gen(tasks)\nreturn chart",
+            "nextNodes": [
+              "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+              "6a9c7386-1a6e-49f9-b925-7c6bee1366a6"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b3d303f8-26d1-4485-b850-aee23bb0b484",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+              "4307718e-cafd-449c-afdf-407dc23ea865"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n\"gantt\":$\n}",
+            "nextNodes": [
+              "7262b34e-cf76-4192-b8f6-701cbbb995d1"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "7015326d-6100-4336-b028-1145840d98a4",
+          "name": "JavaScript",
+          "type": "javascriptTransform",
+          "data": {
+            "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\nfunction generateWorkOrders(qty) {\n    let workOrders = [];\n    let startPromiseDate = new Date(\"2023-07-26\");\n    let endPromiseDate = new Date(startPromiseDate);\n    endPromiseDate.setDate(startPromiseDate.getDate() + 7);\n\n    for (let workOrderID = 1; workOrderID <= qty; workOrderID++) {\n        let quantity = getRandomInt(400, 900);\n        let promiseDate = getRandomDate(startPromiseDate, endPromiseDate);\n        // let mixSelection = Math.random() < 0.5 ? 2 : 3;\n        let processes = [\n            { \"label\": \"Preprocess\", \"id\": \"1\", \"rate\": getRandomInt(120, 150) },\n            { \"label\": \"Mix A\", \"id\": \"2\", \"rate\": getRandomInt(100, 150) },\n            { \"label\":\"Mix B\", \"id\": \"3\", \"rate\": getRandomInt(100, 150) },\n            {\"label\": \"Mix C\",  \"id\": \"4\", \"rate\": getRandomInt(100, 150) },\n            { \"label\": \"QC\", \"id\": \"5\", \"rate\": getRandomInt(110, 160) },\n            { \"label\": \"Dispense\", \"id\": \"6\", \"rate\": getRandomInt(140, 150) },\n        ];\n\n        workOrders.push({\n            id: workOrderID,\n            quantity,\n            promiseDate,\n            processes,\n            color: getRandomColor()\n        });\n    }\n\n    return workOrders;\n}\nconst workorders = generateWorkOrders($.qty)\nworkorders.sort((a,b)=>a.promiseDate < b.promiseDate ? -1 : 1)\n\nreturn workorders",
+            "nextNodes": [
+              "355da7b9-ee10-4c78-9acd-e72e44a9cb27"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "7015326d-6100-4336-b028-1145840d98a4"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "355da7b9-ee10-4c78-9acd-e72e44a9cb27",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{wo:$}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "7262b34e-cf76-4192-b8f6-701cbbb995d1",
+          "name": "Mutate",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"code\": $moment().format('YYMMDD') & \"-12-\" & $state.context.ot,\n      \"startAt\": $now(),\n      \"endAt\": $moment().add(1,'month'),\n      \"rawData\":$,\n      \"description\": \"12 Hour No OT\"\n    }\n  }\n}",
+            "nextNodes": [],
+            "mutation": "mutation($payload:[SchedulingRunCreatePayloadInput!]!){\n  createSchedulingRun(payload:$payload){\n  id\n}\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+          "name": "Query",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\"where\": {\n  \"id\": {\n    \"_in\":[id]\n  }\n}}",
+            "query": "query Query($where: SchedulingRunWhereInput, $orderBy: [SchedulingRunOrderByInput!], $first: Int, $after: String) {\n  s:schedulingRun(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        rawData\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "0413f0eb-2f74-445c-a98d-6619ae794884"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "0413f0eb-2f74-445c-a98d-6619ae794884",
+          "name": "JSONata",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "981a4d61-14e6-429b-99d4-e82ec0c7d171"
+            ],
+            "transform": "s.edges.node.rawData\n"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4307718e-cafd-449c-afdf-407dc23ea865",
+          "name": "Log req",
+          "type": "log",
+          "data": {
+            "messageTransform": "$",
+            "level": "Debug",
+            "includeContext": false,
+            "includePayload": false,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+          "name": "Query",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\":[$state.context.REQUEST.DATA.workOrderId]\n    }\n  }\n}",
+            "query": "query Query($where: WorkOrderWhereInput, $orderBy: [WorkOrderOrderByInput!], $first: Int, $after: String) {\n  workOrder(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id number\n        promiseAt\n        scheduledFinishAt\n        scheduledStartAt\n        workOrderDistributions {\n          edges {\n            node {\n              scheduledFinishAt\n              scheduledStartAt\n              workOrderProcess {\n                order\n                quantity\n                code\n                productionOperators\n                setupOperators\n              }\n              workcenter {\n                code\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "transform": "$",
+            "nextNodes": [
+              "c1866114-ac75-46d4-a74f-3cbc44e10e81"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+          "name": "JSONata",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $wo := workOrder.edges.node;\n  $d := $wo.workOrderDistributions.edges.node;\n  $p := $uniq($d^(workOrderProcess.order).workcenter.code)#$j.{\n    \"label\": $,\n    \"id\":$string($j+1)\n  };\n  $c := [\"#AC92EB\",\"#4FC1E8\",\"#A0D568\",\"#FFCE54\",\"#ED5564\"];\n  $t := $wo#$i.(\n    $id := number;\n    $color := $c[$i%4];\n    $.workOrderDistributions.edges.node.(\n    $code := workcenter.code;\n    {\n      \"workOrderId\":$id,\n      \"start\": scheduledStartAt,\n      \"end\":scheduledFinishAt,\n      \"processLabel\":$code,\n      \"color\":$color,\n      \"processId\": $p[label=$code].id\n    })\n  );\n  $es := $d^(scheduledStartAt)[0].scheduledStartAt;\n  $le := $d^(>scheduledFinishAt)[0].scheduledFinishAt;\n  {\n    \"tasks\": $t^(processId),\n    \"earliestStartDate\": $es,\n    \"latestEndDate\": $le,\n    \"processes\": $p\n  }\n  \n)",
+            "nextNodes": [
+              "ada4f4fa-a1c1-4c07-b02e-375a7431dc47"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+          "name": "JavaScript",
+          "type": "javascriptTransform",
+          "data": {
+            "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\n\n\nfunction scheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(6, 0, 0, 0);\n\n    let normalShiftDurationMillisecs = 12 * 60 * 60 * 1000;\n    let totalShiftDurationMillisecs = (12 + overtime) * 60 * 60 * 1000;\n\n    let earliestStartDate = null;\n    let latestEndDate = null;\n\n    for (let workOrder of workOrders) {\n        let lastTaskEndTimeInThisWorkOrder = new Date(currentDateTime);\n\n        for (let process of workOrder.processes) {\n            let taskDurationMillisecs = (workOrder.quantity / process.rate) * 60 * 60 * 1000;\n\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n\n            let taskStart = new Date(Math.max(lastTaskEndTimeInThisWorkOrder.getTime(), processAvailableTime.getTime()));\n            \n            let shiftStart = new Date(taskStart);\n            shiftStart.setHours(6, 0, 0, 0);\n            \n            let shiftEnd = new Date(shiftStart);\n            shiftEnd.setTime(shiftStart.getTime() + totalShiftDurationMillisecs);\n\n            if (taskStart > shiftEnd) {\n                shiftStart.setDate(shiftStart.getDate() + 1);\n                shiftEnd.setDate(shiftEnd.getDate() + 1);\n                taskStart = new Date(shiftStart);\n            }\n\n            let taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n\n            if (taskEnd > shiftEnd) {\n                let overtimeUsedMillisecs = taskEnd - shiftEnd;\n\n                if (overtimeUsedMillisecs <= overtime * 60 * 60 * 1000) {\n                    accumulatedOvertime += overtimeUsedMillisecs / (60 * 60 * 1000);\n                } else {\n                    shiftStart.setDate(shiftStart.getDate() + 1);\n                    shiftEnd.setDate(shiftEnd.getDate() + 1);\n                    taskStart = new Date(shiftStart);\n                    taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n                }\n            }\n\n            tasks.push({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\": workOrder.color\n            });\n\n            if (!earliestStartDate || taskStart < earliestStartDate) {\n                earliestStartDate = taskStart;\n            }\n\n            if (!latestEndDate || taskEnd > latestEndDate) {\n                latestEndDate = taskEnd;\n            }\n\n            lastTaskEndTimeInThisWorkOrder = new Date(taskEnd);\n            schedule[process.id] = taskEnd;\n        }\n    }\n\n    return { \n        \"tasks\": tasks, \n        \"accumulatedOvertime\": accumulatedOvertime,\n        \"earliestStartDate\": earliestStartDate,\n        \"latestEndDate\": latestEndDate\n    };\n};\n\n\n const {tasks, processes, earliestStartDate, latestEndDate} = $\n\n\n\nfunction reverseScheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let shiftStart = 9;  // 9 AM\n    let shiftEnd = 17;  // 5 PM\n\n    // Sort the work orders by promise date in descending order\n    workOrders.sort((a, b) => b.promiseDate - a.promiseDate);\n\n    // Initialize the current date time to the promise date of the first work order (which is the latest)\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(shiftEnd);\n    currentDateTime.setMinutes(0);\n    currentDateTime.setSeconds(0);\n\n    for (let workOrder of workOrders) {\n        for (let i = workOrder.processes.length - 1; i >= 0; i--) {\n            let process = workOrder.processes[i];\n            let taskDurationHours = workOrder.quantity / process.rate;\n            let taskDurationMillisecs = taskDurationHours * 60 * 60 * 1000;\n\n            // Determine the latest available time for this process\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n            // The task can end either before the next task starts or when the process is available, whichever is earlier\n            let taskEnd = new Date(Math.min(currentDateTime, processAvailableTime));\n            let taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n\n            // Check if the task start time extends before the current shift, if so, extend to the previous shift\n            if (taskStart.getHours() < shiftStart || (taskStart.getHours() === shiftStart && taskStart.getMinutes() < 0)) {\n                // If overtime is allowed and the task start time is within the overtime window, accumulate the overtime\n                if (overtime > 0 && taskStart.getHours() >= shiftStart - overtime) {\n                    let overtimeUsed = shiftStart - taskStart.getHours() - (taskStart.getMinutes() < 0 ? 1 : 0);\n                    accumulatedOvertime += overtimeUsed;\n                } else {\n                    // If no overtime is allowed or the task start time is beyond the overtime window, move the task to the next shift\n                    taskEnd.setDate(taskEnd.getDate() - 1);\n                    taskEnd.setHours(shiftEnd);\n                    taskEnd.setMinutes(0);\n                    taskEnd.setSeconds(0);\n                    taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n                }\n            }\n\n            tasks.unshift({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\":workOrder.color\n            });\n\n            // Update the current date time to the start of this task\n            currentDateTime = new Date(taskStart);\n            // Update the schedule array with the start time of this task for this process\n            schedule[process.id] = taskStart;\n        }\n    }\n\n    return { \"tasks\": tasks, \"accumulatedOvertime\": accumulatedOvertime };\n};\n\n//const {tasks: reverseTasks, accumulatedOvertime: reverseAccumulatedOvertime} = reverseScheduleWorkOrders(workorders,1)\n\n\n\n\n\nfunction format(date, minsToSubtract = 0) {\n    const d = new Date(date);\n    d.setMinutes(d.getMinutes() - minsToSubtract);\n    \n    let month = '' + (d.getMonth() + 1);\n    let day = '' + d.getDate();\n    let year = d.getFullYear();\n\n    let hour = '' + d.getHours();\n    let minute = '' + d.getMinutes();\n\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    if (hour.length < 2) hour = '0' + hour;\n    if (minute.length < 2) minute = '0' + minute;\n\n    return [year, month, day].join('-') + ' ' + [hour, minute].join(':');\n}\n\nfunction gen(workOrdersArray){\n//generate single category from time span of all work orders: {start,end,label }\n    const categories = {\n        category: [\n            {\n                start: format(earliestStartDate),\n                end: format(latestEndDate),\n                label: \"Work Orders\" + format(earliestStartDate) + \"-\" + format(latestEndDate)\n            }\n        ]\n    };\n\n\n    let tasks = {\n        task: workOrdersArray.map((workOrder, i) => {\n            const startDate = format(new Date(workOrder.start));\n            const endDate = format(new Date(workOrder.end),5);\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            return {\n                start: startDate,\n                end: endDate,\n                processid: `${processId}`,\n                id: `${processId}-${workOrder.workOrderId}`,\n                label: `Work Order ${workOrder.workOrderId}`,\n                color: workOrder.color,\n                alpha: \"100\",\n                height: \"75%\"\n            }\n        })\n    };\n    \n    let connectors = {\n        connector: workOrdersArray.map((workOrder, i, array) => {\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            const workOrderId = `${processId}-${workOrder.workOrderId}`;\n            \n            // Find next task with the same work order ID\n            let nextTaskIndex = array.findIndex((nextWorkOrder, j) => j > i && nextWorkOrder.workOrderId === workOrder.workOrderId);\n            let toTaskId = nextTaskIndex !== -1 ? `${processes.findIndex(processLabel => processLabel.label === array[nextTaskIndex].processLabel) + 1}-${array[nextTaskIndex].workOrderId}` : undefined;\n\n            return {\n                fromtaskid: workOrderId,\n                totaskid: toTaskId,\n                color: workOrder.color,\n                thickness: \"2\"\n            }\n        }).filter(connector => connector.totaskid !== undefined) // Filter out connectors without a toTaskId\n    };\n    \n    let dataSource = {\n        chart: {\n            dateformat: \"yyyy-mm-dd hh:mn\",\n            caption: \"Work Orders Scheduling\",\n            theme: \"fusion\",\n            canvasBorderAlpha: \"40\",\n        },\n        categories: [categories],\n        processes: {\n            process: processes\n        },\n        tasks: tasks,\n        connectors: connectors\n    };\n    \n    return dataSource\n}\n \n        const chart = gen(tasks)\nreturn chart",
+            "nextNodes": [
+              "bff5f816-ab3f-4b03-8a4a-17ceb848fa66"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "bff5f816-ab3f-4b03-8a4a-17ceb848fa66",
+          "name": "Mutate",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"code\": $moment().format('YYMMDDHHmm'),\n      \"startAt\": $now(),\n      \"endAt\": $moment().add(1,'month'),\n      \"rawData\":$,\n      \"description\": $moment().format('YYMMDDHH')\n    }\n  }\n}",
+            "nextNodes": [],
+            "mutation": "mutation($payload:[SchedulingRunCreatePayloadInput!]!){\n  createSchedulingRun(payload:$payload){\n  id\n}\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.8"
+    },
+    "diagram": {
+      "id": "cllvvm3x70003017b6fxpab9m",
+      "offsetX": -108.5,
+      "offsetY": 47.22,
+      "zoom": 96.78,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "99fde7b5-a98e-4d7c-97e7-13a33aa735bd",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "140de6e9-a8f2-4173-815b-ccb4b0154076": {
+              "points": [
+                {
+                  "id": "923dd817-716b-4242-865a-9cb0de60786a",
+                  "type": "point",
+                  "x": 593.98,
+                  "y": 393.93
+                },
+                {
+                  "id": "5285805a-4faf-46ac-a167-4429f2e26198",
+                  "type": "point",
+                  "x": 748.5,
+                  "y": 433.93
+                }
+              ],
+              "id": "140de6e9-a8f2-4173-815b-ccb4b0154076",
+              "type": "default",
+              "selected": false,
+              "source": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+              "sourcePort": "clkl3omis001y356i7v337w87",
+              "target": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+              "targetPort": "clkl3y4rr004d356iba9tzvsv",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "cd63b172-f46d-4dba-bc64-5d2d59c13d1a": {
+              "points": [
+                {
+                  "id": "10e92311-1e71-4a8c-8ff9-b71149842a21",
+                  "type": "point",
+                  "x": 233.98,
+                  "y": 123.93
+                },
+                {
+                  "id": "c4a74ed9-e5ca-4ea3-84de-5cf42faf9809",
+                  "type": "point",
+                  "x": 304.51,
+                  "y": 152.64
+                }
+              ],
+              "id": "cd63b172-f46d-4dba-bc64-5d2d59c13d1a",
+              "type": "default",
+              "selected": false,
+              "source": "71c3ac82-9618-450b-8ee5-977ce78e39d9",
+              "sourcePort": "clkl3oix3001o356iueo8p06i",
+              "target": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+              "targetPort": "clkl3znox005r356i4uet5hbx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e16d4f9e-6a51-4e65-bc0c-107725615c96": {
+              "points": [
+                {
+                  "id": "4ace1f21-d08c-49dc-b62f-b2f311953088",
+                  "type": "point",
+                  "x": 460,
+                  "y": 152.64
+                },
+                {
+                  "id": "c255aa83-01fa-4308-94c2-d72c30aa43fa",
+                  "type": "point",
+                  "x": 503.5,
+                  "y": 248.93
+                }
+              ],
+              "id": "e16d4f9e-6a51-4e65-bc0c-107725615c96",
+              "type": "default",
+              "selected": false,
+              "source": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+              "sourcePort": "clkl3znox005t356icltom0by",
+              "target": "7015326d-6100-4336-b028-1145840d98a4",
+              "targetPort": "clkl3yfjh004j356ie292ws6u",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "725bbc15-dad5-4315-a55b-535cf47a9b62": {
+              "points": [
+                {
+                  "id": "557ddb71-e11f-441a-8d03-feebcb277a32",
+                  "type": "point",
+                  "x": 658.98,
+                  "y": 248.93
+                },
+                {
+                  "id": "9f713cd4-88a2-4cae-a369-6808a96a65d2",
+                  "type": "point",
+                  "x": 708.5,
+                  "y": 248.93
+                }
+              ],
+              "id": "725bbc15-dad5-4315-a55b-535cf47a9b62",
+              "type": "default",
+              "selected": false,
+              "source": "7015326d-6100-4336-b028-1145840d98a4",
+              "sourcePort": "clkl3yfjh004l356ig8ra42po",
+              "target": "355da7b9-ee10-4c78-9acd-e72e44a9cb27",
+              "targetPort": "clkl407zu006d356iev47came",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9f85a899-081c-433c-afe0-1fe2a7663fff": {
+              "points": [
+                {
+                  "id": "7eabf372-9ab0-4c95-8846-7fedcee450d5",
+                  "type": "point",
+                  "x": 254,
+                  "y": 264.65
+                },
+                {
+                  "id": "41f9ebd1-7c5b-4b57-b48f-d6944bdfcfa5",
+                  "type": "point",
+                  "x": 438.5,
+                  "y": 393.93
+                }
+              ],
+              "id": "9f85a899-081c-433c-afe0-1fe2a7663fff",
+              "type": "default",
+              "selected": false,
+              "source": "0ea3cafe-6d84-4311-ad70-98d7b0402581",
+              "sourcePort": "clkl410mt006w356i5xfvxd61",
+              "target": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+              "targetPort": "clkl3omis001w356i8h6i4wq9",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "90917764-6f26-474a-861c-9c4080a2ceb6": {
+              "points": [
+                {
+                  "id": "7b5ad144-9048-451b-8cb3-c3382401782f",
+                  "type": "point",
+                  "x": 903.98,
+                  "y": 433.93
+                },
+                {
+                  "id": "28d07675-6bdd-4dca-8810-b02aaa7b9f22",
+                  "type": "point",
+                  "x": 868.5,
+                  "y": 538.93
+                }
+              ],
+              "id": "90917764-6f26-474a-861c-9c4080a2ceb6",
+              "type": "default",
+              "selected": false,
+              "source": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+              "sourcePort": "clkl3y4rr004f356izcbanafa",
+              "target": "7262b34e-cf76-4192-b8f6-701cbbb995d1",
+              "targetPort": "clkl44apx009t356ifggof7fk",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3b333976-4d90-4e45-8612-3723ad552845": {
+              "points": [
+                {
+                  "id": "323b17fc-6814-4fbd-b7ca-299f16df14ff",
+                  "type": "point",
+                  "x": 394,
+                  "y": 728.93
+                },
+                {
+                  "id": "7e3010fa-10ea-492d-baca-c5ef543b2f5c",
+                  "type": "point",
+                  "x": 443.5,
+                  "y": 733.93
+                }
+              ],
+              "id": "3b333976-4d90-4e45-8612-3723ad552845",
+              "type": "default",
+              "selected": false,
+              "source": "b3d303f8-26d1-4485-b850-aee23bb0b484",
+              "sourcePort": "clkl3xdk60045356idma1mdp4",
+              "target": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+              "targetPort": "clkl4esx000kl356igx301w0t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4fa76772-6fa3-4882-a46a-8a3519c1ee93": {
+              "points": [
+                {
+                  "id": "a26d894d-3771-4dc9-8333-82db84bdf3ff",
+                  "type": "point",
+                  "x": 598.98,
+                  "y": 733.93
+                },
+                {
+                  "id": "228bc6ea-2fa0-4079-a0ee-bce555846cdb",
+                  "type": "point",
+                  "x": 566.5,
+                  "y": 859.65
+                }
+              ],
+              "id": "4fa76772-6fa3-4882-a46a-8a3519c1ee93",
+              "type": "default",
+              "selected": false,
+              "source": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+              "sourcePort": "clkl4esx000kn356imjz7y4t3",
+              "target": "0413f0eb-2f74-445c-a98d-6619ae794884",
+              "targetPort": "clkl4guba00m7356iyonhmr7d",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "28ccca93-79a5-4505-be84-4d53be0625da": {
+              "points": [
+                {
+                  "id": "20846251-5b3b-4e03-ac67-d7eec2bb1fb6",
+                  "type": "point",
+                  "x": 721.99,
+                  "y": 859.65
+                },
+                {
+                  "id": "51b2e07b-85b7-4e60-8a16-5d69ec1f24a1",
+                  "type": "point",
+                  "x": 688.5,
+                  "y": 718.93
+                }
+              ],
+              "id": "28ccca93-79a5-4505-be84-4d53be0625da",
+              "type": "default",
+              "selected": false,
+              "source": "0413f0eb-2f74-445c-a98d-6619ae794884",
+              "sourcePort": "clkl4guba00m9356ilpzkusxs",
+              "target": "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+              "targetPort": "clkl3xisi0047356ii1rgui9w",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4d88e823-fd51-4b80-aa61-4bba35f974ff": {
+              "points": [
+                {
+                  "id": "db3b38d8-80f6-48ac-8129-e72ef58c0236",
+                  "type": "point",
+                  "x": 496.5,
+                  "y": 646.64
+                },
+                {
+                  "id": "1779503e-f289-4db1-a70b-5ad8557d32e3",
+                  "type": "point",
+                  "x": 394,
+                  "y": 728.93
+                }
+              ],
+              "id": "4d88e823-fd51-4b80-aa61-4bba35f974ff",
+              "type": "default",
+              "selected": false,
+              "source": "4307718e-cafd-449c-afdf-407dc23ea865",
+              "sourcePort": "clkl4okxb00nu356ikgkbm6qz",
+              "target": "b3d303f8-26d1-4485-b850-aee23bb0b484",
+              "targetPort": "clkl3xdk60045356idma1mdp4",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "3d77e83a-f83b-4b5d-885a-0a106d889a3f": {
+              "points": [
+                {
+                  "id": "d9cb82e5-3eb5-404e-b68a-305b8b73664b",
+                  "type": "point",
+                  "x": 633.89,
+                  "y": 946.37
+                },
+                {
+                  "id": "0d8b84b6-e5eb-4030-afff-ec8f7532e805",
+                  "type": "point",
+                  "x": 473.5,
+                  "y": 1013.93
+                }
+              ],
+              "id": "3d77e83a-f83b-4b5d-885a-0a106d889a3f",
+              "type": "default",
+              "selected": false,
+              "source": "1328e7d6-c29f-44e8-abba-dd6ba24f8e62",
+              "sourcePort": "cllvs04b900892a647hlxhrrc",
+              "target": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+              "targetPort": "cllvs1fy800a42a649r66iikd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d7127f22-b203-476e-b1d0-293ce9bc9ca7": {
+              "points": [
+                {
+                  "id": "3c823624-d138-42b7-bd02-c1a6da5d0eb9",
+                  "type": "point",
+                  "x": 628.98,
+                  "y": 1013.93
+                },
+                {
+                  "id": "75136d69-cf4c-4618-89e9-49f890d87d80",
+                  "type": "point",
+                  "x": 473.5,
+                  "y": 1083.93
+                }
+              ],
+              "id": "d7127f22-b203-476e-b1d0-293ce9bc9ca7",
+              "type": "default",
+              "selected": false,
+              "source": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+              "sourcePort": "cllvs1fy800a62a64b9gc669h",
+              "target": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+              "targetPort": "cllvs025500832a64xmmw8myl",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d0b33b6b-ac20-4ba2-a5ce-f9be8371acb0": {
+              "points": [
+                {
+                  "id": "3232b869-38ac-4362-8173-b6d3588ceeaf",
+                  "type": "point",
+                  "x": 628.98,
+                  "y": 1083.93
+                },
+                {
+                  "id": "885447ce-a955-4e4c-8dd0-b6d4bd7f2521",
+                  "type": "point",
+                  "x": 668.5,
+                  "y": 938.93
+                }
+              ],
+              "id": "d0b33b6b-ac20-4ba2-a5ce-f9be8371acb0",
+              "type": "default",
+              "selected": false,
+              "source": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+              "sourcePort": "cllvs025500852a64xdak7dav",
+              "target": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+              "targetPort": "cllvsf8ww00iz2a647sb6zzva",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "77b8aafa-71fc-464c-9975-d4e8fadab836": {
+              "points": [
+                {
+                  "id": "2289b8bb-fbd5-4450-b6ec-ffa6080d7925",
+                  "type": "point",
+                  "x": 823.98,
+                  "y": 938.93
+                },
+                {
+                  "id": "58a10c73-4ab5-45a6-82c8-ce34955ce47c",
+                  "type": "point",
+                  "x": 668.5,
+                  "y": 1013.93
+                }
+              ],
+              "id": "77b8aafa-71fc-464c-9975-d4e8fadab836",
+              "type": "default",
+              "selected": false,
+              "source": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+              "sourcePort": "cllvsf8ww00j12a64z9yfuggy",
+              "target": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+              "targetPort": "cllvucmmu003t356iiw4gua74",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "da9b1297-a3c4-4a6b-84f7-0cefaab879d7": {
+              "points": [
+                {
+                  "id": "02e031e2-86a8-4ef1-997b-b218ee87f3c0",
+                  "type": "point",
+                  "x": 823.98,
+                  "y": 1013.93
+                },
+                {
+                  "id": "54643802-0b9a-4921-986f-cb4aa6522283",
+                  "type": "point",
+                  "x": 713.5,
+                  "y": 1103.93
+                }
+              ],
+              "id": "da9b1297-a3c4-4a6b-84f7-0cefaab879d7",
+              "type": "default",
+              "selected": false,
+              "source": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+              "sourcePort": "cllvucmmu003v356ifpdh0sc5",
+              "target": "bff5f816-ab3f-4b03-8a4a-17ceb848fa66",
+              "targetPort": "cllvuegba0056356it7d20jfy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7d8b03c6-99c8-493d-a7fa-e2dae9930fbd": {
+              "points": [
+                {
+                  "id": "c0894540-8df8-4771-904c-cda08cc00e0e",
+                  "type": "point",
+                  "x": 413.98,
+                  "y": 628.93
+                },
+                {
+                  "id": "94cafaa9-eb44-469e-aab5-e8f986e6a180",
+                  "type": "point",
+                  "x": 443.5,
+                  "y": 733.93
+                }
+              ],
+              "id": "7d8b03c6-99c8-493d-a7fa-e2dae9930fbd",
+              "type": "default",
+              "selected": false,
+              "source": "372f994e-9e88-40db-8f73-7f0791b9443d",
+              "sourcePort": "cllvunho8006k356ikb4280a7",
+              "target": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+              "targetPort": "clkl4esx000kl356igx301w0t",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "cf0c9369-748f-45e2-8d19-57c75fd27113",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "71c3ac82-9618-450b-8ee5-977ce78e39d9": {
+              "id": "71c3ac82-9618-450b-8ee5-977ce78e39d9",
+              "type": "debugSource",
+              "selected": false,
+              "x": 80,
+              "y": 85,
+              "ports": [
+                {
+                  "id": "clkl3oix3001o356iueo8p06i",
+                  "type": "default",
+                  "x": 226.74,
+                  "y": 116.68,
+                  "name": "clkl3oix3001p356iot3shgms",
+                  "parentNode": "71c3ac82-9618-450b-8ee5-977ce78e39d9",
+                  "links": [
+                    "cd63b172-f46d-4dba-bc64-5d2d59c13d1a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "qty": 20,
+                  "ot": 0
+                },
+                "context": {},
+                "nextNodes": [
+                  "bbe5d401-fe68-4459-a4b1-755aa4286310"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "12fa5f18-ec95-424c-96ad-5dba7786aaea": {
+              "id": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+              "type": "javascriptTransform",
+              "selected": false,
+              "x": 440,
+              "y": 355,
+              "ports": [
+                {
+                  "id": "clkl3omis001w356i8h6i4wq9",
+                  "type": "default",
+                  "x": 431.25,
+                  "y": 386.68,
+                  "name": "clkl3omis001x356iz1tf8crd",
+                  "parentNode": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+                  "links": [
+                    "9f85a899-081c-433c-afe0-1fe2a7663fff"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl3omis001y356i7v337w87",
+                  "type": "default",
+                  "x": 586.74,
+                  "y": 386.68,
+                  "name": "clkl3omis001z356idpwmnmyb",
+                  "parentNode": "12fa5f18-ec95-424c-96ad-5dba7786aaea",
+                  "links": [
+                    "140de6e9-a8f2-4173-815b-ccb4b0154076"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\n\n\nfunction scheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(6, 0, 0, 0);\n\n    let normalShiftDurationMillisecs = 12 * 60 * 60 * 1000;\n    let totalShiftDurationMillisecs = (12 + overtime) * 60 * 60 * 1000;\n\n    let earliestStartDate = null;\n    let latestEndDate = null;\n\n    for (let workOrder of workOrders) {\n        let lastTaskEndTimeInThisWorkOrder = new Date(currentDateTime);\n\n        for (let process of workOrder.processes) {\n            let taskDurationMillisecs = (workOrder.quantity / process.rate) * 60 * 60 * 1000;\n\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n\n            let taskStart = new Date(Math.max(lastTaskEndTimeInThisWorkOrder.getTime(), processAvailableTime.getTime()));\n            \n            let shiftStart = new Date(taskStart);\n            shiftStart.setHours(6, 0, 0, 0);\n            \n            let shiftEnd = new Date(shiftStart);\n            shiftEnd.setTime(shiftStart.getTime() + totalShiftDurationMillisecs);\n\n            if (taskStart > shiftEnd) {\n                shiftStart.setDate(shiftStart.getDate() + 1);\n                shiftEnd.setDate(shiftEnd.getDate() + 1);\n                taskStart = new Date(shiftStart);\n            }\n\n            let taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n\n            if (taskEnd > shiftEnd) {\n                let overtimeUsedMillisecs = taskEnd - shiftEnd;\n\n                if (overtimeUsedMillisecs <= overtime * 60 * 60 * 1000) {\n                    accumulatedOvertime += overtimeUsedMillisecs / (60 * 60 * 1000);\n                } else {\n                    shiftStart.setDate(shiftStart.getDate() + 1);\n                    shiftEnd.setDate(shiftEnd.getDate() + 1);\n                    taskStart = new Date(shiftStart);\n                    taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n                }\n            }\n\n            tasks.push({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\": workOrder.color\n            });\n\n            if (!earliestStartDate || taskStart < earliestStartDate) {\n                earliestStartDate = taskStart;\n            }\n\n            if (!latestEndDate || taskEnd > latestEndDate) {\n                latestEndDate = taskEnd;\n            }\n\n            lastTaskEndTimeInThisWorkOrder = new Date(taskEnd);\n            schedule[process.id] = taskEnd;\n        }\n    }\n\n    return { \n        \"tasks\": tasks, \n        \"accumulatedOvertime\": accumulatedOvertime,\n        \"earliestStartDate\": earliestStartDate,\n        \"latestEndDate\": latestEndDate\n    };\n};\n\n\n const {tasks, accumulatedOvertime, earliestStartDate, latestEndDate} = scheduleWorkOrders($,$state.context.ot)\n\n\n\nfunction reverseScheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let shiftStart = 9;  // 9 AM\n    let shiftEnd = 17;  // 5 PM\n\n    // Sort the work orders by promise date in descending order\n    workOrders.sort((a, b) => b.promiseDate - a.promiseDate);\n\n    // Initialize the current date time to the promise date of the first work order (which is the latest)\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(shiftEnd);\n    currentDateTime.setMinutes(0);\n    currentDateTime.setSeconds(0);\n\n    for (let workOrder of workOrders) {\n        for (let i = workOrder.processes.length - 1; i >= 0; i--) {\n            let process = workOrder.processes[i];\n            let taskDurationHours = workOrder.quantity / process.rate;\n            let taskDurationMillisecs = taskDurationHours * 60 * 60 * 1000;\n\n            // Determine the latest available time for this process\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n            // The task can end either before the next task starts or when the process is available, whichever is earlier\n            let taskEnd = new Date(Math.min(currentDateTime, processAvailableTime));\n            let taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n\n            // Check if the task start time extends before the current shift, if so, extend to the previous shift\n            if (taskStart.getHours() < shiftStart || (taskStart.getHours() === shiftStart && taskStart.getMinutes() < 0)) {\n                // If overtime is allowed and the task start time is within the overtime window, accumulate the overtime\n                if (overtime > 0 && taskStart.getHours() >= shiftStart - overtime) {\n                    let overtimeUsed = shiftStart - taskStart.getHours() - (taskStart.getMinutes() < 0 ? 1 : 0);\n                    accumulatedOvertime += overtimeUsed;\n                } else {\n                    // If no overtime is allowed or the task start time is beyond the overtime window, move the task to the next shift\n                    taskEnd.setDate(taskEnd.getDate() - 1);\n                    taskEnd.setHours(shiftEnd);\n                    taskEnd.setMinutes(0);\n                    taskEnd.setSeconds(0);\n                    taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n                }\n            }\n\n            tasks.unshift({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\":workOrder.color\n            });\n\n            // Update the current date time to the start of this task\n            currentDateTime = new Date(taskStart);\n            // Update the schedule array with the start time of this task for this process\n            schedule[process.id] = taskStart;\n        }\n    }\n\n    return { \"tasks\": tasks, \"accumulatedOvertime\": accumulatedOvertime };\n};\n\n//const {tasks: reverseTasks, accumulatedOvertime: reverseAccumulatedOvertime} = reverseScheduleWorkOrders(workorders,1)\n\n\nconst processes = [\n    {\n      \"label\": \"Preprocess\",\n      \"id\": \"1\"\n    },\n    {\n      \"label\": \"Mix A\",\n      \"id\": \"2\"\n    },\n    {\n      \"label\": \"Mix B\",\n      \"id\": \"3\"\n    },\n    {\n      \"label\": \"Mix C\",\n      \"id\": \"4\"\n    },\n    {\n      \"label\": \"QC\",\n      \"id\": \"5\"\n    },\n    {\n      \"label\": \"Dispense\",\n      \"id\": \"6\"\n    }\n  ];\n\n\nfunction format(date, minsToSubtract = 0) {\n    const d = new Date(date);\n    d.setMinutes(d.getMinutes() - minsToSubtract);\n    \n    let month = '' + (d.getMonth() + 1);\n    let day = '' + d.getDate();\n    let year = d.getFullYear();\n\n    let hour = '' + d.getHours();\n    let minute = '' + d.getMinutes();\n\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    if (hour.length < 2) hour = '0' + hour;\n    if (minute.length < 2) minute = '0' + minute;\n\n    return [year, month, day].join('-') + ' ' + [hour, minute].join(':');\n}\n\nfunction gen(workOrdersArray){\n//generate single category from time span of all work orders: {start,end,label }\n    const categories = {\n        category: [\n            {\n                start: format(earliestStartDate),\n                end: format(latestEndDate),\n                label: \"Work Orders\" + format(earliestStartDate) + \"-\" + format(latestEndDate)\n            }\n        ]\n    };\n\n\n    let tasks = {\n        task: workOrdersArray.map((workOrder, i) => {\n            const startDate = format(new Date(workOrder.start));\n            const endDate = format(new Date(workOrder.end),5);\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            return {\n                start: startDate,\n                end: endDate,\n                processid: `${processId}`,\n                id: `${processId}-${workOrder.workOrderId}`,\n                label: `Work Order ${workOrder.workOrderId}`,\n                color: workOrder.color,\n                alpha: \"100\",\n                height: \"75%\"\n            }\n        })\n    };\n    \n    let connectors = {\n        connector: workOrdersArray.map((workOrder, i, array) => {\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            const workOrderId = `${processId}-${workOrder.workOrderId}`;\n            \n            // Find next task with the same work order ID\n            let nextTaskIndex = array.findIndex((nextWorkOrder, j) => j > i && nextWorkOrder.workOrderId === workOrder.workOrderId);\n            let toTaskId = nextTaskIndex !== -1 ? `${processes.findIndex(processLabel => processLabel.label === array[nextTaskIndex].processLabel) + 1}-${array[nextTaskIndex].workOrderId}` : undefined;\n\n            return {\n                fromtaskid: workOrderId,\n                totaskid: toTaskId,\n                color: workOrder.color,\n                thickness: \"2\"\n            }\n        }).filter(connector => connector.totaskid !== undefined) // Filter out connectors without a toTaskId\n    };\n    \n    let dataSource = {\n        chart: {\n            dateformat: \"yyyy-mm-dd hh:mn\",\n            caption: \"Work Orders Scheduling\",\n            theme: \"fusion\",\n            canvasBorderAlpha: \"40\",\n        },\n        categories: [categories],\n        processes: {\n            process: processes\n        },\n        tasks: tasks,\n        connectors: connectors\n    };\n    \n    return dataSource\n}\n \n        const chart = gen(tasks)\nreturn chart",
+                "nextNodes": [
+                  "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+                  "6a9c7386-1a6e-49f9-b925-7c6bee1366a6"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JavaScript"
+            },
+            "b3d303f8-26d1-4485-b850-aee23bb0b484": {
+              "id": "b3d303f8-26d1-4485-b850-aee23bb0b484",
+              "type": "request",
+              "selected": false,
+              "x": 240,
+              "y": 690,
+              "ports": [
+                {
+                  "id": "clkl3xdk60045356idma1mdp4",
+                  "type": "default",
+                  "x": 386.76,
+                  "y": 721.68,
+                  "name": "clkl3xdk60046356ibpbvucxk",
+                  "parentNode": "b3d303f8-26d1-4485-b850-aee23bb0b484",
+                  "links": [
+                    "3b333976-4d90-4e45-8612-3723ad552845",
+                    "4d88e823-fd51-4b80-aa61-4bba35f974ff"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+                  "4307718e-cafd-449c-afdf-407dc23ea865"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "981a4d61-14e6-429b-99d4-e82ec0c7d171": {
+              "id": "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+              "type": "response",
+              "selected": false,
+              "x": 690,
+              "y": 680,
+              "ports": [
+                {
+                  "id": "clkl3xisi0047356ii1rgui9w",
+                  "type": "default",
+                  "x": 681.25,
+                  "y": 711.68,
+                  "name": "clkl3xisi0048356iwabo48fo",
+                  "parentNode": "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+                  "links": [
+                    "28ccca93-79a5-4505-be84-4d53be0625da"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "clkl3xisi0049356iqbpghsa6",
+                  "type": "default",
+                  "x": 836.74,
+                  "y": 711.68,
+                  "name": "clkl3xisi004a356iehgxxn7o",
+                  "parentNode": "981a4d61-14e6-429b-99d4-e82ec0c7d171",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "6a9c7386-1a6e-49f9-b925-7c6bee1366a6": {
+              "id": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 750,
+              "y": 395,
+              "ports": [
+                {
+                  "id": "clkl3y4rr004d356iba9tzvsv",
+                  "type": "default",
+                  "x": 741.25,
+                  "y": 426.68,
+                  "name": "clkl3y4rr004e356iz5kxwms0",
+                  "parentNode": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+                  "links": [
+                    "140de6e9-a8f2-4173-815b-ccb4b0154076"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl3y4rr004f356izcbanafa",
+                  "type": "default",
+                  "x": 896.74,
+                  "y": 426.68,
+                  "name": "clkl3y4rr004g356ifrff68lb",
+                  "parentNode": "6a9c7386-1a6e-49f9-b925-7c6bee1366a6",
+                  "links": [
+                    "90917764-6f26-474a-861c-9c4080a2ceb6"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n\"gantt\":$\n}",
+                "nextNodes": [
+                  "7262b34e-cf76-4192-b8f6-701cbbb995d1"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "7015326d-6100-4336-b028-1145840d98a4": {
+              "id": "7015326d-6100-4336-b028-1145840d98a4",
+              "type": "javascriptTransform",
+              "selected": false,
+              "x": 505,
+              "y": 210,
+              "ports": [
+                {
+                  "id": "clkl3yfjh004j356ie292ws6u",
+                  "type": "default",
+                  "x": 496.25,
+                  "y": 241.68,
+                  "name": "clkl3yfjh004k356iu4z33szb",
+                  "parentNode": "7015326d-6100-4336-b028-1145840d98a4",
+                  "links": [
+                    "e16d4f9e-6a51-4e65-bc0c-107725615c96"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl3yfjh004l356ig8ra42po",
+                  "type": "default",
+                  "x": 651.74,
+                  "y": 241.68,
+                  "name": "clkl3yfjh004m356irz3n72fx",
+                  "parentNode": "7015326d-6100-4336-b028-1145840d98a4",
+                  "links": [
+                    "725bbc15-dad5-4315-a55b-535cf47a9b62"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\nfunction generateWorkOrders(qty) {\n    let workOrders = [];\n    let startPromiseDate = new Date(\"2023-07-26\");\n    let endPromiseDate = new Date(startPromiseDate);\n    endPromiseDate.setDate(startPromiseDate.getDate() + 7);\n\n    for (let workOrderID = 1; workOrderID <= qty; workOrderID++) {\n        let quantity = getRandomInt(400, 900);\n        let promiseDate = getRandomDate(startPromiseDate, endPromiseDate);\n        // let mixSelection = Math.random() < 0.5 ? 2 : 3;\n        let processes = [\n            { \"label\": \"Preprocess\", \"id\": \"1\", \"rate\": getRandomInt(120, 150) },\n            { \"label\": \"Mix A\", \"id\": \"2\", \"rate\": getRandomInt(100, 150) },\n            { \"label\":\"Mix B\", \"id\": \"3\", \"rate\": getRandomInt(100, 150) },\n            {\"label\": \"Mix C\",  \"id\": \"4\", \"rate\": getRandomInt(100, 150) },\n            { \"label\": \"QC\", \"id\": \"5\", \"rate\": getRandomInt(110, 160) },\n            { \"label\": \"Dispense\", \"id\": \"6\", \"rate\": getRandomInt(140, 150) },\n        ];\n\n        workOrders.push({\n            id: workOrderID,\n            quantity,\n            promiseDate,\n            processes,\n            color: getRandomColor()\n        });\n    }\n\n    return workOrders;\n}\nconst workorders = generateWorkOrders($.qty)\nworkorders.sort((a,b)=>a.promiseDate < b.promiseDate ? -1 : 1)\n\nreturn workorders",
+                "nextNodes": [
+                  "355da7b9-ee10-4c78-9acd-e72e44a9cb27"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JavaScript"
+            },
+            "bbe5d401-fe68-4459-a4b1-755aa4286310": {
+              "id": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+              "type": "setContext",
+              "selected": false,
+              "x": 306.02,
+              "y": 113.73,
+              "ports": [
+                {
+                  "id": "clkl3znox005r356i4uet5hbx",
+                  "type": "default",
+                  "x": 297.27,
+                  "y": 145.39,
+                  "name": "clkl3znox005s356i8x6p19jr",
+                  "parentNode": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+                  "links": [
+                    "cd63b172-f46d-4dba-bc64-5d2d59c13d1a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl3znox005t356icltom0by",
+                  "type": "default",
+                  "x": 452.75,
+                  "y": 145.39,
+                  "name": "clkl3znox005u356i42wl4mr6",
+                  "parentNode": "bbe5d401-fe68-4459-a4b1-755aa4286310",
+                  "links": [
+                    "e16d4f9e-6a51-4e65-bc0c-107725615c96"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "7015326d-6100-4336-b028-1145840d98a4"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "355da7b9-ee10-4c78-9acd-e72e44a9cb27": {
+              "id": "355da7b9-ee10-4c78-9acd-e72e44a9cb27",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 710,
+              "y": 210,
+              "ports": [
+                {
+                  "id": "clkl407zu006d356iev47came",
+                  "type": "default",
+                  "x": 701.25,
+                  "y": 241.68,
+                  "name": "clkl407zu006e356ivzrpana1",
+                  "parentNode": "355da7b9-ee10-4c78-9acd-e72e44a9cb27",
+                  "links": [
+                    "725bbc15-dad5-4315-a55b-535cf47a9b62"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl407zu006f356ibp3m6x1v",
+                  "type": "default",
+                  "x": 856.74,
+                  "y": 241.68,
+                  "name": "clkl407zu006g356igjlrv2nm",
+                  "parentNode": "355da7b9-ee10-4c78-9acd-e72e44a9cb27",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{wo:$}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "0ea3cafe-6d84-4311-ad70-98d7b0402581": {
+              "id": "0ea3cafe-6d84-4311-ad70-98d7b0402581",
+              "type": "debugSource",
+              "selected": false,
+              "x": 100.02,
+              "y": 225.73,
+              "ports": [
+                {
+                  "id": "clkl410mt006w356i5xfvxd61",
+                  "type": "default",
+                  "x": 246.76,
+                  "y": 257.4,
+                  "name": "clkl410mt006x356ipsvy868s",
+                  "parentNode": "0ea3cafe-6d84-4311-ad70-98d7b0402581",
+                  "links": [
+                    "9f85a899-081c-433c-afe0-1fe2a7663fff"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": [
+                  {
+                    "id": 3,
+                    "quantity": 480,
+                    "promiseDate": "2023-07-26T13:40:30.809Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 124
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 133
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 145
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 129
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 156
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 142
+                      }
+                    ],
+                    "color": "#BB388E"
+                  },
+                  {
+                    "id": 15,
+                    "quantity": 846,
+                    "promiseDate": "2023-07-27T01:18:00.002Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 137
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 109
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 126
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 138
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 114
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 142
+                      }
+                    ],
+                    "color": "#3999F3"
+                  },
+                  {
+                    "id": 1,
+                    "quantity": 740,
+                    "promiseDate": "2023-07-27T04:17:03.238Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 143
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 150
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 137
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 106
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 139
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 143
+                      }
+                    ],
+                    "color": "#2DE06D"
+                  },
+                  {
+                    "id": 10,
+                    "quantity": 501,
+                    "promiseDate": "2023-07-27T10:46:58.226Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 125
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 145
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 143
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 136
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 130
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 147
+                      }
+                    ],
+                    "color": "#B40BA3"
+                  },
+                  {
+                    "id": 14,
+                    "quantity": 672,
+                    "promiseDate": "2023-07-27T16:59:01.453Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 148
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 131
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 135
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 129
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 120
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#38A50B"
+                  },
+                  {
+                    "id": 16,
+                    "quantity": 516,
+                    "promiseDate": "2023-07-27T17:22:56.953Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 135
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 137
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 130
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 135
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 129
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#144250"
+                  },
+                  {
+                    "id": 6,
+                    "quantity": 700,
+                    "promiseDate": "2023-07-28T14:51:37.279Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 139
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 138
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 119
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 125
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 153
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 150
+                      }
+                    ],
+                    "color": "#57AD04"
+                  },
+                  {
+                    "id": 4,
+                    "quantity": 565,
+                    "promiseDate": "2023-07-28T19:01:37.626Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 147
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 141
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 143
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 145
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 134
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 148
+                      }
+                    ],
+                    "color": "#28FC60"
+                  },
+                  {
+                    "id": 2,
+                    "quantity": 790,
+                    "promiseDate": "2023-07-29T07:28:37.467Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 133
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 103
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 143
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 114
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 121
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#40ACFD"
+                  },
+                  {
+                    "id": 12,
+                    "quantity": 520,
+                    "promiseDate": "2023-07-29T10:03:57.353Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 141
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 134
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 131
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 139
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 136
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 143
+                      }
+                    ],
+                    "color": "#8A2BA6"
+                  },
+                  {
+                    "id": 9,
+                    "quantity": 572,
+                    "promiseDate": "2023-07-29T16:39:13.593Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 129
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 133
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 119
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 112
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 149
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 142
+                      }
+                    ],
+                    "color": "#568EA6"
+                  },
+                  {
+                    "id": 8,
+                    "quantity": 872,
+                    "promiseDate": "2023-07-29T17:52:12.123Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 148
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 119
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 112
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 109
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 155
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#16936E"
+                  },
+                  {
+                    "id": 19,
+                    "quantity": 752,
+                    "promiseDate": "2023-07-29T22:27:58.274Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 144
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 131
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 125
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 121
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 114
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#C9CEDA"
+                  },
+                  {
+                    "id": 13,
+                    "quantity": 583,
+                    "promiseDate": "2023-07-30T12:24:27.406Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 125
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 120
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 121
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 150
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 157
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 147
+                      }
+                    ],
+                    "color": "#5B8CF7"
+                  },
+                  {
+                    "id": 20,
+                    "quantity": 753,
+                    "promiseDate": "2023-07-30T13:04:18.613Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 137
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 111
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 124
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 114
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 136
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 143
+                      }
+                    ],
+                    "color": "#26FA9A"
+                  },
+                  {
+                    "id": 18,
+                    "quantity": 885,
+                    "promiseDate": "2023-07-31T16:38:57.184Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 143
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 100
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 103
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 136
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 114
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 146
+                      }
+                    ],
+                    "color": "#3446C9"
+                  },
+                  {
+                    "id": 11,
+                    "quantity": 448,
+                    "promiseDate": "2023-08-01T02:31:39.789Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 121
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 142
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 113
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 114
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 147
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 142
+                      }
+                    ],
+                    "color": "#C6B4DF"
+                  },
+                  {
+                    "id": 7,
+                    "quantity": 680,
+                    "promiseDate": "2023-08-01T05:04:22.133Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 147
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 114
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 142
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 150
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 120
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 147
+                      }
+                    ],
+                    "color": "#ED423D"
+                  },
+                  {
+                    "id": 17,
+                    "quantity": 414,
+                    "promiseDate": "2023-08-01T07:36:45.048Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 134
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 101
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 101
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 142
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 125
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 144
+                      }
+                    ],
+                    "color": "#523C7E"
+                  },
+                  {
+                    "id": 5,
+                    "quantity": 576,
+                    "promiseDate": "2023-08-01T23:58:47.371Z",
+                    "processes": [
+                      {
+                        "label": "Preprocess",
+                        "id": "1",
+                        "rate": 127
+                      },
+                      {
+                        "label": "Mix A",
+                        "id": "2",
+                        "rate": 142
+                      },
+                      {
+                        "label": "Mix B",
+                        "id": "3",
+                        "rate": 100
+                      },
+                      {
+                        "label": "Mix C",
+                        "id": "4",
+                        "rate": 149
+                      },
+                      {
+                        "label": "QC",
+                        "id": "5",
+                        "rate": 118
+                      },
+                      {
+                        "label": "Dispense",
+                        "id": "6",
+                        "rate": 149
+                      }
+                    ],
+                    "color": "#A2502F"
+                  }
+                ],
+                "context": {
+                  "qty": 20,
+                  "ot": 4
+                },
+                "nextNodes": [
+                  "12fa5f18-ec95-424c-96ad-5dba7786aaea"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "7262b34e-cf76-4192-b8f6-701cbbb995d1": {
+              "id": "7262b34e-cf76-4192-b8f6-701cbbb995d1",
+              "type": "mutate",
+              "selected": false,
+              "x": 870,
+              "y": 500,
+              "ports": [
+                {
+                  "id": "clkl44apx009t356ifggof7fk",
+                  "type": "default",
+                  "x": 861.25,
+                  "y": 531.68,
+                  "name": "clkl44apy009u356ibcpm326f",
+                  "parentNode": "7262b34e-cf76-4192-b8f6-701cbbb995d1",
+                  "links": [
+                    "90917764-6f26-474a-861c-9c4080a2ceb6"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl44apy009v356ik5fgkg07",
+                  "type": "default",
+                  "x": 1016.74,
+                  "y": 531.68,
+                  "name": "clkl44apy009w356i7fl196lo",
+                  "parentNode": "7262b34e-cf76-4192-b8f6-701cbbb995d1",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"code\": $moment().format('YYMMDD') & \"-12-\" & $state.context.ot,\n      \"startAt\": $now(),\n      \"endAt\": $moment().add(1,'month'),\n      \"rawData\":$,\n      \"description\": \"12 Hour No OT\"\n    }\n  }\n}",
+                "nextNodes": [],
+                "mutation": "mutation($payload:[SchedulingRunCreatePayloadInput!]!){\n  createSchedulingRun(payload:$payload){\n  id\n}\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate"
+            },
+            "49bb1fbc-e121-40e9-b113-2d3ed9fc7254": {
+              "id": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+              "type": "query",
+              "selected": false,
+              "x": 445,
+              "y": 695,
+              "ports": [
+                {
+                  "id": "clkl4esx000kl356igx301w0t",
+                  "type": "default",
+                  "x": 436.25,
+                  "y": 726.68,
+                  "name": "clkl4esx000km356i4mr0a3ji",
+                  "parentNode": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+                  "links": [
+                    "3b333976-4d90-4e45-8612-3723ad552845",
+                    "7d8b03c6-99c8-493d-a7fa-e2dae9930fbd"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl4esx000kn356imjz7y4t3",
+                  "type": "default",
+                  "x": 591.74,
+                  "y": 726.68,
+                  "name": "clkl4esx000ko356ioshy72hr",
+                  "parentNode": "49bb1fbc-e121-40e9-b113-2d3ed9fc7254",
+                  "links": [
+                    "4fa76772-6fa3-4882-a46a-8a3519c1ee93"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\"where\": {\n  \"id\": {\n    \"_in\":[id]\n  }\n}}",
+                "query": "query Query($where: SchedulingRunWhereInput, $orderBy: [SchedulingRunOrderByInput!], $first: Int, $after: String) {\n  s:schedulingRun(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        rawData\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "0413f0eb-2f74-445c-a98d-6619ae794884"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query"
+            },
+            "0413f0eb-2f74-445c-a98d-6619ae794884": {
+              "id": "0413f0eb-2f74-445c-a98d-6619ae794884",
+              "type": "transform",
+              "selected": false,
+              "x": 568.02,
+              "y": 820.73,
+              "ports": [
+                {
+                  "id": "clkl4guba00m7356iyonhmr7d",
+                  "type": "default",
+                  "x": 559.26,
+                  "y": 852.4,
+                  "name": "clkl4guba00m8356iw5pqwzn8",
+                  "parentNode": "0413f0eb-2f74-445c-a98d-6619ae794884",
+                  "links": [
+                    "4fa76772-6fa3-4882-a46a-8a3519c1ee93"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl4guba00m9356ilpzkusxs",
+                  "type": "default",
+                  "x": 714.75,
+                  "y": 852.4,
+                  "name": "clkl4guba00ma356i4n5c3u9m",
+                  "parentNode": "0413f0eb-2f74-445c-a98d-6619ae794884",
+                  "links": [
+                    "28ccca93-79a5-4505-be84-4d53be0625da"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "981a4d61-14e6-429b-99d4-e82ec0c7d171"
+                ],
+                "transform": "s.edges.node.rawData\n"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata"
+            },
+            "4307718e-cafd-449c-afdf-407dc23ea865": {
+              "id": "4307718e-cafd-449c-afdf-407dc23ea865",
+              "type": "log",
+              "selected": false,
+              "x": 498.02,
+              "y": 607.73,
+              "ports": [
+                {
+                  "id": "clkl4okxb00nu356ikgkbm6qz",
+                  "type": "default",
+                  "x": 489.26,
+                  "y": 639.39,
+                  "name": "clkl4okxb00nv356iyn4suef7",
+                  "parentNode": "4307718e-cafd-449c-afdf-407dc23ea865",
+                  "links": [
+                    "4d88e823-fd51-4b80-aa61-4bba35f974ff"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clkl4okxb00nw356i2vvxlcys",
+                  "type": "default",
+                  "x": 644.75,
+                  "y": 639.39,
+                  "name": "clkl4okxb00nx356insdmt41x",
+                  "parentNode": "4307718e-cafd-449c-afdf-407dc23ea865",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "$",
+                "level": "Debug",
+                "includeContext": false,
+                "includePayload": false,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log req"
+            },
+            "c1866114-ac75-46d4-a74f-3cbc44e10e81": {
+              "id": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+              "type": "query",
+              "selected": false,
+              "x": 475,
+              "y": 1045,
+              "ports": [
+                {
+                  "id": "cllvs025500832a64xmmw8myl",
+                  "type": "default",
+                  "x": 466.25,
+                  "y": 1076.68,
+                  "name": "cllvs025500842a64jcrp3zl6",
+                  "parentNode": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+                  "links": [
+                    "d7127f22-b203-476e-b1d0-293ce9bc9ca7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cllvs025500852a64xdak7dav",
+                  "type": "default",
+                  "x": 621.74,
+                  "y": 1076.68,
+                  "name": "cllvs025500862a64nslforzl",
+                  "parentNode": "c1866114-ac75-46d4-a74f-3cbc44e10e81",
+                  "links": [
+                    "d0b33b6b-ac20-4ba2-a5ce-f9be8371acb0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\":[$state.context.REQUEST.DATA.workOrderId]\n    }\n  }\n}",
+                "query": "query Query($where: WorkOrderWhereInput, $orderBy: [WorkOrderOrderByInput!], $first: Int, $after: String) {\n  workOrder(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id number\n        promiseAt\n        scheduledFinishAt\n        scheduledStartAt\n        workOrderDistributions {\n          edges {\n            node {\n              scheduledFinishAt\n              scheduledStartAt\n              workOrderProcess {\n                order\n                quantity\n                code\n                productionOperators\n                setupOperators\n              }\n              workcenter {\n                code\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query"
+            },
+            "1328e7d6-c29f-44e8-abba-dd6ba24f8e62": {
+              "id": "1328e7d6-c29f-44e8-abba-dd6ba24f8e62",
+              "type": "debugSource",
+              "selected": false,
+              "x": 479.92,
+              "y": 907.45,
+              "ports": [
+                {
+                  "id": "cllvs04b900892a647hlxhrrc",
+                  "type": "default",
+                  "x": 626.64,
+                  "y": 939.12,
+                  "name": "cllvs04b9008a2a64lnbidcgy",
+                  "parentNode": "1328e7d6-c29f-44e8-abba-dd6ba24f8e62",
+                  "links": [
+                    "3d77e83a-f83b-4b5d-885a-0a106d889a3f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "REQUEST": {
+                    "DATA": {
+                      "workOrderId": [
+                        "cllvox8bw001p019q9dz07j6o",
+                        "cllvox8bw001p019q9dz07j6o",
+                        "cllvox8bw001p019q9dz07j6o",
+                        "cllvox8bw001p019q9dz07j6o",
+                        "cllvoy2ep001s016v5xbc4wvj",
+                        "cllvoy2ep001s016v5xbc4wvj",
+                        "cllvoy2ep001s016v5xbc4wvj",
+                        "cllvoy2ep001s016v5xbc4wvj",
+                        "cllvoyv66001u016vbdow872c",
+                        "cllvoyv66001u016vbdow872c",
+                        "cllvoyv66001u016vbdow872c",
+                        "cllvoyv66001u016vbdow872c",
+                        "cllvozo5j002e01ap2qkncdca",
+                        "cllvozo5j002e01ap2qkncdca",
+                        "cllvozo5j002e01ap2qkncdca",
+                        "cllvp1go4001j018n2kgq9wmv",
+                        "cllvp1go4001j018n2kgq9wmv",
+                        "cllvp1go4001j018n2kgq9wmv",
+                        "cllvpe2zc002i019qd51egns2",
+                        "cllvpe2zc002i019qd51egns2",
+                        "cllvpetuc002g016vgjjg6thm",
+                        "cllvpetuc002g016vgjjg6thm",
+                        "cllvpfi75001u018n6l9k5beq",
+                        "cllvpfi75001u018n6l9k5beq",
+                        "cllvp4n0n002k01ap8tsb365f",
+                        "cllvp4n0n002k01ap8tsb365f",
+                        "cllvp4n0n002k01ap8tsb365f"
+                      ]
+                    },
+                    "ACTION": "NEST"
+                  }
+                },
+                "context": null,
+                "nextNodes": [
+                  "88174dc2-c3ee-4990-b107-c17f09e1b78f"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "88174dc2-c3ee-4990-b107-c17f09e1b78f": {
+              "id": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+              "type": "setContext",
+              "selected": false,
+              "x": 475,
+              "y": 975,
+              "ports": [
+                {
+                  "id": "cllvs1fy800a42a649r66iikd",
+                  "type": "default",
+                  "x": 466.25,
+                  "y": 1006.68,
+                  "name": "cllvs1fy800a52a64lx9yw0d6",
+                  "parentNode": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+                  "links": [
+                    "3d77e83a-f83b-4b5d-885a-0a106d889a3f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cllvs1fy800a62a64b9gc669h",
+                  "type": "default",
+                  "x": 621.74,
+                  "y": 1006.68,
+                  "name": "cllvs1fy800a72a64wegt9p35",
+                  "parentNode": "88174dc2-c3ee-4990-b107-c17f09e1b78f",
+                  "links": [
+                    "d7127f22-b203-476e-b1d0-293ce9bc9ca7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$",
+                "nextNodes": [
+                  "c1866114-ac75-46d4-a74f-3cbc44e10e81"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55": {
+              "id": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+              "type": "transform",
+              "selected": true,
+              "x": 670,
+              "y": 900,
+              "ports": [
+                {
+                  "id": "cllvsf8ww00iz2a647sb6zzva",
+                  "type": "default",
+                  "x": 661.25,
+                  "y": 931.68,
+                  "name": "cllvsf8ww00j02a64249p57na",
+                  "parentNode": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+                  "links": [
+                    "d0b33b6b-ac20-4ba2-a5ce-f9be8371acb0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cllvsf8ww00j12a64z9yfuggy",
+                  "type": "default",
+                  "x": 816.74,
+                  "y": 931.68,
+                  "name": "cllvsf8ww00j22a64dm80t2fj",
+                  "parentNode": "2cf609e6-74ab-4cc2-a1fe-f6fa40c92d55",
+                  "links": [
+                    "77b8aafa-71fc-464c-9975-d4e8fadab836"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $wo := workOrder.edges.node;\n  $d := $wo.workOrderDistributions.edges.node;\n  $p := $uniq($d^(workOrderProcess.order).workcenter.code)#$j.{\n    \"label\": $,\n    \"id\":$string($j+1)\n  };\n  $c := [\"#AC92EB\",\"#4FC1E8\",\"#A0D568\",\"#FFCE54\",\"#ED5564\"];\n  $t := $wo#$i.(\n    $id := number;\n    $color := $c[$i%4];\n    $.workOrderDistributions.edges.node.(\n    $code := workcenter.code;\n    {\n      \"workOrderId\":$id,\n      \"start\": scheduledStartAt,\n      \"end\":scheduledFinishAt,\n      \"processLabel\":$code,\n      \"color\":$color,\n      \"processId\": $p[label=$code].id\n    })\n  );\n  $es := $d^(scheduledStartAt)[0].scheduledStartAt;\n  $le := $d^(>scheduledFinishAt)[0].scheduledFinishAt;\n  {\n    \"tasks\": $t^(processId),\n    \"earliestStartDate\": $es,\n    \"latestEndDate\": $le,\n    \"processes\": $p\n  }\n  \n)",
+                "nextNodes": [
+                  "ada4f4fa-a1c1-4c07-b02e-375a7431dc47"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata"
+            },
+            "ada4f4fa-a1c1-4c07-b02e-375a7431dc47": {
+              "id": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+              "type": "javascriptTransform",
+              "selected": false,
+              "x": 670,
+              "y": 975,
+              "ports": [
+                {
+                  "id": "cllvucmmu003t356iiw4gua74",
+                  "type": "default",
+                  "x": 661.25,
+                  "y": 1006.68,
+                  "name": "cllvucmmu003u356ibxsoco6v",
+                  "parentNode": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+                  "links": [
+                    "77b8aafa-71fc-464c-9975-d4e8fadab836"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cllvucmmu003v356ifpdh0sc5",
+                  "type": "default",
+                  "x": 816.74,
+                  "y": 1006.68,
+                  "name": "cllvucmmu003w356iwucm6dwl",
+                  "parentNode": "ada4f4fa-a1c1-4c07-b02e-375a7431dc47",
+                  "links": [
+                    "da9b1297-a3c4-4a6b-84f7-0cefaab879d7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "function getRandomInt(min, max) {\n    return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\nfunction getRandomDate(start, end) {\n    return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));\n}\nfunction getRandomColor() {\n    const letters = '0123456789ABCDEF';\n    let color = '#';\n    for (let i = 0; i < 6; i++) {\n        color += letters[Math.floor(Math.random() * 16)];\n    }\n    return color;\n}\n\n\n\n\nfunction scheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(6, 0, 0, 0);\n\n    let normalShiftDurationMillisecs = 12 * 60 * 60 * 1000;\n    let totalShiftDurationMillisecs = (12 + overtime) * 60 * 60 * 1000;\n\n    let earliestStartDate = null;\n    let latestEndDate = null;\n\n    for (let workOrder of workOrders) {\n        let lastTaskEndTimeInThisWorkOrder = new Date(currentDateTime);\n\n        for (let process of workOrder.processes) {\n            let taskDurationMillisecs = (workOrder.quantity / process.rate) * 60 * 60 * 1000;\n\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n\n            let taskStart = new Date(Math.max(lastTaskEndTimeInThisWorkOrder.getTime(), processAvailableTime.getTime()));\n            \n            let shiftStart = new Date(taskStart);\n            shiftStart.setHours(6, 0, 0, 0);\n            \n            let shiftEnd = new Date(shiftStart);\n            shiftEnd.setTime(shiftStart.getTime() + totalShiftDurationMillisecs);\n\n            if (taskStart > shiftEnd) {\n                shiftStart.setDate(shiftStart.getDate() + 1);\n                shiftEnd.setDate(shiftEnd.getDate() + 1);\n                taskStart = new Date(shiftStart);\n            }\n\n            let taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n\n            if (taskEnd > shiftEnd) {\n                let overtimeUsedMillisecs = taskEnd - shiftEnd;\n\n                if (overtimeUsedMillisecs <= overtime * 60 * 60 * 1000) {\n                    accumulatedOvertime += overtimeUsedMillisecs / (60 * 60 * 1000);\n                } else {\n                    shiftStart.setDate(shiftStart.getDate() + 1);\n                    shiftEnd.setDate(shiftEnd.getDate() + 1);\n                    taskStart = new Date(shiftStart);\n                    taskEnd = new Date(taskStart.getTime() + taskDurationMillisecs);\n                }\n            }\n\n            tasks.push({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\": workOrder.color\n            });\n\n            if (!earliestStartDate || taskStart < earliestStartDate) {\n                earliestStartDate = taskStart;\n            }\n\n            if (!latestEndDate || taskEnd > latestEndDate) {\n                latestEndDate = taskEnd;\n            }\n\n            lastTaskEndTimeInThisWorkOrder = new Date(taskEnd);\n            schedule[process.id] = taskEnd;\n        }\n    }\n\n    return { \n        \"tasks\": tasks, \n        \"accumulatedOvertime\": accumulatedOvertime,\n        \"earliestStartDate\": earliestStartDate,\n        \"latestEndDate\": latestEndDate\n    };\n};\n\n\n const {tasks, processes, earliestStartDate, latestEndDate} = $\n\n\n\nfunction reverseScheduleWorkOrders(workOrders, overtime) {\n    let tasks = [];\n    let schedule = [null, null, null, null, null, null];\n    let accumulatedOvertime = 0;\n\n    let shiftStart = 9;  // 9 AM\n    let shiftEnd = 17;  // 5 PM\n\n    // Sort the work orders by promise date in descending order\n    workOrders.sort((a, b) => b.promiseDate - a.promiseDate);\n\n    // Initialize the current date time to the promise date of the first work order (which is the latest)\n    let currentDateTime = new Date(workOrders[0].promiseDate);\n    currentDateTime.setHours(shiftEnd);\n    currentDateTime.setMinutes(0);\n    currentDateTime.setSeconds(0);\n\n    for (let workOrder of workOrders) {\n        for (let i = workOrder.processes.length - 1; i >= 0; i--) {\n            let process = workOrder.processes[i];\n            let taskDurationHours = workOrder.quantity / process.rate;\n            let taskDurationMillisecs = taskDurationHours * 60 * 60 * 1000;\n\n            // Determine the latest available time for this process\n            let processAvailableTime = schedule[process.id] ? new Date(schedule[process.id]) : new Date(currentDateTime);\n            // The task can end either before the next task starts or when the process is available, whichever is earlier\n            let taskEnd = new Date(Math.min(currentDateTime, processAvailableTime));\n            let taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n\n            // Check if the task start time extends before the current shift, if so, extend to the previous shift\n            if (taskStart.getHours() < shiftStart || (taskStart.getHours() === shiftStart && taskStart.getMinutes() < 0)) {\n                // If overtime is allowed and the task start time is within the overtime window, accumulate the overtime\n                if (overtime > 0 && taskStart.getHours() >= shiftStart - overtime) {\n                    let overtimeUsed = shiftStart - taskStart.getHours() - (taskStart.getMinutes() < 0 ? 1 : 0);\n                    accumulatedOvertime += overtimeUsed;\n                } else {\n                    // If no overtime is allowed or the task start time is beyond the overtime window, move the task to the next shift\n                    taskEnd.setDate(taskEnd.getDate() - 1);\n                    taskEnd.setHours(shiftEnd);\n                    taskEnd.setMinutes(0);\n                    taskEnd.setSeconds(0);\n                    taskStart = new Date(taskEnd.getTime() - taskDurationMillisecs);\n                }\n            }\n\n            tasks.unshift({\n                \"workOrderId\": workOrder.id,\n                \"processLabel\": process.label,\n                \"start\": taskStart,\n                \"end\": taskEnd,\n                \"color\":workOrder.color\n            });\n\n            // Update the current date time to the start of this task\n            currentDateTime = new Date(taskStart);\n            // Update the schedule array with the start time of this task for this process\n            schedule[process.id] = taskStart;\n        }\n    }\n\n    return { \"tasks\": tasks, \"accumulatedOvertime\": accumulatedOvertime };\n};\n\n//const {tasks: reverseTasks, accumulatedOvertime: reverseAccumulatedOvertime} = reverseScheduleWorkOrders(workorders,1)\n\n\n\n\n\nfunction format(date, minsToSubtract = 0) {\n    const d = new Date(date);\n    d.setMinutes(d.getMinutes() - minsToSubtract);\n    \n    let month = '' + (d.getMonth() + 1);\n    let day = '' + d.getDate();\n    let year = d.getFullYear();\n\n    let hour = '' + d.getHours();\n    let minute = '' + d.getMinutes();\n\n    if (month.length < 2) month = '0' + month;\n    if (day.length < 2) day = '0' + day;\n    if (hour.length < 2) hour = '0' + hour;\n    if (minute.length < 2) minute = '0' + minute;\n\n    return [year, month, day].join('-') + ' ' + [hour, minute].join(':');\n}\n\nfunction gen(workOrdersArray){\n//generate single category from time span of all work orders: {start,end,label }\n    const categories = {\n        category: [\n            {\n                start: format(earliestStartDate),\n                end: format(latestEndDate),\n                label: \"Work Orders\" + format(earliestStartDate) + \"-\" + format(latestEndDate)\n            }\n        ]\n    };\n\n\n    let tasks = {\n        task: workOrdersArray.map((workOrder, i) => {\n            const startDate = format(new Date(workOrder.start));\n            const endDate = format(new Date(workOrder.end),5);\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            return {\n                start: startDate,\n                end: endDate,\n                processid: `${processId}`,\n                id: `${processId}-${workOrder.workOrderId}`,\n                label: `Work Order ${workOrder.workOrderId}`,\n                color: workOrder.color,\n                alpha: \"100\",\n                height: \"75%\"\n            }\n        })\n    };\n    \n    let connectors = {\n        connector: workOrdersArray.map((workOrder, i, array) => {\n            const processId = processes.findIndex(processLabel => processLabel.label === workOrder.processLabel) + 1;\n            const workOrderId = `${processId}-${workOrder.workOrderId}`;\n            \n            // Find next task with the same work order ID\n            let nextTaskIndex = array.findIndex((nextWorkOrder, j) => j > i && nextWorkOrder.workOrderId === workOrder.workOrderId);\n            let toTaskId = nextTaskIndex !== -1 ? `${processes.findIndex(processLabel => processLabel.label === array[nextTaskIndex].processLabel) + 1}-${array[nextTaskIndex].workOrderId}` : undefined;\n\n            return {\n                fromtaskid: workOrderId,\n                totaskid: toTaskId,\n                color: workOrder.color,\n                thickness: \"2\"\n            }\n        }).filter(connector => connector.totaskid !== undefined) // Filter out connectors without a toTaskId\n    };\n    \n    let dataSource = {\n        chart: {\n            dateformat: \"yyyy-mm-dd hh:mn\",\n            caption: \"Work Orders Scheduling\",\n            theme: \"fusion\",\n            canvasBorderAlpha: \"40\",\n        },\n        categories: [categories],\n        processes: {\n            process: processes\n        },\n        tasks: tasks,\n        connectors: connectors\n    };\n    \n    return dataSource\n}\n \n        const chart = gen(tasks)\nreturn chart",
+                "nextNodes": [
+                  "bff5f816-ab3f-4b03-8a4a-17ceb848fa66"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JavaScript"
+            },
+            "bff5f816-ab3f-4b03-8a4a-17ceb848fa66": {
+              "id": "bff5f816-ab3f-4b03-8a4a-17ceb848fa66",
+              "type": "mutate",
+              "selected": false,
+              "x": 715,
+              "y": 1065,
+              "ports": [
+                {
+                  "id": "cllvuegba0056356it7d20jfy",
+                  "type": "default",
+                  "x": 706.25,
+                  "y": 1096.68,
+                  "name": "cllvuegba0057356i4b4lyyke",
+                  "parentNode": "bff5f816-ab3f-4b03-8a4a-17ceb848fa66",
+                  "links": [
+                    "da9b1297-a3c4-4a6b-84f7-0cefaab879d7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cllvuegba0058356i048h3t5o",
+                  "type": "default",
+                  "x": 861.74,
+                  "y": 1096.68,
+                  "name": "cllvuegba0059356i7jy0cuxs",
+                  "parentNode": "bff5f816-ab3f-4b03-8a4a-17ceb848fa66",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payload\": {\n    \"create\": {\n      \"code\": $moment().format('YYMMDDHHmm'),\n      \"startAt\": $now(),\n      \"endAt\": $moment().add(1,'month'),\n      \"rawData\":$,\n      \"description\": $moment().format('YYMMDDHH')\n    }\n  }\n}",
+                "nextNodes": [],
+                "mutation": "mutation($payload:[SchedulingRunCreatePayloadInput!]!){\n  createSchedulingRun(payload:$payload){\n  id\n}\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate"
+            },
+            "372f994e-9e88-40db-8f73-7f0791b9443d": {
+              "id": "372f994e-9e88-40db-8f73-7f0791b9443d",
+              "type": "debugSource",
+              "selected": false,
+              "x": 260,
+              "y": 590,
+              "ports": [
+                {
+                  "id": "cllvunho8006k356ikb4280a7",
+                  "type": "default",
+                  "x": 406.74,
+                  "y": 621.68,
+                  "name": "cllvunho8006l356iyj1qwgou",
+                  "parentNode": "372f994e-9e88-40db-8f73-7f0791b9443d",
+                  "links": [
+                    "7d8b03c6-99c8-493d-a7fa-e2dae9930fbd"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "id": "clkl4dgq8000e01ao362m1dg0"
+                },
+                "context": {},
+                "nextNodes": [
+                  "49bb1fbc-e121-40e9-b113-2d3ed9fc7254"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Schedule Variations",
+      "type": "System",
+      "version": "0.0.8",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

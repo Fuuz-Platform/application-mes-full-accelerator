@@ -1,0 +1,19 @@
+{
+  "header": {
+    "id": "cl9xclg2s027l0j7k7zxydktl",
+    "name": "Visualization Datasource: Workcenter Status by Shift",
+    "description": "Auto-generated saved transform to drive visualization \"Workcenter Status by Shift\".",
+    "active": true,
+    "deprecated": false
+  },
+  "version": {
+    "id": "clpksn3ow006y01swf79r8atj",
+    "number": "1.0.0",
+    "description": "Auto-generated saved transform to drive visualization \"Workcenter Status by Shift\".",
+    "savedTransformId": "cl9xclg2s027l0j7k7zxydktl",
+    "scriptLanguageId": "JSONata",
+    "transform": "(\n  $data := $ \n    ~> | $ | {\n      \"category\": $moment(creditedAt).format(\"MM/DD\") & \" \" & shift.name,\n      /* Sort 3-1-2 */    \n      \"sort\": $moment(creditedAt).format(\"MM/DD\") & \" \" & $replace(shift.name, \"3\", \"0\")\n    } |;\n    \n  $groupedData := ($data{\n    category: {\n      \"category\": $first(category),\n      \"sort\": $first(sort),\n      \"prodHours\": $sum(productionTime) / 3600,\n      \"plannedDowntimeHours\": $sum(plannedDowntime) / 3600,\n      \"unplannedDowntimeHours\": $sum(unplannedDowntime) / 3600,\n      \"otherHours\": $sum(other) / 3600\n    }\n  } ~> $values)^(>sort);\n\n  {\n    \"categories\": [\n        {\n            \"category\": [$groupedData.{\n              \"label\": category\n            }]\n        }\n    ],\n    \"dataSet\": [\n        {\n            \"seriesName\": \"Production\",\n            \"color\": \"#43a047\",\n            \"data\": [$groupedData.{\n              \"value\": prodHours\n            }]\n        },\n        {\n            \"seriesName\": \"Planned Down\",\n            \"color\": \"#ffa000\",\n            \"data\": [$groupedData.{\n              \"value\": plannedDowntimeHours\n            }]\n        },\n        {\n            \"seriesName\": \"Unplanned Down\",\n            \"color\": \"#f44336\",\n            \"data\": [$groupedData.{\n              \"value\": unplannedDowntimeHours\n            }]\n        },\n        {\n            \"seriesName\": \"Other\",\n            \"color\": \"#1e88e5\",\n            \"data\": [$groupedData.{\n              \"value\": otherHours\n            }]\n        }\n    ]\n  }\n)",
+    "inputSchema": {},
+    "outputSchema": {}
+  }
+}

@@ -1,0 +1,2117 @@
+{
+  "header": {
+    "id": "updateAssetHoursCycles",
+    "name": "Update Asset Hours/Cycles from ProductionRuns",
+    "description": "Used to read from productionRunMaintenance and set asset current hours (since last reset)",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "maintenance"
+  },
+  "version": {
+    "id": "cm09wlphw094n0163hmwo0vjf",
+    "number": "0.0.1",
+    "description": "Used to read from productionRunMaintenance and set asset current hours (since last reset)",
+    "dataFlowId": "updateAssetHoursCycles",
+    "flow": {
+      "id": "cm09wlphw094n0163hmwo0vjf",
+      "name": "Update Asset Hours/Cycles from ProductionRuns",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "7b74ae40-ab91-4b7c-b7dd-d31a19725df2",
+          "name": "Schedule",
+          "type": "schedule",
+          "data": {
+            "configure": "Open Schedule Editor",
+            "nextNodes": [
+              "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+          "name": "Query: Get asset data for all usable items",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "query": "query Query($whereA: AssetWhereInput) {\n  assets : asset(where: $whereA) {\n    edges {\n      node {\n        id\n        number\n        maxLifetimeCycles\n        currentCycles\n        currentHours\n        lifetimeCycles\n        lifetimeHours\n        maxLifetimeHours\n        serialized\n        barcode\n        brand\n        description\n        externalId\n        modelNumber\n        serialNumber\n        inServiceAt\n        lastResetAt\n        newAt\n        purchaseAt\n        customData\n        integrationData\n        assetMaintenanceStatusId\n        assetMaintenanceStatus {\n          id\n          name\n          disabled\n          ready\n          retired\n          servicing\n          system\n          usable\n          color\n          externalId\n          message\n          customData\n          integrationData\n        }\n        statusId\n        status {\n          id\n          name\n          active\n          approved\n          default\n          experimental\n          system\n          usable\n          color\n          externalId\n          message\n          customData\n          integrationData\n        }\n        typeId\n        type {\n          id\n          name\n          equipment\n          inspection\n          machinery\n          system\n          tooling\n          usable\n          color\n          customData\n          screenId\n        }\n        assetDesignId\n        facilityId\n        groupId\n        imageId\n        supplierId\n        workcenterId\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "e32badfa-4b5e-4891-8a40-f42ab87d27f1"
+            ],
+            "variablesTransform": "{\"whereA\":\n  {\"_and\": [\n\t\t{\"assetMaintenanceStatus\": {\"usable\": {\"_eq\": true}}},\n    {\"status\": {\"usable\": {\"_eq\": true}}}\n  ]}\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+          "name": "Mutate: Update asset Hours and cycles",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation(\n  $payload: [AssetUpdatePayloadInput!]!,\n){\n  updateAsset(payload:$payload){\n    id\n    currentHours\n    lifetimeHours\n    currentCycles\n    lifetimeCycles\n  }\n}",
+            "nextNodes": [
+              "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+          "name": "JSONata: Group and sum data for each asset",
+          "type": "transform",
+          "data": {
+            "transform": "/*\nINPUT - \nraw PRM record\n\nOUTPUT - \n1 per PRM record\n  \n\n(\n$prm := productionRunMaintenance.edges.node.(\n    {\n    \"id\":id,\n    \"maintenanceCycles\" : maintenanceCycles,\n    \"maintenanceHours\" : maintenanceHours,\n    \"assetId\" : assetId,\n    \"productionRunId\" : productionRunId\n    }\n  );\n \n$groupby($.assetId)\n\n)\n*/\n\n$reduce($.productionRunMaintenance.edges.node,function($acc, $curr) {\n    $append($filter($acc, function($item) { $item.assetId != $curr.assetId }),\n      [{\n          \"assetId\": $curr.assetId,\n          \"maintenanceCycles\": $sum($append($filter($acc, function($item) { $item.assetId = $curr.assetId }).maintenanceCycles,$curr.maintenanceCycles)),\n          \"maintenanceHours\": $sum($append($filter($acc, function($item) { $item.assetId = $curr.assetId }).maintenanceHours,$curr.maintenanceHours)),\n          \"prmId\": $curr.id\n        }])},\n  []\n)\n\n\n\n\n\n\n\n\n\n /* $groupby($.assetId) */",
+            "nextNodes": [
+              "3817ed2e-8df1-4634-a403-9fb8434adcba"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+          "name": "Try Catch",
+          "type": "tryCatch",
+          "data": {
+            "tryNextNodes": [
+              "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+              "c6b313fa-f1f0-4e12-978d-05ffde52f2d8"
+            ],
+            "catchNextNodes": [
+              "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+              "a5fe8bb4-0786-433b-85a6-425ef7a57a80"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+          "name": "Log: ERROR ENCOUNTERED",
+          "type": "log",
+          "data": {
+            "messageTransform": "\"ERROR ENCOUNTERED !!!\"",
+            "level": "Warn",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+          "name": "If Else - Missing Production Data?",
+          "type": "ifElse",
+          "data": {
+            "onTrueNextNodes": [
+              "e4a0db4c-0df3-4247-bb1c-bb35d180ace4"
+            ],
+            "onFalseNextNodes": [
+              "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af"
+            ],
+            "transform": "$isNilOrEmpty($.productionRunMaintenance)"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e4a0db4c-0df3-4247-bb1c-bb35d180ace4",
+          "name": "Log: No Production History",
+          "type": "log",
+          "data": {
+            "messageTransform": "\"No Production History found !!!\"",
+            "level": "Warn",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97",
+          "name": "JSONata - SUCCESS",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"SUCCESS\": true,\n  \"MESSAGE\": \"Assets updated successfull with the following values: \"\n    & $.updateAsset\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+          "name": "If Else",
+          "type": "ifElse",
+          "data": {
+            "onTrueNextNodes": [
+              "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97"
+            ],
+            "onFalseNextNodes": [
+              "2dcf14df-6cfe-4174-829f-8508867cb73e",
+              "8daaf7f7-41d7-425a-9c21-5901032b59aa"
+            ],
+            "transform": "/* Check for all expected items (create success) */\n$not($isNilOrEmpty(updateAsset))"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2dcf14df-6cfe-4174-829f-8508867cb73e",
+          "name": "JSONata - FAILED",
+          "type": "transform",
+          "data": {
+            "transform": "{\n  \"SUCCESS\": false,\n  \"MESSAGE\": \"Asset Hours (WorkcenterHistory) update failed\"\n}\n\n",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a5fe8bb4-0786-433b-85a6-425ef7a57a80",
+          "name": "Throw Error",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$",
+            "messageTransform": "\"ERROR\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "8daaf7f7-41d7-425a-9c21-5901032b59aa",
+          "name": "Throw Error",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "$",
+            "messageTransform": "\"FAILED ASSET UPDATE\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9785ca0c-429b-45e9-9131-8291b7707f74",
+          "name": "Query: GET ProductionRuns that match the assets",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "query": "query Query($wherePRM: ProductionRunMaintenanceWhereInput) {\n  productionRunMaintenance : productionRunMaintenance(where: $wherePRM) {\n    edges {\n      node {\n        id\n        maintenanceCycles\n        maintenanceHours\n        assetId\n        productionRunId\n        productionRun{\n          id\n          startAt\n          endAt\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "0cea648e-0f3c-40c5-a2bb-a298991977e2"
+            ],
+            "variablesTransform": "\n(\n\n$firstOfYear := $moment().startOf('year');\n$assetIds := $state.context.LOCAL.assets.id;\n\n{\"$wherePRM\":\n  \t{\"_and\": [\n      {\"productionRun\":{\"startAt\": {\"_gte\": $firstOfYear}}},\n      {\"assetId\":{\"_in\": [$assetIds]}}\n    ]}\n}\n\n)"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "transform": "{\n  \"LOCAL\": {\n    \"request\": $\n  }\n}",
+            "nextNodes": [
+              "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "9785ca0c-429b-45e9-9131-8291b7707f74"
+            ],
+            "transform": "{\n  \"LOCAL\": {\n    \"assets\": $.assets.edges.node\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "92ee4164-5634-4fcf-ad79-e5d347948f98"
+            ],
+            "transform": "{\n  \"LOCAL\": {\n    \"productionRunMaintenance\": $.productionRunMaintenance.edges.node\n  }\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+          "name": "JSONata: Generate update payloads",
+          "type": "transform",
+          "data": {
+            "transform": "/*\n$inner\nUSE inner join (JSONATA) to combine the \nINPUT -\n1 per asset id, per ph record\n{\n  \"id\": \"clwaxnjhy1b6u015dgczs8d3e\",\n  \"units\": 1,\n  \"hours\": 0.39445305555555554,\n  \"cycles\": 1\n}\nOUTPUT - \nupdate payload for giving new asset hours\n\n\n{\n    \"payloads\": $map($, function($v) {\n        {\n            \"payload\": {\n                \"update\": {\"maintenanceHours\" : $coalesce([maintHours,0])},\n                \"where\": {\"id\": $v.id}\n            }\n        }\n    })\n}\n\n\n\n{\"payload\": \n    {\n      \"update\": {\"maintenanceHours\" : $coalesce([maintHours,0])},\n      \"where\": {\"id\": id}\n    }\n    \n}\n\n*/\n\n{\n    \"payload\": $map($, function($v) {\n        {\n            \"update\": {\n              \"currentHours\" : $coalesce([maintenanceHours,0]),\n              \"currentCycles\" : $coalesce([maintenanceCycles,0])},\n            \"where\": {\"id\": $v.assetId}\n        }\n    })\n}\n\n",
+            "nextNodes": [
+              "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "c6b313fa-f1f0-4e12-978d-05ffde52f2d8",
+          "name": "Log: No Production History",
+          "type": "log",
+          "data": {
+            "messageTransform": "\"Update Asset Hours/Cycles from ProductionRuns Ran !!!\"",
+            "level": "Info",
+            "includeContext": true,
+            "includePayload": true,
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.1"
+    },
+    "diagram": {
+      "id": "cm09wlphw094n0163hmwo0vjf",
+      "offsetX": 153.26,
+      "offsetY": 439.86,
+      "zoom": 63.89,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "36bdd9c6-ea29-4cc8-9673-953f4907704d",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "44fd6af0-212f-48a2-94ad-738298c50874": {
+              "points": [
+                {
+                  "id": "19500731-9922-4b72-a7a7-7ec1a6c8a98c",
+                  "type": "point",
+                  "x": 1264.15,
+                  "y": -190.68
+                },
+                {
+                  "id": "0621da09-d597-4a00-82eb-90eda55fbda3",
+                  "type": "point",
+                  "x": 1314.2,
+                  "y": -190.68
+                }
+              ],
+              "id": "44fd6af0-212f-48a2-94ad-738298c50874",
+              "type": "default",
+              "selected": false,
+              "source": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+              "sourcePort": "cm09wp3l800333j6hpkkf9kdd",
+              "target": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+              "targetPort": "cm09wp3m2008b3j6habxz9yxz",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6014e342-0fed-4a38-9893-1266807296af": {
+              "points": [
+                {
+                  "id": "e149b278-c45e-4e8e-8690-4d598d3f0549",
+                  "type": "point",
+                  "x": 279,
+                  "y": -290.53
+                },
+                {
+                  "id": "c4089432-a785-47c2-9160-66b14f526cc2",
+                  "type": "point",
+                  "x": 134.2,
+                  "y": -150.68
+                }
+              ],
+              "id": "6014e342-0fed-4a38-9893-1266807296af",
+              "type": "default",
+              "selected": false,
+              "source": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "sourcePort": "cm09wp3lk005l3j6hyuf9cgga",
+              "target": "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+              "targetPort": "cm09wp3lo00613j6hq8opnmrs",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7cb8f9b1-e360-4067-a037-366ce10fab06": {
+              "points": [
+                {
+                  "id": "9a6d67f7-99a2-49b8-8b69-019e99525821",
+                  "type": "point",
+                  "x": 279,
+                  "y": -290.53
+                },
+                {
+                  "id": "ea370981-e933-4a57-b8f2-73130f3f1cd7",
+                  "type": "point",
+                  "x": 134.2,
+                  "y": -215.68
+                }
+              ],
+              "id": "7cb8f9b1-e360-4067-a037-366ce10fab06",
+              "type": "default",
+              "selected": false,
+              "source": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "sourcePort": "cm09wp3lk005l3j6hyuf9cgga",
+              "target": "a5fe8bb4-0786-433b-85a6-425ef7a57a80",
+              "targetPort": "cm09wp3m6008x3j6h5ou8lf78",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "944cae56-42bc-4f19-96a2-5ef540a17531": {
+              "points": [
+                {
+                  "id": "6b580a4b-eab0-49df-a5e9-ebaa9cab9c7c",
+                  "type": "point",
+                  "x": 30.75,
+                  "y": -335.68
+                },
+                {
+                  "id": "13e51a91-fc7c-442e-ae44-e6a333f4e4a9",
+                  "type": "point",
+                  "x": 124.2,
+                  "y": -315.67
+                }
+              ],
+              "id": "944cae56-42bc-4f19-96a2-5ef540a17531",
+              "type": "default",
+              "selected": false,
+              "source": "3a903d0e-ff1d-4757-9a74-212a79668a71",
+              "sourcePort": "cm09wp3ll005r3j6hf9kjwjy6",
+              "target": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "targetPort": "cm09wp3lk005h3j6hccmv5qdi",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5c5950ec-2dcd-4d9b-aa90-eee682c8af51": {
+              "points": [
+                {
+                  "id": "8afe432e-59de-45ef-b17a-90c59a3f6d83",
+                  "type": "point",
+                  "x": 954.18,
+                  "y": -350.68
+                },
+                {
+                  "id": "549e4321-f9f7-41fe-a4ed-03121fbf4674",
+                  "type": "point",
+                  "x": 1014.2,
+                  "y": -415.68
+                }
+              ],
+              "id": "5c5950ec-2dcd-4d9b-aa90-eee682c8af51",
+              "type": "default",
+              "selected": false,
+              "source": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+              "sourcePort": "cm09wp3lt006v3j6h9z7gxyys",
+              "target": "e4a0db4c-0df3-4247-bb1c-bb35d180ace4",
+              "targetPort": "cm09wp3lv00773j6hb331pc32",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d6662028-7864-448d-aba8-379ab1f81b84": {
+              "points": [
+                {
+                  "id": "96e2c253-9d29-455b-b4e6-c51a124715c4",
+                  "type": "point",
+                  "x": 954.18,
+                  "y": -325.53
+                },
+                {
+                  "id": "9ebca124-1a00-4b8a-a25a-20e55bc0c8e2",
+                  "type": "point",
+                  "x": 999.2,
+                  "y": -325.67
+                }
+              ],
+              "id": "d6662028-7864-448d-aba8-379ab1f81b84",
+              "type": "default",
+              "selected": false,
+              "source": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+              "sourcePort": "cm09wp3lt006x3j6h8xg5m88r",
+              "target": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+              "targetPort": "cm09wp3l9003d3j6houd09jfn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "375910aa-d894-4099-b7a1-6ac3a8fa6531": {
+              "points": [
+                {
+                  "id": "71841833-45a7-4f5f-85e5-1e26cf11c6ac",
+                  "type": "point",
+                  "x": 1469,
+                  "y": -190.68
+                },
+                {
+                  "id": "3b5bfdf0-1659-4415-beb7-233ec8fa5682",
+                  "type": "point",
+                  "x": 1549.2,
+                  "y": -210.68
+                }
+              ],
+              "id": "375910aa-d894-4099-b7a1-6ac3a8fa6531",
+              "type": "default",
+              "selected": false,
+              "source": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+              "sourcePort": "cm09wp3m2008d3j6hz5no3a7z",
+              "target": "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97",
+              "targetPort": "cm09wp3lz007v3j6hcvwlnhvm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "29b53984-14bf-43c0-95bc-c3a7158d2d47": {
+              "points": [
+                {
+                  "id": "c85efc3d-abd6-44c7-b217-8496d80d4c35",
+                  "type": "point",
+                  "x": 1469,
+                  "y": -165.52
+                },
+                {
+                  "id": "ab9ad588-413f-477e-8f48-b4bcc7f2ee28",
+                  "type": "point",
+                  "x": 1549.2,
+                  "y": -150.68
+                }
+              ],
+              "id": "29b53984-14bf-43c0-95bc-c3a7158d2d47",
+              "type": "default",
+              "selected": false,
+              "source": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+              "sourcePort": "cm09wp3m2008f3j6hrcl1p0m1",
+              "target": "2dcf14df-6cfe-4174-829f-8508867cb73e",
+              "targetPort": "cm09wp3m4008p3j6h9sdz5c1h",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "771a680a-6ff7-440b-9872-626491e4bec4": {
+              "points": [
+                {
+                  "id": "42729ea3-07a2-493c-98ed-8476da4df838",
+                  "type": "point",
+                  "x": 1469,
+                  "y": -165.52
+                },
+                {
+                  "id": "d827a7dc-a9f8-44f6-9d00-6b8fe2a35c24",
+                  "type": "point",
+                  "x": 1554.2,
+                  "y": -75.67
+                }
+              ],
+              "id": "771a680a-6ff7-440b-9872-626491e4bec4",
+              "type": "default",
+              "selected": false,
+              "source": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+              "sourcePort": "cm09wp3m2008f3j6hrcl1p0m1",
+              "target": "8daaf7f7-41d7-425a-9c21-5901032b59aa",
+              "targetPort": "cm09wp3m800933j6h4am337am",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "bbfc1b84-4544-4d88-8bcf-afe5f09f4f66": {
+              "points": [
+                {
+                  "id": "e62affa6-4589-437b-b86e-482f72dcff6f",
+                  "type": "point",
+                  "x": 675.2,
+                  "y": -250.67
+                },
+                {
+                  "id": "77a0a24f-bac6-44b5-aa33-2be79161735e",
+                  "type": "point",
+                  "x": 524.19,
+                  "y": -185.67
+                }
+              ],
+              "id": "bbfc1b84-4544-4d88-8bcf-afe5f09f4f66",
+              "type": "default",
+              "selected": false,
+              "source": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+              "sourcePort": "cm09wp3l6002r3j6hvx2k5c0z",
+              "target": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+              "targetPort": "cm0bn79mu017z3j6hm5eunqv3",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9c8d49a4-9ebc-453a-a5f3-52ac6032fbf6": {
+              "points": [
+                {
+                  "id": "a93009e9-6c78-4592-826f-a11a10fe10cd",
+                  "type": "point",
+                  "x": 682.25,
+                  "y": -120.68
+                },
+                {
+                  "id": "faab827e-f58c-46d7-9068-edaab9192c92",
+                  "type": "point",
+                  "x": 524.19,
+                  "y": -60.67
+                }
+              ],
+              "id": "9c8d49a4-9ebc-453a-a5f3-52ac6032fbf6",
+              "type": "default",
+              "selected": false,
+              "source": "9785ca0c-429b-45e9-9131-8291b7707f74",
+              "sourcePort": "cm0bmz2sh016h3j6hi5e61vuq",
+              "target": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+              "targetPort": "cm0bn7x93018v3j6hjxm5ixdv",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5c5a7893-a279-415d-b052-3f6c0e605c29": {
+              "points": [
+                {
+                  "id": "c6ff36c7-84ac-47cf-81d3-d0cdbfb98e59",
+                  "type": "point",
+                  "x": 638.99,
+                  "y": -315.66
+                },
+                {
+                  "id": "dd5c758e-9857-45cf-988b-9df74e8c8bb8",
+                  "type": "point",
+                  "x": 404.2,
+                  "y": -250.67
+                }
+              ],
+              "id": "5c5a7893-a279-415d-b052-3f6c0e605c29",
+              "type": "default",
+              "selected": false,
+              "source": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+              "sourcePort": "cm0bn0tbs017d3j6hettqur2w",
+              "target": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+              "targetPort": "cm09wp3l6002p3j6h7c3v9nuy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "333f75df-7ec2-4c5e-9852-bbb23af818b1": {
+              "points": [
+                {
+                  "id": "9fff787f-7678-4bda-a800-fd18c4f7f5d3",
+                  "type": "point",
+                  "x": 279,
+                  "y": -315.67
+                },
+                {
+                  "id": "aad384aa-4488-45ea-88d5-0a8e2fb0d2f7",
+                  "type": "point",
+                  "x": 484.19,
+                  "y": -315.66
+                }
+              ],
+              "id": "333f75df-7ec2-4c5e-9852-bbb23af818b1",
+              "type": "default",
+              "selected": false,
+              "source": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "sourcePort": "cm09wp3lk005j3j6h80ng7duv",
+              "target": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+              "targetPort": "cm0bn0tbs017b3j6h3sezstin",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "893b5822-4d92-4701-9c8f-b1eec7b5c7d8": {
+              "points": [
+                {
+                  "id": "dc03eecd-f03f-4b2e-a566-7e7c8118b63f",
+                  "type": "point",
+                  "x": 678.99,
+                  "y": -185.67
+                },
+                {
+                  "id": "975e8623-8a65-45fe-8848-6122c44653cb",
+                  "type": "point",
+                  "x": 364.2,
+                  "y": -120.68
+                }
+              ],
+              "id": "893b5822-4d92-4701-9c8f-b1eec7b5c7d8",
+              "type": "default",
+              "selected": false,
+              "source": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+              "sourcePort": "cm0bn79mu01813j6hen0mldfa",
+              "target": "9785ca0c-429b-45e9-9131-8291b7707f74",
+              "targetPort": "cm0bmz2sh016f3j6hkg4273ii",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e9bb82d1-a14f-45c5-979e-3c917730f22c": {
+              "points": [
+                {
+                  "id": "6b7eb2c4-1194-4411-a934-538d623d5355",
+                  "type": "point",
+                  "x": 678.99,
+                  "y": -60.67
+                },
+                {
+                  "id": "38fb1881-c7ae-4f22-a7fa-68000452f9fb",
+                  "type": "point",
+                  "x": 724.2,
+                  "y": -350.68
+                }
+              ],
+              "id": "e9bb82d1-a14f-45c5-979e-3c917730f22c",
+              "type": "default",
+              "selected": false,
+              "source": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+              "sourcePort": "cm0bn7x93018x3j6hhs7l05a6",
+              "target": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+              "targetPort": "cm09wp3lt006t3j6hn0yc1peg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f2bdb1e0-a3d3-4e86-b00b-67b1699e418a": {
+              "points": [
+                {
+                  "id": "f4d65cbb-b12d-4700-ac1c-116ae72d9b24",
+                  "type": "point",
+                  "x": 1290.2,
+                  "y": -325.67
+                },
+                {
+                  "id": "a992cb3a-ca6d-4ac3-9b5c-debadf4b1a90",
+                  "type": "point",
+                  "x": 1024.2,
+                  "y": -255.67
+                }
+              ],
+              "id": "f2bdb1e0-a3d3-4e86-b00b-67b1699e418a",
+              "type": "default",
+              "selected": false,
+              "source": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+              "sourcePort": "cm09wp3l9003f3j6h6pxbf91u",
+              "target": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+              "targetPort": "cm0bsw2i102583j6hlzo9wnwg",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "13a6a970-d206-4115-9c14-4dcb5af1d69f": {
+              "points": [
+                {
+                  "id": "4c148d51-3985-4e44-b8ff-b55387ef3342",
+                  "type": "point",
+                  "x": 1265.25,
+                  "y": -255.67
+                },
+                {
+                  "id": "da7be397-3dad-43e9-aff0-162b6183e145",
+                  "type": "point",
+                  "x": 1004.2,
+                  "y": -190.68
+                }
+              ],
+              "id": "13a6a970-d206-4115-9c14-4dcb5af1d69f",
+              "type": "default",
+              "selected": false,
+              "source": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+              "sourcePort": "cm0bsw2i1025a3j6h9fqg6g66",
+              "target": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+              "targetPort": "cm09wp3l800313j6h2ilt8c8b",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a6d03e9c-afc7-4738-939a-1bc1acf96a24": {
+              "points": [
+                {
+                  "id": "f408d127-9b81-4da8-871a-db440c2e61ad",
+                  "type": "point",
+                  "x": 19,
+                  "y": -265.67
+                },
+                {
+                  "id": "ad55899e-29d7-4b50-8652-c9e90ffcf5d7",
+                  "type": "point",
+                  "x": 124.2,
+                  "y": -315.67
+                }
+              ],
+              "id": "a6d03e9c-afc7-4738-939a-1bc1acf96a24",
+              "type": "default",
+              "selected": false,
+              "source": "7b74ae40-ab91-4b7c-b7dd-d31a19725df2",
+              "sourcePort": "cm09wp3l200293j6h31q5tj9a",
+              "target": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "targetPort": "cm09wp3lk005h3j6hccmv5qdi",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "64506a20-ef9e-46fd-a163-175e53c25c33": {
+              "points": [
+                {
+                  "id": "d26c053d-1ce3-4e85-82fb-4d669e23429c",
+                  "type": "point",
+                  "x": 279,
+                  "y": -315.67
+                },
+                {
+                  "id": "f8bf0f6e-9413-42ba-a1d6-dc74306823ae",
+                  "type": "point",
+                  "x": 374.2,
+                  "y": -405.67
+                }
+              ],
+              "id": "64506a20-ef9e-46fd-a163-175e53c25c33",
+              "type": "default",
+              "selected": false,
+              "source": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "sourcePort": "cm09wp3lk005j3j6h80ng7duv",
+              "target": "c6b313fa-f1f0-4e12-978d-05ffde52f2d8",
+              "targetPort": "cm0btn0ne02jh3j6hul0h9z96",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "34688c8a-ddf4-4c40-b2a4-568514ecf86b",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "7b74ae40-ab91-4b7c-b7dd-d31a19725df2": {
+              "id": "7b74ae40-ab91-4b7c-b7dd-d31a19725df2",
+              "type": "schedule",
+              "selected": false,
+              "x": -135,
+              "y": -305,
+              "ports": [
+                {
+                  "id": "cm09wp3l200293j6h31q5tj9a",
+                  "type": "default",
+                  "x": 11.4,
+                  "y": -273.27,
+                  "name": "cm09wp3l2002a3j6h4icj9zpv",
+                  "parentNode": "7b74ae40-ab91-4b7c-b7dd-d31a19725df2",
+                  "links": [
+                    "a6d03e9c-afc7-4738-939a-1bc1acf96a24"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "configure": "Open Schedule Editor",
+                "nextNodes": [
+                  "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Schedule"
+            },
+            "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd": {
+              "id": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+              "type": "query",
+              "selected": false,
+              "x": 405,
+              "y": -290,
+              "ports": [
+                {
+                  "id": "cm09wp3l6002p3j6h7c3v9nuy",
+                  "type": "default",
+                  "x": 396.6,
+                  "y": -258.27,
+                  "name": "cm09wp3l6002q3j6hfog8i0rv",
+                  "parentNode": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+                  "links": [
+                    "5c5a7893-a279-415d-b052-3f6c0e605c29"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3l6002r3j6hvx2k5c0z",
+                  "type": "default",
+                  "x": 667.6,
+                  "y": -258.27,
+                  "name": "cm09wp3l6002s3j6hvy8g287w",
+                  "parentNode": "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd",
+                  "links": [
+                    "bbfc1b84-4544-4d88-8bcf-afe5f09f4f66"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "query": "query Query($whereA: AssetWhereInput) {\n  assets : asset(where: $whereA) {\n    edges {\n      node {\n        id\n        number\n        maxLifetimeCycles\n        currentCycles\n        currentHours\n        lifetimeCycles\n        lifetimeHours\n        maxLifetimeHours\n        serialized\n        barcode\n        brand\n        description\n        externalId\n        modelNumber\n        serialNumber\n        inServiceAt\n        lastResetAt\n        newAt\n        purchaseAt\n        customData\n        integrationData\n        assetMaintenanceStatusId\n        assetMaintenanceStatus {\n          id\n          name\n          disabled\n          ready\n          retired\n          servicing\n          system\n          usable\n          color\n          externalId\n          message\n          customData\n          integrationData\n        }\n        statusId\n        status {\n          id\n          name\n          active\n          approved\n          default\n          experimental\n          system\n          usable\n          color\n          externalId\n          message\n          customData\n          integrationData\n        }\n        typeId\n        type {\n          id\n          name\n          equipment\n          inspection\n          machinery\n          system\n          tooling\n          usable\n          color\n          customData\n          screenId\n        }\n        assetDesignId\n        facilityId\n        groupId\n        imageId\n        supplierId\n        workcenterId\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "e32badfa-4b5e-4891-8a40-f42ab87d27f1"
+                ],
+                "variablesTransform": "{\"whereA\":\n  {\"_and\": [\n\t\t{\"assetMaintenanceStatus\": {\"usable\": {\"_eq\": true}}},\n    {\"status\": {\"usable\": {\"_eq\": true}}}\n  ]}\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query: Get asset data for all usable items"
+            },
+            "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2": {
+              "id": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+              "type": "mutate",
+              "selected": false,
+              "x": 1005,
+              "y": -230,
+              "ports": [
+                {
+                  "id": "cm09wp3l800313j6h2ilt8c8b",
+                  "type": "default",
+                  "x": 996.6,
+                  "y": -198.28,
+                  "name": "cm09wp3l800323j6hv1s8609c",
+                  "parentNode": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+                  "links": [
+                    "13a6a970-d206-4115-9c14-4dcb5af1d69f"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3l800333j6hpkkf9kdd",
+                  "type": "default",
+                  "x": 1256.55,
+                  "y": -198.28,
+                  "name": "cm09wp3l800343j6hjt63go5v",
+                  "parentNode": "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2",
+                  "links": [
+                    "44fd6af0-212f-48a2-94ad-738298c50874"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation(\n  $payload: [AssetUpdatePayloadInput!]!,\n){\n  updateAsset(payload:$payload){\n    id\n    currentHours\n    lifetimeHours\n    currentCycles\n    lifetimeCycles\n  }\n}",
+                "nextNodes": [
+                  "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Mutate: Update asset Hours and cycles"
+            },
+            "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af": {
+              "id": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+              "type": "transform",
+              "selected": false,
+              "x": 1000,
+              "y": -365,
+              "ports": [
+                {
+                  "id": "cm09wp3l9003d3j6houd09jfn",
+                  "type": "default",
+                  "x": 991.6,
+                  "y": -333.27,
+                  "name": "cm09wp3l9003e3j6h4ax3ywk4",
+                  "parentNode": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+                  "links": [
+                    "d6662028-7864-448d-aba8-379ab1f81b84"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3l9003f3j6h6pxbf91u",
+                  "type": "default",
+                  "x": 1282.6,
+                  "y": -333.27,
+                  "name": "cm09wp3l9003g3j6h3lavsi2c",
+                  "parentNode": "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af",
+                  "links": [
+                    "f2bdb1e0-a3d3-4e86-b00b-67b1699e418a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "/*\nINPUT - \nraw PRM record\n\nOUTPUT - \n1 per PRM record\n  \n\n(\n$prm := productionRunMaintenance.edges.node.(\n    {\n    \"id\":id,\n    \"maintenanceCycles\" : maintenanceCycles,\n    \"maintenanceHours\" : maintenanceHours,\n    \"assetId\" : assetId,\n    \"productionRunId\" : productionRunId\n    }\n  );\n \n$groupby($.assetId)\n\n)\n*/\n\n$reduce($.productionRunMaintenance.edges.node,function($acc, $curr) {\n    $append($filter($acc, function($item) { $item.assetId != $curr.assetId }),\n      [{\n          \"assetId\": $curr.assetId,\n          \"maintenanceCycles\": $sum($append($filter($acc, function($item) { $item.assetId = $curr.assetId }).maintenanceCycles,$curr.maintenanceCycles)),\n          \"maintenanceHours\": $sum($append($filter($acc, function($item) { $item.assetId = $curr.assetId }).maintenanceHours,$curr.maintenanceHours)),\n          \"prmId\": $curr.id\n        }])},\n  []\n)\n\n\n\n\n\n\n\n\n\n /* $groupby($.assetId) */",
+                "nextNodes": [
+                  "3817ed2e-8df1-4634-a403-9fb8434adcba"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata: Group and sum data for each asset"
+            },
+            "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d": {
+              "id": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+              "type": "tryCatch",
+              "selected": false,
+              "x": 125,
+              "y": -355,
+              "ports": [
+                {
+                  "id": "cm09wp3lk005h3j6hccmv5qdi",
+                  "type": "default",
+                  "x": 116.6,
+                  "y": -323.27,
+                  "name": "cm09wp3lk005i3j6hr2k6tq66",
+                  "parentNode": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+                  "links": [
+                    "944cae56-42bc-4f19-96a2-5ef540a17531",
+                    "a6d03e9c-afc7-4738-939a-1bc1acf96a24"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3lk005j3j6h80ng7duv",
+                  "type": "default",
+                  "x": 271.4,
+                  "y": -323.27,
+                  "name": "cm09wp3lk005k3j6hoz67kr4c",
+                  "parentNode": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+                  "links": [
+                    "333f75df-7ec2-4c5e-9852-bbb23af818b1",
+                    "64506a20-ef9e-46fd-a163-175e53c25c33"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Try",
+                  "fieldPath": "data.tryNextNodes"
+                },
+                {
+                  "id": "cm09wp3lk005l3j6hyuf9cgga",
+                  "type": "default",
+                  "x": 271.4,
+                  "y": -298.13,
+                  "name": "cm09wp3lk005m3j6hvskozs9x",
+                  "parentNode": "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d",
+                  "links": [
+                    "6014e342-0fed-4a38-9893-1266807296af",
+                    "7cb8f9b1-e360-4067-a037-366ce10fab06"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Catch",
+                  "fieldPath": "data.catchNextNodes"
+                }
+              ],
+              "data": {
+                "tryNextNodes": [
+                  "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+                  "c6b313fa-f1f0-4e12-978d-05ffde52f2d8"
+                ],
+                "catchNextNodes": [
+                  "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+                  "a5fe8bb4-0786-433b-85a6-425ef7a57a80"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Try Catch"
+            },
+            "3a903d0e-ff1d-4757-9a74-212a79668a71": {
+              "id": "3a903d0e-ff1d-4757-9a74-212a79668a71",
+              "type": "debugSource",
+              "selected": false,
+              "x": -145,
+              "y": -375,
+              "ports": [
+                {
+                  "id": "cm09wp3ll005r3j6hf9kjwjy6",
+                  "type": "default",
+                  "x": 23.15,
+                  "y": -343.27,
+                  "name": "cm09wp3ll005s3j6huc5jtwhd",
+                  "parentNode": "3a903d0e-ff1d-4757-9a74-212a79668a71",
+                  "links": [
+                    "944cae56-42bc-4f19-96a2-5ef540a17531"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {},
+                "context": {},
+                "nextNodes": [
+                  "e070e8c0-a1f0-4bf5-8fa2-35ee739d234d"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source - Test PH update"
+            },
+            "cf6619a0-9386-4de3-bef5-c2a097d883f6": {
+              "id": "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+              "type": "log",
+              "selected": false,
+              "x": 135,
+              "y": -190,
+              "ports": [
+                {
+                  "id": "cm09wp3lo00613j6hq8opnmrs",
+                  "type": "default",
+                  "x": 126.6,
+                  "y": -158.28,
+                  "name": "cm09wp3lo00623j6hgm3bgjeq",
+                  "parentNode": "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+                  "links": [
+                    "6014e342-0fed-4a38-9893-1266807296af"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3lo00633j6hx02gm437",
+                  "type": "default",
+                  "x": 326.23,
+                  "y": -158.28,
+                  "name": "cm09wp3lo00643j6hwrd3fylr",
+                  "parentNode": "cf6619a0-9386-4de3-bef5-c2a097d883f6",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"ERROR ENCOUNTERED !!!\"",
+                "level": "Warn",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log: ERROR ENCOUNTERED"
+            },
+            "92ee4164-5634-4fcf-ad79-e5d347948f98": {
+              "id": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+              "type": "ifElse",
+              "selected": false,
+              "x": 725,
+              "y": -390,
+              "ports": [
+                {
+                  "id": "cm09wp3lt006t3j6hn0yc1peg",
+                  "type": "default",
+                  "x": 716.6,
+                  "y": -358.28,
+                  "name": "cm09wp3lt006u3j6hik1gcc7y",
+                  "parentNode": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+                  "links": [
+                    "e9bb82d1-a14f-45c5-979e-3c917730f22c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3lt006v3j6h9z7gxyys",
+                  "type": "default",
+                  "x": 946.58,
+                  "y": -358.28,
+                  "name": "cm09wp3lt006w3j6hgp6mnhrf",
+                  "parentNode": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+                  "links": [
+                    "5c5950ec-2dcd-4d9b-aa90-eee682c8af51"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "cm09wp3lt006x3j6h8xg5m88r",
+                  "type": "default",
+                  "x": 946.58,
+                  "y": -333.13,
+                  "name": "cm09wp3lt006y3j6hly1a54sy",
+                  "parentNode": "92ee4164-5634-4fcf-ad79-e5d347948f98",
+                  "links": [
+                    "d6662028-7864-448d-aba8-379ab1f81b84"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onTrueNextNodes": [
+                  "e4a0db4c-0df3-4247-bb1c-bb35d180ace4"
+                ],
+                "onFalseNextNodes": [
+                  "4d6c1c11-2e69-45c2-bbd7-f26ce5c022af"
+                ],
+                "transform": "$isNilOrEmpty($.productionRunMaintenance)"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "If Else - Missing Production Data?"
+            },
+            "e4a0db4c-0df3-4247-bb1c-bb35d180ace4": {
+              "id": "e4a0db4c-0df3-4247-bb1c-bb35d180ace4",
+              "type": "log",
+              "selected": false,
+              "x": 1015,
+              "y": -455,
+              "ports": [
+                {
+                  "id": "cm09wp3lv00773j6hb331pc32",
+                  "type": "default",
+                  "x": 1006.6,
+                  "y": -423.28,
+                  "name": "cm09wp3lv00783j6ha7ejwev3",
+                  "parentNode": "e4a0db4c-0df3-4247-bb1c-bb35d180ace4",
+                  "links": [
+                    "5c5950ec-2dcd-4d9b-aa90-eee682c8af51"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3lv00793j6h5w21dcr6",
+                  "type": "default",
+                  "x": 1201.15,
+                  "y": -423.28,
+                  "name": "cm09wp3lv007a3j6hq0cs9akj",
+                  "parentNode": "e4a0db4c-0df3-4247-bb1c-bb35d180ace4",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"No Production History found !!!\"",
+                "level": "Warn",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log: No Production History"
+            },
+            "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97": {
+              "id": "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97",
+              "type": "transform",
+              "selected": false,
+              "x": 1550,
+              "y": -250,
+              "ports": [
+                {
+                  "id": "cm09wp3lz007v3j6hcvwlnhvm",
+                  "type": "default",
+                  "x": 1541.6,
+                  "y": -218.27,
+                  "name": "cm09wp3lz007w3j6h0hank19f",
+                  "parentNode": "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97",
+                  "links": [
+                    "375910aa-d894-4099-b7a1-6ac3a8fa6531"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3lz007x3j6hgw2g8l4m",
+                  "type": "default",
+                  "x": 1698.18,
+                  "y": -218.27,
+                  "name": "cm09wp3lz007y3j6hmaia9dcb",
+                  "parentNode": "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"SUCCESS\": true,\n  \"MESSAGE\": \"Assets updated successfull with the following values: \"\n    & $.updateAsset\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata - SUCCESS"
+            },
+            "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50": {
+              "id": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+              "type": "ifElse",
+              "selected": false,
+              "x": 1315,
+              "y": -230,
+              "ports": [
+                {
+                  "id": "cm09wp3m2008b3j6habxz9yxz",
+                  "type": "default",
+                  "x": 1306.6,
+                  "y": -198.28,
+                  "name": "cm09wp3m2008c3j6hz8gbot4l",
+                  "parentNode": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+                  "links": [
+                    "44fd6af0-212f-48a2-94ad-738298c50874"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3m2008d3j6hz5no3a7z",
+                  "type": "default",
+                  "x": 1461.4,
+                  "y": -198.28,
+                  "name": "cm09wp3m2008e3j6h6ncn90dr",
+                  "parentNode": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+                  "links": [
+                    "375910aa-d894-4099-b7a1-6ac3a8fa6531"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "cm09wp3m2008f3j6hrcl1p0m1",
+                  "type": "default",
+                  "x": 1461.4,
+                  "y": -173.12,
+                  "name": "cm09wp3m2008g3j6hah2hohiy",
+                  "parentNode": "0ad039b3-74f4-4a4b-87f0-1ed22cf92f50",
+                  "links": [
+                    "29b53984-14bf-43c0-95bc-c3a7158d2d47",
+                    "771a680a-6ff7-440b-9872-626491e4bec4"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "onTrueNextNodes": [
+                  "e6c78c5f-9aa0-40cd-a0a1-a78ff74b0b97"
+                ],
+                "onFalseNextNodes": [
+                  "2dcf14df-6cfe-4174-829f-8508867cb73e",
+                  "8daaf7f7-41d7-425a-9c21-5901032b59aa"
+                ],
+                "transform": "/* Check for all expected items (create success) */\n$not($isNilOrEmpty(updateAsset))"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "If Else"
+            },
+            "2dcf14df-6cfe-4174-829f-8508867cb73e": {
+              "id": "2dcf14df-6cfe-4174-829f-8508867cb73e",
+              "type": "transform",
+              "selected": false,
+              "x": 1550,
+              "y": -190,
+              "ports": [
+                {
+                  "id": "cm09wp3m4008p3j6h9sdz5c1h",
+                  "type": "default",
+                  "x": 1541.6,
+                  "y": -158.28,
+                  "name": "cm09wp3m4008q3j6ha6xlqvuh",
+                  "parentNode": "2dcf14df-6cfe-4174-829f-8508867cb73e",
+                  "links": [
+                    "29b53984-14bf-43c0-95bc-c3a7158d2d47"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm09wp3m4008r3j6hy2kfgcri",
+                  "type": "default",
+                  "x": 1696.4,
+                  "y": -158.28,
+                  "name": "cm09wp3m4008s3j6hh00t6b9g",
+                  "parentNode": "2dcf14df-6cfe-4174-829f-8508867cb73e",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"SUCCESS\": false,\n  \"MESSAGE\": \"Asset Hours (WorkcenterHistory) update failed\"\n}\n\n",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata - FAILED"
+            },
+            "a5fe8bb4-0786-433b-85a6-425ef7a57a80": {
+              "id": "a5fe8bb4-0786-433b-85a6-425ef7a57a80",
+              "type": "throwError",
+              "selected": false,
+              "x": 135,
+              "y": -255,
+              "ports": [
+                {
+                  "id": "cm09wp3m6008x3j6h5ou8lf78",
+                  "type": "default",
+                  "x": 126.6,
+                  "y": -223.28,
+                  "name": "cm09wp3m6008y3j6havzubypk",
+                  "parentNode": "a5fe8bb4-0786-433b-85a6-425ef7a57a80",
+                  "links": [
+                    "7cb8f9b1-e360-4067-a037-366ce10fab06"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$",
+                "messageTransform": "\"ERROR\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Throw Error"
+            },
+            "8daaf7f7-41d7-425a-9c21-5901032b59aa": {
+              "id": "8daaf7f7-41d7-425a-9c21-5901032b59aa",
+              "type": "throwError",
+              "selected": false,
+              "x": 1555,
+              "y": -115,
+              "ports": [
+                {
+                  "id": "cm09wp3m800933j6h4am337am",
+                  "type": "default",
+                  "x": 1546.6,
+                  "y": -83.27,
+                  "name": "cm09wp3m800943j6huqjskr37",
+                  "parentNode": "8daaf7f7-41d7-425a-9c21-5901032b59aa",
+                  "links": [
+                    "771a680a-6ff7-440b-9872-626491e4bec4"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "$",
+                "messageTransform": "\"FAILED ASSET UPDATE\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Throw Error"
+            },
+            "9785ca0c-429b-45e9-9131-8291b7707f74": {
+              "id": "9785ca0c-429b-45e9-9131-8291b7707f74",
+              "type": "query",
+              "selected": false,
+              "x": 365,
+              "y": -160,
+              "ports": [
+                {
+                  "id": "cm0bmz2sh016f3j6hkg4273ii",
+                  "type": "default",
+                  "x": 356.6,
+                  "y": -128.28,
+                  "name": "cm0bmz2sh016g3j6h1slq2hf7",
+                  "parentNode": "9785ca0c-429b-45e9-9131-8291b7707f74",
+                  "links": [
+                    "893b5822-4d92-4701-9c8f-b1eec7b5c7d8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0bmz2sh016h3j6hi5e61vuq",
+                  "type": "default",
+                  "x": 674.65,
+                  "y": -128.28,
+                  "name": "cm0bmz2sh016i3j6hpxyq25qq",
+                  "parentNode": "9785ca0c-429b-45e9-9131-8291b7707f74",
+                  "links": [
+                    "9c8d49a4-9ebc-453a-a5f3-52ac6032fbf6"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "query": "query Query($wherePRM: ProductionRunMaintenanceWhereInput) {\n  productionRunMaintenance : productionRunMaintenance(where: $wherePRM) {\n    edges {\n      node {\n        id\n        maintenanceCycles\n        maintenanceHours\n        assetId\n        productionRunId\n        productionRun{\n          id\n          startAt\n          endAt\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "0cea648e-0f3c-40c5-a2bb-a298991977e2"
+                ],
+                "variablesTransform": "\n(\n\n$firstOfYear := $moment().startOf('year');\n$assetIds := $state.context.LOCAL.assets.id;\n\n{\"$wherePRM\":\n  \t{\"_and\": [\n      {\"productionRun\":{\"startAt\": {\"_gte\": $firstOfYear}}},\n      {\"assetId\":{\"_in\": [$assetIds]}}\n    ]}\n}\n\n)"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query: GET ProductionRuns that match the assets"
+            },
+            "a15bb684-29e3-4412-b3d2-6f0342a2a25c": {
+              "id": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+              "type": "setContext",
+              "selected": false,
+              "x": 485,
+              "y": -355,
+              "ports": [
+                {
+                  "id": "cm0bn0tbs017b3j6h3sezstin",
+                  "type": "default",
+                  "x": 476.59,
+                  "y": -323.26,
+                  "name": "cm0bn0tbs017c3j6h6g4gad6d",
+                  "parentNode": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+                  "links": [
+                    "333f75df-7ec2-4c5e-9852-bbb23af818b1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0bn0tbs017d3j6hettqur2w",
+                  "type": "default",
+                  "x": 631.39,
+                  "y": -323.26,
+                  "name": "cm0bn0tbs017e3j6hi9my89q4",
+                  "parentNode": "a15bb684-29e3-4412-b3d2-6f0342a2a25c",
+                  "links": [
+                    "5c5a7893-a279-415d-b052-3f6c0e605c29"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"LOCAL\": {\n    \"request\": $\n  }\n}",
+                "nextNodes": [
+                  "561f9e05-ae93-4ea1-abb9-8bd3afb4d6bd"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "e32badfa-4b5e-4891-8a40-f42ab87d27f1": {
+              "id": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 525,
+              "y": -225,
+              "ports": [
+                {
+                  "id": "cm0bn79mu017z3j6hm5eunqv3",
+                  "type": "default",
+                  "x": 516.59,
+                  "y": -193.27,
+                  "name": "cm0bn79mu01803j6h6ujaaigs",
+                  "parentNode": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+                  "links": [
+                    "bbfc1b84-4544-4d88-8bcf-afe5f09f4f66"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0bn79mu01813j6hen0mldfa",
+                  "type": "default",
+                  "x": 671.39,
+                  "y": -193.27,
+                  "name": "cm0bn79mu01823j6ht4ynu0aj",
+                  "parentNode": "e32badfa-4b5e-4891-8a40-f42ab87d27f1",
+                  "links": [
+                    "893b5822-4d92-4701-9c8f-b1eec7b5c7d8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "9785ca0c-429b-45e9-9131-8291b7707f74"
+                ],
+                "transform": "{\n  \"LOCAL\": {\n    \"assets\": $.assets.edges.node\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "0cea648e-0f3c-40c5-a2bb-a298991977e2": {
+              "id": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 525,
+              "y": -100,
+              "ports": [
+                {
+                  "id": "cm0bn7x93018v3j6hjxm5ixdv",
+                  "type": "default",
+                  "x": 516.59,
+                  "y": -68.27,
+                  "name": "cm0bn7x93018w3j6hyrmdw7i4",
+                  "parentNode": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+                  "links": [
+                    "9c8d49a4-9ebc-453a-a5f3-52ac6032fbf6"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0bn7x93018x3j6hhs7l05a6",
+                  "type": "default",
+                  "x": 671.39,
+                  "y": -68.27,
+                  "name": "cm0bn7x93018y3j6hxh5jbp74",
+                  "parentNode": "0cea648e-0f3c-40c5-a2bb-a298991977e2",
+                  "links": [
+                    "e9bb82d1-a14f-45c5-979e-3c917730f22c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "92ee4164-5634-4fcf-ad79-e5d347948f98"
+                ],
+                "transform": "{\n  \"LOCAL\": {\n    \"productionRunMaintenance\": $.productionRunMaintenance.edges.node\n  }\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "3817ed2e-8df1-4634-a403-9fb8434adcba": {
+              "id": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+              "type": "transform",
+              "selected": false,
+              "x": 1025,
+              "y": -295,
+              "ports": [
+                {
+                  "id": "cm0bsw2i102583j6hlzo9wnwg",
+                  "type": "default",
+                  "x": 1016.6,
+                  "y": -263.27,
+                  "name": "cm0bsw2i102593j6hcu0yswn4",
+                  "parentNode": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+                  "links": [
+                    "f2bdb1e0-a3d3-4e86-b00b-67b1699e418a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0bsw2i1025a3j6h9fqg6g66",
+                  "type": "default",
+                  "x": 1257.65,
+                  "y": -263.27,
+                  "name": "cm0bsw2i1025b3j6hm871ob6v",
+                  "parentNode": "3817ed2e-8df1-4634-a403-9fb8434adcba",
+                  "links": [
+                    "13a6a970-d206-4115-9c14-4dcb5af1d69f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "/*\n$inner\nUSE inner join (JSONATA) to combine the \nINPUT -\n1 per asset id, per ph record\n{\n  \"id\": \"clwaxnjhy1b6u015dgczs8d3e\",\n  \"units\": 1,\n  \"hours\": 0.39445305555555554,\n  \"cycles\": 1\n}\nOUTPUT - \nupdate payload for giving new asset hours\n\n\n{\n    \"payloads\": $map($, function($v) {\n        {\n            \"payload\": {\n                \"update\": {\"maintenanceHours\" : $coalesce([maintHours,0])},\n                \"where\": {\"id\": $v.id}\n            }\n        }\n    })\n}\n\n\n\n{\"payload\": \n    {\n      \"update\": {\"maintenanceHours\" : $coalesce([maintHours,0])},\n      \"where\": {\"id\": id}\n    }\n    \n}\n\n*/\n\n{\n    \"payload\": $map($, function($v) {\n        {\n            \"update\": {\n              \"currentHours\" : $coalesce([maintenanceHours,0]),\n              \"currentCycles\" : $coalesce([maintenanceCycles,0])},\n            \"where\": {\"id\": $v.assetId}\n        }\n    })\n}\n\n",
+                "nextNodes": [
+                  "80efdb26-cd3c-40e5-a09d-f62c7fdda8f2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata: Generate update payloads"
+            },
+            "c6b313fa-f1f0-4e12-978d-05ffde52f2d8": {
+              "id": "c6b313fa-f1f0-4e12-978d-05ffde52f2d8",
+              "type": "log",
+              "selected": false,
+              "x": 375,
+              "y": -445,
+              "ports": [
+                {
+                  "id": "cm0btn0ne02jh3j6hul0h9z96",
+                  "type": "default",
+                  "x": 366.6,
+                  "y": -413.27,
+                  "name": "cm0btn0ne02ji3j6hgac6nupu",
+                  "parentNode": "c6b313fa-f1f0-4e12-978d-05ffde52f2d8",
+                  "links": [
+                    "64506a20-ef9e-46fd-a163-175e53c25c33"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0btn0ne02jj3j6hxn0iyt97",
+                  "type": "default",
+                  "x": 561.15,
+                  "y": -413.27,
+                  "name": "cm0btn0ne02jk3j6hobgztb67",
+                  "parentNode": "c6b313fa-f1f0-4e12-978d-05ffde52f2d8",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "messageTransform": "\"Update Asset Hours/Cycles from ProductionRuns Ran !!!\"",
+                "level": "Info",
+                "includeContext": true,
+                "includePayload": true,
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Log: No Production History"
+            }
+          }
+        }
+      ],
+      "name": "Update Asset Hours/Cycles from ProductionRuns",
+      "type": "System",
+      "version": "0.0.1",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

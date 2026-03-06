@@ -1,0 +1,755 @@
+{
+  "header": {
+    "id": "workcenterAvailabilityFromShiftGroupAndCalendar",
+    "name": "Workcenter Availability from Shift Group and Calendar",
+    "description": "Provide one or more Workcenter(s) Availability from Shift Group and Calendar",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cler752tl003l017t4xnsbypl",
+    "number": "0.0.5",
+    "description": "Adding option to split based on shifts.",
+    "dataFlowId": "workcenterAvailabilityFromShiftGroupAndCalendar",
+    "flow": {
+      "id": "cler752tl003l017t4xnsbypl",
+      "name": "Workcenter Availability from Shift Group and Calendar",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "23ba665d-422e-4a40-9862-9253134a70bb",
+          "name": "Query Workcenter Data",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\": $state.context.REQUEST.workcenters\n    }\n  }\n}",
+            "query": "query workcenters($where:WorkcenterWhereInput!){\n  workcenter(where:$where) {\n    edges {\n      node {\n        id\n        name\n        code\n        maximumConcurrency\n        maximumPositions\n        productionOffalAllowed\n        setupOffalAllowed\n        active\n        productionOperators\n        setupOperators\n        shiftGroup {\n          calendarId\n        }\n        calendarId\n      }\n    }\n  } \n}",
+            "nextNodes": [
+              "9a783750-657d-4d36-a778-bced534ef021"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "23ba665d-422e-4a40-9862-9253134a70bb"
+            ],
+            "transform": "{\n  \"REQUEST\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "b0c386cb-7cc1-4a16-8df3-994d57edabb5"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9a783750-657d-4d36-a778-bced534ef021",
+          "name": "JSONata - Combine Data",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $availabilityStart := $isNilOrEmpty($state.context.REQUEST.availabilityStart) ? $moment().startOf('day') :  $moment($state.context.REQUEST.availabilityStart);\n  $availabilityEnd := $isNilOrEmpty($state.context.REQUEST.availabilityEnd) ? $moment($availabilityStart).add(2, 'days').endOf('day') :  $moment($state.context.REQUEST.availabilityEnd);\n\n  $.workcenter.edges.node.(\n    $shiftCalendar := $getCalendar({\"id\":$.shiftGroup.calendarId});\n    \n    /* Does the request require a splitting of availbilty on shifts? */\n    $shiftCalendar := ($state.context.REQUEST.splitShifts=true) \n      ? $shiftCalendar ~> | calendar.calendarEvents.eventJson | {\"duration\": duration-1000, \"end\": $moment(end).subtract(1, 'second')} |\n      : $shiftCalendar;\n        \n    $workcenterCalendar := $getCalendar({\"id\":$.calendarId});\n    $maximumPositions := maximumPositions;\n    \n    /* Grab the events, ensure they do not exceed the max positions */\n    $events := $workcenterCalendar.calendar.calendarEvents.(\n      $merge([\n        $,\n        {\n          \"priority\": (priority > $maximumPositions or priority < 1) ? \"default\" : priority\n        }\n      ])\n    );\n    \n    /* group the events */\n    $events := $groupBy($events, function ($v) { $v.priority });\n    \n    /* pull out the default events */\n    $defaultEvents := $events.default;\n    \n    /* Apply them to ever position */\n    $positionEvents := $values($omit($events,\"default\")).[$, $defaultEvents];\n\n    /* rebuild each position as a full calendar for consideration */\n    $positionCalendars := $positionEvents.(\n      $merge([\n        $workcenterCalendar,\n        {\n          \"calendar\": {\n            \"calendarEvents\": $\n          }\n        }\n      ])\n    );\n\n    {\n      \"availabilityStart\": $availabilityStart,\n      \"availabilityEnd\": $availabilityEnd,\n      \"workcenter\": $omit($,[\"shiftGroup\",\"calendarId\"]),\n\n      /* loop each position calendar */\n      \"positions\": $positionCalendars.(\n        \n        /* combine each calendar with the shift's calendar */\n        $combinedCalendar := $mergeDeep([\n          $shiftCalendar,\n          $\n        ]);\n\n        $combinedAvailability := $getAvailabilityBetween($availabilityStart, $availabilityEnd, $combinedCalendar);\n\n        {\n          \"positionId\": $first($.calendar.calendarEvents.priority),\n          \"availability\": $combinedAvailability[groupEventType=\"available\"]\n        }\n      ),        \n      \"calendars\": {\n        \"shift\": $shiftCalendar.calendar,\n        \"workcenter\": $workcenterCalendar.calendar\n      }\n    };\n  )  \n)",
+            "nextNodes": [
+              "118c8486-4aaf-469a-90de-4d08ddabc106"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "118c8486-4aaf-469a-90de-4d08ddabc106",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.5"
+    },
+    "diagram": {
+      "id": "cler752tl003l017t4xnsbypl",
+      "offsetX": -512.08,
+      "offsetY": -68.85,
+      "zoom": 91.67,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "21600f22-3374-445b-aacd-e67d19f660ce",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "0c5c6653-d907-4b87-8f0c-7eac52996c4b": {
+              "points": [
+                {
+                  "id": "bb510ded-de16-48bb-a889-ae603485687c",
+                  "type": "point",
+                  "x": 479,
+                  "y": 389.73
+                },
+                {
+                  "id": "bdb9135a-22c3-474f-a3fd-c67b1eaeccb4",
+                  "type": "point",
+                  "x": 545,
+                  "y": 389.73
+                }
+              ],
+              "id": "0c5c6653-d907-4b87-8f0c-7eac52996c4b",
+              "type": "default",
+              "selected": false,
+              "source": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+              "sourcePort": "cleokx9sg0350356dvl2tpql5",
+              "target": "23ba665d-422e-4a40-9862-9253134a70bb",
+              "targetPort": "cleoktbpx0340356d780k3xr5",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "00a525e1-8f35-4b00-acae-3b433fd0f3bf": {
+              "points": [
+                {
+                  "id": "223798cf-f71a-4390-9d62-9227a0a0d2dd",
+                  "type": "point",
+                  "x": 229,
+                  "y": 359.73
+                },
+                {
+                  "id": "820e5337-dc3f-4485-9fdc-b0b504b6b359",
+                  "type": "point",
+                  "x": 325,
+                  "y": 389.73
+                }
+              ],
+              "id": "00a525e1-8f35-4b00-acae-3b433fd0f3bf",
+              "type": "default",
+              "selected": false,
+              "source": "82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+              "sourcePort": "cleokxeqt035a356dplhnnueo",
+              "target": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+              "targetPort": "cleokx9sg034y356duhxfy5ra",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "4c8797f3-73a8-420e-a306-53a6b7c0bb5e": {
+              "points": [
+                {
+                  "id": "844a8073-c724-4969-b6f7-b7234d9d40ac",
+                  "type": "point",
+                  "x": 228.98,
+                  "y": 444.73
+                },
+                {
+                  "id": "e6ce5a42-1d57-43b0-b721-0e9ba8c74af6",
+                  "type": "point",
+                  "x": 325,
+                  "y": 389.73
+                }
+              ],
+              "id": "4c8797f3-73a8-420e-a306-53a6b7c0bb5e",
+              "type": "default",
+              "selected": false,
+              "source": "5daf75d2-21fa-4841-b8e8-422b6a37549e",
+              "sourcePort": "cleokqcji030e356d58geg4xl",
+              "target": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+              "targetPort": "cleokx9sg034y356duhxfy5ra",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f2eac513-d041-4413-88fa-3f58cb5672c7": {
+              "points": [
+                {
+                  "id": "b5c22f00-35a7-4e4d-afc5-92bf981f3b62",
+                  "type": "point",
+                  "x": 979.22,
+                  "y": 389.73
+                },
+                {
+                  "id": "ac9607f2-0331-46a8-b14d-d5992e0bb071",
+                  "type": "point",
+                  "x": 1080,
+                  "y": 389.73
+                }
+              ],
+              "id": "f2eac513-d041-4413-88fa-3f58cb5672c7",
+              "type": "default",
+              "selected": false,
+              "source": "9a783750-657d-4d36-a778-bced534ef021",
+              "sourcePort": "cleokyg5g036n356d79qqwfhk",
+              "target": "118c8486-4aaf-469a-90de-4d08ddabc106",
+              "targetPort": "cleor9mif042b356duzpj385x",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "eaa0bd44-2f08-4b2c-af62-cce8d6d6eea8": {
+              "points": [
+                {
+                  "id": "1ac2fe9f-1f10-4b0e-9a68-5a27f9f91198",
+                  "type": "point",
+                  "x": 228.98,
+                  "y": 534.73
+                },
+                {
+                  "id": "bdda950b-3d3f-4c7b-830c-93d1cd4fedd7",
+                  "type": "point",
+                  "x": 325,
+                  "y": 389.73
+                }
+              ],
+              "id": "eaa0bd44-2f08-4b2c-af62-cce8d6d6eea8",
+              "type": "default",
+              "selected": false,
+              "source": "4fa1beb9-b7fd-465f-bf74-aa342456b69b",
+              "sourcePort": "clepo8coe0450356defmhur77",
+              "target": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+              "targetPort": "cleokx9sg034y356duhxfy5ra",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "62c324bd-db9d-4305-8bb3-9f2960f272a1": {
+              "points": [
+                {
+                  "id": "1d23a4c0-96fd-4bf1-8ad9-f592b7733d43",
+                  "type": "point",
+                  "x": 714.47,
+                  "y": 389.73
+                },
+                {
+                  "id": "d8750788-7bb8-48ee-8814-adb6a6edc015",
+                  "type": "point",
+                  "x": 800,
+                  "y": 389.73
+                }
+              ],
+              "id": "62c324bd-db9d-4305-8bb3-9f2960f272a1",
+              "type": "default",
+              "selected": false,
+              "source": "23ba665d-422e-4a40-9862-9253134a70bb",
+              "sourcePort": "cleoktbpx0342356do7n8a41r",
+              "target": "9a783750-657d-4d36-a778-bced534ef021",
+              "targetPort": "cleokyg5g036l356dmojniaq7",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "88a8aa2a-3ccb-4f4e-951e-4939e667dbd3",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "5daf75d2-21fa-4841-b8e8-422b6a37549e": {
+              "id": "5daf75d2-21fa-4841-b8e8-422b6a37549e",
+              "type": "debugSource",
+              "selected": false,
+              "x": 75,
+              "y": 405,
+              "ports": [
+                {
+                  "id": "cleokqcji030e356d58geg4xl",
+                  "type": "default",
+                  "x": 220.98,
+                  "y": 436.73,
+                  "name": "cleokqcji030f356de69a9xtz",
+                  "parentNode": "5daf75d2-21fa-4841-b8e8-422b6a37549e",
+                  "links": [
+                    "4c8797f3-73a8-420e-a306-53a6b7c0bb5e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "availabilityStart": "",
+                  "availabilityEnd": "",
+                  "workcenters": [
+                    "clecrqbyb018j014r67t8frvx",
+                    "clecpf6oc018e014r5wqt5p1i"
+                  ]
+                },
+                "context": {},
+                "nextNodes": [
+                  "b0c386cb-7cc1-4a16-8df3-994d57edabb5"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "CNC 2 & 3",
+              "note": "Testing 2 machines."
+            },
+            "23ba665d-422e-4a40-9862-9253134a70bb": {
+              "id": "23ba665d-422e-4a40-9862-9253134a70bb",
+              "type": "query",
+              "selected": false,
+              "x": 545,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "cleoktbpx0340356d780k3xr5",
+                  "type": "default",
+                  "x": 537,
+                  "y": 381.73,
+                  "name": "cleoktbpx0341356d7ngxzau4",
+                  "parentNode": "23ba665d-422e-4a40-9862-9253134a70bb",
+                  "links": [
+                    "0c5c6653-d907-4b87-8f0c-7eac52996c4b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleoktbpx0342356do7n8a41r",
+                  "type": "default",
+                  "x": 706.47,
+                  "y": 381.73,
+                  "name": "cleoktbpx0343356de88c0fgu",
+                  "parentNode": "23ba665d-422e-4a40-9862-9253134a70bb",
+                  "links": [
+                    "62c324bd-db9d-4305-8bb3-9f2960f272a1"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n    \"id\": {\n      \"_in\": $state.context.REQUEST.workcenters\n    }\n  }\n}",
+                "query": "query workcenters($where:WorkcenterWhereInput!){\n  workcenter(where:$where) {\n    edges {\n      node {\n        id\n        name\n        code\n        maximumConcurrency\n        maximumPositions\n        productionOffalAllowed\n        setupOffalAllowed\n        active\n        productionOperators\n        setupOperators\n        shiftGroup {\n          calendarId\n        }\n        calendarId\n      }\n    }\n  } \n}",
+                "nextNodes": [
+                  "9a783750-657d-4d36-a778-bced534ef021"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Workcenter Data",
+              "note": "Query Workcenter Data, try to get everything a caller might be interested in."
+            },
+            "b0c386cb-7cc1-4a16-8df3-994d57edabb5": {
+              "id": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 325,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "cleokx9sg034y356duhxfy5ra",
+                  "type": "default",
+                  "x": 317,
+                  "y": 381.73,
+                  "name": "cleokx9sg034z356dv9ztvrah",
+                  "parentNode": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+                  "links": [
+                    "00a525e1-8f35-4b00-acae-3b433fd0f3bf",
+                    "4c8797f3-73a8-420e-a306-53a6b7c0bb5e",
+                    "eaa0bd44-2f08-4b2c-af62-cce8d6d6eea8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleokx9sg0350356dvl2tpql5",
+                  "type": "default",
+                  "x": 471,
+                  "y": 381.73,
+                  "name": "cleokx9sg0351356djqm1osy4",
+                  "parentNode": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+                  "links": [
+                    "0c5c6653-d907-4b87-8f0c-7eac52996c4b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "23ba665d-422e-4a40-9862-9253134a70bb"
+                ],
+                "transform": "{\n  \"REQUEST\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context",
+              "note": "Save the REQUEST to context."
+            },
+            "82e74886-8b6b-4297-a07c-a1d66e6a0ad5": {
+              "id": "82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+              "type": "request",
+              "selected": false,
+              "x": 75,
+              "y": 320,
+              "ports": [
+                {
+                  "id": "cleokxeqt035a356dplhnnueo",
+                  "type": "default",
+                  "x": 221,
+                  "y": 351.73,
+                  "name": "cleokxeqt035b356dtdsyg6hp",
+                  "parentNode": "82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+                  "links": [
+                    "00a525e1-8f35-4b00-acae-3b433fd0f3bf"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "b0c386cb-7cc1-4a16-8df3-994d57edabb5"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request",
+              "note": "Request from another flow."
+            },
+            "9a783750-657d-4d36-a778-bced534ef021": {
+              "id": "9a783750-657d-4d36-a778-bced534ef021",
+              "type": "transform",
+              "selected": true,
+              "x": 800,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "cleokyg5g036l356dmojniaq7",
+                  "type": "default",
+                  "x": 792,
+                  "y": 381.73,
+                  "name": "cleokyg5g036m356d8m9a18kl",
+                  "parentNode": "9a783750-657d-4d36-a778-bced534ef021",
+                  "links": [
+                    "62c324bd-db9d-4305-8bb3-9f2960f272a1"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cleokyg5g036n356d79qqwfhk",
+                  "type": "default",
+                  "x": 971.22,
+                  "y": 381.73,
+                  "name": "cleokyg5g036o356df1ncyvr9",
+                  "parentNode": "9a783750-657d-4d36-a778-bced534ef021",
+                  "links": [
+                    "f2eac513-d041-4413-88fa-3f58cb5672c7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $availabilityStart := $isNilOrEmpty($state.context.REQUEST.availabilityStart) ? $moment().startOf('day') :  $moment($state.context.REQUEST.availabilityStart);\n  $availabilityEnd := $isNilOrEmpty($state.context.REQUEST.availabilityEnd) ? $moment($availabilityStart).add(2, 'days').endOf('day') :  $moment($state.context.REQUEST.availabilityEnd);\n\n  $.workcenter.edges.node.(\n    $shiftCalendar := $getCalendar({\"id\":$.shiftGroup.calendarId});\n    \n    /* Does the request require a splitting of availbilty on shifts? */\n    $shiftCalendar := ($state.context.REQUEST.splitShifts=true) \n      ? $shiftCalendar ~> | calendar.calendarEvents.eventJson | {\"duration\": duration-1000, \"end\": $moment(end).subtract(1, 'second')} |\n      : $shiftCalendar;\n        \n    $workcenterCalendar := $getCalendar({\"id\":$.calendarId});\n    $maximumPositions := maximumPositions;\n    \n    /* Grab the events, ensure they do not exceed the max positions */\n    $events := $workcenterCalendar.calendar.calendarEvents.(\n      $merge([\n        $,\n        {\n          \"priority\": (priority > $maximumPositions or priority < 1) ? \"default\" : priority\n        }\n      ])\n    );\n    \n    /* group the events */\n    $events := $groupBy($events, function ($v) { $v.priority });\n    \n    /* pull out the default events */\n    $defaultEvents := $events.default;\n    \n    /* Apply them to ever position */\n    $positionEvents := $values($omit($events,\"default\")).[$, $defaultEvents];\n\n    /* rebuild each position as a full calendar for consideration */\n    $positionCalendars := $positionEvents.(\n      $merge([\n        $workcenterCalendar,\n        {\n          \"calendar\": {\n            \"calendarEvents\": $\n          }\n        }\n      ])\n    );\n\n    {\n      \"availabilityStart\": $availabilityStart,\n      \"availabilityEnd\": $availabilityEnd,\n      \"workcenter\": $omit($,[\"shiftGroup\",\"calendarId\"]),\n\n      /* loop each position calendar */\n      \"positions\": $positionCalendars.(\n        \n        /* combine each calendar with the shift's calendar */\n        $combinedCalendar := $mergeDeep([\n          $shiftCalendar,\n          $\n        ]);\n\n        $combinedAvailability := $getAvailabilityBetween($availabilityStart, $availabilityEnd, $combinedCalendar);\n\n        {\n          \"positionId\": $first($.calendar.calendarEvents.priority),\n          \"availability\": $combinedAvailability[groupEventType=\"available\"]\n        }\n      ),        \n      \"calendars\": {\n        \"shift\": $shiftCalendar.calendar,\n        \"workcenter\": $workcenterCalendar.calendar\n      }\n    };\n  )  \n)",
+                "nextNodes": [
+                  "118c8486-4aaf-469a-90de-4d08ddabc106"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "JSONata - Combine Data",
+              "note": "Combine the workcenter data with calendar data from two sources (Shift and its own calendar).  Each entry looks at the priority and splits them into cavities matching the workcenter."
+            },
+            "118c8486-4aaf-469a-90de-4d08ddabc106": {
+              "id": "118c8486-4aaf-469a-90de-4d08ddabc106",
+              "type": "response",
+              "selected": false,
+              "x": 1080,
+              "y": 350,
+              "ports": [
+                {
+                  "id": "cleor9mif042b356duzpj385x",
+                  "type": "default",
+                  "x": 1072,
+                  "y": 381.73,
+                  "name": "cleor9mif042c356dxmcln5w8",
+                  "parentNode": "118c8486-4aaf-469a-90de-4d08ddabc106",
+                  "links": [
+                    "f2eac513-d041-4413-88fa-3f58cb5672c7"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cleor9mif042d356d2vi5j230",
+                  "type": "default",
+                  "x": 1225.98,
+                  "y": 381.73,
+                  "name": "cleor9mif042e356dqq1grgrq",
+                  "parentNode": "118c8486-4aaf-469a-90de-4d08ddabc106",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response",
+              "note": "Respond to request."
+            },
+            "4fa1beb9-b7fd-465f-bf74-aa342456b69b": {
+              "id": "4fa1beb9-b7fd-465f-bf74-aa342456b69b",
+              "type": "debugSource",
+              "selected": false,
+              "x": 75,
+              "y": 495,
+              "ports": [
+                {
+                  "id": "clepo8coe0450356defmhur77",
+                  "type": "default",
+                  "x": 220.98,
+                  "y": 526.73,
+                  "name": "clepo8coe0451356d2j6fnkm2",
+                  "parentNode": "4fa1beb9-b7fd-465f-bf74-aa342456b69b",
+                  "links": [
+                    "eaa0bd44-2f08-4b2c-af62-cce8d6d6eea8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "availabilityStart": "",
+                  "availabilityEnd": "",
+                  "splitShifts": true,
+                  "workcenters": [
+                    "clecrqbyb018j014r67t8frvx"
+                  ]
+                },
+                "context": {},
+                "nextNodes": [
+                  "b0c386cb-7cc1-4a16-8df3-994d57edabb5"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "CNC 3",
+              "note": "Testing 1 machine."
+            }
+          }
+        }
+      ],
+      "name": "Workcenter Availability from Shift Group and Calendar",
+      "type": "System",
+      "version": "0.0.5",
+      "walkthrough": {
+        "steps": [
+          {
+            "id": "82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+            "target": "#mfgx-node-82e74886-8b6b-4297-a07c-a1d66e6a0ad5",
+            "title": "Request",
+            "subtitle": "Request",
+            "content": "Request from another flow."
+          },
+          {
+            "id": "5daf75d2-21fa-4841-b8e8-422b6a37549e",
+            "target": "#mfgx-node-5daf75d2-21fa-4841-b8e8-422b6a37549e",
+            "title": "CNC 2 & 3",
+            "subtitle": "Source",
+            "content": "Testing 2 machines."
+          },
+          {
+            "id": "4fa1beb9-b7fd-465f-bf74-aa342456b69b",
+            "target": "#mfgx-node-4fa1beb9-b7fd-465f-bf74-aa342456b69b",
+            "title": "CNC 3",
+            "subtitle": "Source",
+            "content": "Testing 1 machine."
+          },
+          {
+            "id": "b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+            "target": "#mfgx-node-b0c386cb-7cc1-4a16-8df3-994d57edabb5",
+            "title": "Merge Context",
+            "subtitle": "Merge Context",
+            "content": "Save the REQUEST to context."
+          },
+          {
+            "id": "23ba665d-422e-4a40-9862-9253134a70bb",
+            "target": "#mfgx-node-23ba665d-422e-4a40-9862-9253134a70bb",
+            "title": "Query Workcenter Data",
+            "subtitle": "Query",
+            "content": "Query Workcenter Data, try to get everything a caller might be interested in."
+          },
+          {
+            "id": "9a783750-657d-4d36-a778-bced534ef021",
+            "target": "#mfgx-node-9a783750-657d-4d36-a778-bced534ef021",
+            "title": "JSONata - Combine Data",
+            "subtitle": "JSONata",
+            "content": "Combine the workcenter data with calendar data from two sources (Shift and its own calendar).  Each entry looks at the priority and splits them into cavities matching the workcenter."
+          },
+          {
+            "id": "118c8486-4aaf-469a-90de-4d08ddabc106",
+            "target": "#mfgx-node-118c8486-4aaf-469a-90de-4d08ddabc106",
+            "title": "Response",
+            "subtitle": "Response",
+            "content": "Respond to request."
+          }
+        ],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

@@ -1,0 +1,718 @@
+{
+  "header": {
+    "id": "workcenterGanttChartDataFromCalendarEvents",
+    "name": "Workcenter Gantt Chart Data from Calendar Events",
+    "description": "Workcenter Gantt Chart Data from Calendar Events",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cldok3t1q00db014r29dcf0k3",
+    "number": "0.0.10",
+    "description": "Adding variable daysOut",
+    "dataFlowId": "workcenterGanttChartDataFromCalendarEvents",
+    "flow": {
+      "id": "cldok3t1q00db014r29dcf0k3",
+      "name": "Workcenter Gantt Chart Data from Calendar Events",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+          "name": "Query - Workcenter(s) with Calendars",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"where\": {\n  \t\"calendarId\": {\n      \"_isNull\": false\n    },\n    \"workcenterGroupId\": (workcenterGroupId) ? {\n      \"_eq\": workcenterGroupId\n    },\n    \"workcenterTypeId\": (workcenterTypeId) ? {\n      \"_eq\": workcenterTypeId\n    }\n  }\n}",
+            "query": "query workcenter($where:WorkcenterWhereInput!){\n  workcenter(where:$where) {\n    edges {\n      node {\n        id\n        name\n        workcenterGroup {\n          id\n          name\n        }\n        calendarId\n      }\n    }\n  } \n}",
+            "nextNodes": [
+              "ee5e6780-84e9-40fb-bd9e-054b91cc7248"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+          "name": "Process Calendar Data",
+          "type": "transform",
+          "data": {
+            "transform": "(\n  $diff := function($start,$end) {\n    $moment($end).diff($moment($start))\n  };\n  \n  $uniq($.**.node).\n  (\n    /* Get the calendar objects */\n    $currentCalendar := $getCalendar({\"id\": calendarId, \"name\": \"\"}); \n    \n    ($currentCalendar) ? (\n      $eventList := $getAvailabilityBetween(\n        $moment().add(0,'days').startOf('day'), \n        $moment().add($coalesce([$state.context.daysOut,5]),'days').endOf('day'), \n        $currentCalendar\n      ).(\n          $between := $eventsBetween(start,end,$currentCalendar);\n          \n          $obj := $merge([$,{\n            \"startAt\": $moment(start).format(\"MM/DD/YYYY\"),\n            \"endAt\": $moment(end).format(\"MM/DD/YYYY\"),\n            \"total\": $diff(start, end)/1000/60,\n\n            \"eventsBetween\": ($count($between)=0) ? $between : $getEventsAt(start,$currentCalendar)[-1]\n            \n          }]).(\n            /* Pass back through and look at the events between to determine actual availability */\n            $currentType := (groupEventType=\"unallocated\") ? \"unallocated\" : \n              ($coalesce([$count(eventsBetween[calendarEventTypeId='unavailable']),0])>0) ? \"unavailable\"\n                : \"available\";         \n          \n            $merge([$,{\n              \"available\": ($currentType=\"available\") ? $diff(start, end)/1000/60 : 0,\n              \"unAvailable\": ($currentType=\"unavailable\") ? $diff(start, end)/1000/60 : 0,\n              \"unAllocated\": ($currentType=\"unallocated\") ? $diff(start, end)/1000/60 : 0\n            }])\n          );\n          \n          /* Unallocation happens for that time between 23:59:59.999Z and 00:00:00.000Z so we need to omit them */\n          ($obj.total > 0.0001) ? $obj\n        );\n      \n      ($eventList) ? (\n        $eventList := $groupBy($eventList, function ($v) { $v.endAt });\n\n        $merge([$,{\n          \"events\": $eventList,\n          \"total\": $sum($eventList.**.total),\n          \"available\": $sum($eventList.**.available),\n          \"unAvailable\": $sum($eventList.**.unAvailable),\n          \"unAllocated\": $sum($eventList.**.unAllocated)\n        }]).(\n          $merge([$,{\n            \"availablePct\": $round(available/total * 100, 2),\n            \"unAvailablePct\": $round(unAvailable/total * 100, 2),\n            \"unAllocatedPct\": $round(unAllocated/total * 100,2)\n          }]);\n        );\n      )\n    )\n  );\n)",
+            "nextNodes": [
+              "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "d771da13-f52f-4c32-8640-622d30fe563a",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "43f1f57b-9292-442b-9a5a-50ce568e24bb"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "7b67595e-157f-40d2-a260-ce0e33a8c435",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "$",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+          "name": "Convert to Gantt",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "7b67595e-157f-40d2-a260-ce0e33a8c435"
+            ],
+            "transform": "(\n  $available := \"#62B58D\";\n  $unallocated := \"#E7E7E7\";\n  $unavailable := \"#d84343\";\n                \n  {  \n     \"chart\": {\n          \"dateFormat\": \"mm/dd/yyyy hh:mm:ss\",\n          \"caption\": \"Workcenter Utilization Overview\",\n          \"legendCaption\": \"Included Statuses\",\n          \"showTaskLabels\": false,\n          \"showTaskEndDate\": false,\n          \"animation\": false,\n          \"exportEnabled\": true,\n          \"ganttPaneDuration\": 1,\n          \"ganttPaneDurationUnit\": 'm',\n          \"toolBarPosition\": \"TR\",\n          \"toolBarButtonColor\": \"#FFC533\",\n          \"showLegend\": 1,\n          \"legendShadow\": 0\n              },\n    \"legend\": {\n      \"item\": [\n        {\n          \"label\": \"available\",\n          \"color\": $available\n        },\n        {\n          \"label\": \"unavailable\",\n          \"color\": $unavailable\n        },\n        {\n          \"label\": \"unallocated\",\n          \"color\": $unallocated\n        }        \n      ]\n    },\n    \"tasks\": {\n      \"task\": [\n        $.(\n          $name := name;\n          $workcenterGroup := workcenterGroup;\n          $calendarId := calendarId;\n          \n          \n          $values(events).*.($).(\n            $label := ($.eventsBetween.title) ? \n              $join([$.eventsBetween.title],\", \")\n              : $uppercase($substring(groupEventType,0,1)) & $substring(groupEventType,1);\n\n            /* (groupEventType=\"unavailable\") ? $unavailable : $available*/\n            \n            $currentColor := (groupEventType=\"unallocated\") ? $unallocated : \n              ($coalesce([$count(eventsBetween[calendarEventTypeId='unavailable']),0])>0) ? $unavailable\n                : $available;\n                \n            {\n              \"label\": $label,\n              \"processid\": $name,\n              \"start\": $moment(start).format(\"MM/DD/YYYY HH:MM:ss\"),\n              \"end\": $moment(end).format(\"MM/DD/YYYY HH:MM:ss\"),\n              \"bordercolor\": $currentColor,\n              \"color\": $currentColor,\n              \"toppadding\": \"12%\",\n              \"height\": \"32%\",\n              \"link\": \"https://demo.fuuz.app/system/configuration/calendars/\" & $calendarId & \"?component=CalendarEventViewForm\"\n            }\n          )\n        )\n      ]\n    },\n    \"processes\": {\n      \"isbold\": \"1\",\n      \"headertext\": \"Workcenters\",\n      \"process\": [\n        $.{\n          \"label\": name & \"<BR>\" & availablePct & \"%\",\n          \"id\": name,\n          \"link\": \"https://demo.fuuz.app/system/configuration/calendars/\" & calendarId & \"?component=CalendarEventViewForm\"\n        }\n      ]\n    },\n    \"categories\": [\n      {\n        \"category\": [\n          $keys($.**.events).{\n            \"start\": $ & \" 00:00:00\",\n            \"end\": $ & \" 23:59:59\",\n            \"name\": $\n          }\n        ]\n      }\n    ]\n  }\n)"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "d91e9b91-54ad-49e7-8b7a-d56c223842bb"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.10"
+    },
+    "diagram": {
+      "id": "cldok3t1q00db014r29dcf0k3",
+      "offsetX": 240.77,
+      "offsetY": 55.83,
+      "zoom": 98.33,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "80f975c1-13dd-443f-be34-0c2495000704",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "71e8d9e6-e7f5-4c09-8caa-e5552a31dee7": {
+              "points": [
+                {
+                  "id": "a669e956-8fdf-4e81-946d-7a39d80acfcf",
+                  "type": "point",
+                  "x": 661.5,
+                  "y": 309.73
+                },
+                {
+                  "id": "f00eb5d4-5f4f-49a6-b050-adbbc3dc8d42",
+                  "type": "point",
+                  "x": 765,
+                  "y": 309.73
+                }
+              ],
+              "id": "71e8d9e6-e7f5-4c09-8caa-e5552a31dee7",
+              "type": "default",
+              "selected": false,
+              "source": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+              "sourcePort": "cldetczgv00ym306dytfbaxfc",
+              "target": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+              "targetPort": "cldetfy0f011l306dzipl4d7e",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "788176ef-bff3-488e-b4e2-32738d0c3444": {
+              "points": [
+                {
+                  "id": "c6b9e4fa-7395-4076-9bf1-93c48e1d34f1",
+                  "type": "point",
+                  "x": 1194,
+                  "y": 309.73
+                },
+                {
+                  "id": "609a3510-0f60-4fbb-b9e4-b823a8774ede",
+                  "type": "point",
+                  "x": 1285,
+                  "y": 309.73
+                }
+              ],
+              "id": "788176ef-bff3-488e-b4e2-32738d0c3444",
+              "type": "default",
+              "selected": false,
+              "source": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+              "sourcePort": "cldkj9op100ly306d5e1yi6jf",
+              "target": "7b67595e-157f-40d2-a260-ce0e33a8c435",
+              "targetPort": "cldkiwr7800ip306dommvz8or",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "62407433-a834-4a02-821a-1b6b8e748da6": {
+              "points": [
+                {
+                  "id": "2cd7fb38-b0d1-424a-a12d-152b81a6f7d8",
+                  "type": "point",
+                  "x": 933.44,
+                  "y": 309.73
+                },
+                {
+                  "id": "65ba5398-bb1b-46c8-8b47-e8c95a742fda",
+                  "type": "point",
+                  "x": 1040,
+                  "y": 309.73
+                }
+              ],
+              "id": "62407433-a834-4a02-821a-1b6b8e748da6",
+              "type": "default",
+              "selected": false,
+              "source": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+              "sourcePort": "cldetfy0f011n306d52uh8cay",
+              "target": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+              "targetPort": "cldkj9op100lw306d3wy3fz9u",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e3e0d319-31ce-4047-bd8d-b1c219366e85": {
+              "points": [
+                {
+                  "id": "e89194fc-585d-42ce-a246-1b595a3b20e4",
+                  "type": "point",
+                  "x": 309,
+                  "y": 309.73
+                },
+                {
+                  "id": "e6c0d8c2-b139-4e41-80cb-0974aac51964",
+                  "type": "point",
+                  "x": 415,
+                  "y": 309.73
+                }
+              ],
+              "id": "e3e0d319-31ce-4047-bd8d-b1c219366e85",
+              "type": "default",
+              "source": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+              "sourcePort": "cldok289f00vr306d2fg65u1v",
+              "target": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+              "targetPort": "cldetczgv00yk306djhkbtesm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "08ec0058-a3ff-441a-a666-2bbe2d9bbc92": {
+              "points": [
+                {
+                  "id": "e65e12ae-7572-465c-9b86-db865e1df007",
+                  "type": "point",
+                  "x": -26.02,
+                  "y": 309.73
+                },
+                {
+                  "id": "07ba0eb2-ed61-41c8-9be3-70b27f282e8d",
+                  "type": "point",
+                  "x": 155,
+                  "y": 309.73
+                }
+              ],
+              "id": "08ec0058-a3ff-441a-a666-2bbe2d9bbc92",
+              "type": "default",
+              "source": "ebbeb7fb-9676-4a88-89b7-c2eb8ffe6242",
+              "sourcePort": "cldetcygt00yi306dfsp3rtaa",
+              "target": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+              "targetPort": "cldok289f00vp306dzhekmuye",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "706d6647-f16f-4473-b585-9f2128262790": {
+              "points": [
+                {
+                  "id": "e39846de-c16a-47e9-9af1-81cde9188b6d",
+                  "type": "point",
+                  "x": -31,
+                  "y": 229.73
+                },
+                {
+                  "id": "54334d76-02ba-4742-ac20-4bc894a5590b",
+                  "type": "point",
+                  "x": 155,
+                  "y": 309.73
+                }
+              ],
+              "id": "706d6647-f16f-4473-b585-9f2128262790",
+              "type": "default",
+              "source": "d771da13-f52f-4c32-8640-622d30fe563a",
+              "sourcePort": "cldkiwmq700il306d97wdj0md",
+              "target": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+              "targetPort": "cldok289f00vp306dzhekmuye",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "b1758226-a0e8-4969-98f1-e65ff07fdc29",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "ebbeb7fb-9676-4a88-89b7-c2eb8ffe6242": {
+              "id": "ebbeb7fb-9676-4a88-89b7-c2eb8ffe6242",
+              "type": "debugSource",
+              "selected": true,
+              "x": -180,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldetcygt00yi306dfsp3rtaa",
+                  "type": "default",
+                  "x": -34.02,
+                  "y": 301.73,
+                  "name": "cldetcygt00yj306dcxh9ztgy",
+                  "parentNode": "ebbeb7fb-9676-4a88-89b7-c2eb8ffe6242",
+                  "links": [
+                    "08ec0058-a3ff-441a-a666-2bbe2d9bbc92"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "workcenterTypeId": null,
+                  "workcenterGroupId": "cld8x57y0000501609lbbc5ny",
+                  "daysOut": 10
+                },
+                "context": {},
+                "nextNodes": [
+                  "43f1f57b-9292-442b-9a5a-50ce568e24bb"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "d91e9b91-54ad-49e7-8b7a-d56c223842bb": {
+              "id": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+              "type": "query",
+              "selected": false,
+              "x": 415,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldetczgv00yk306djhkbtesm",
+                  "type": "default",
+                  "x": 407,
+                  "y": 301.73,
+                  "name": "cldetczgv00yl306d6rz8w4dd",
+                  "parentNode": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+                  "links": [
+                    "e3e0d319-31ce-4047-bd8d-b1c219366e85"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldetczgv00ym306dytfbaxfc",
+                  "type": "default",
+                  "x": 653.5,
+                  "y": 301.73,
+                  "name": "cldetczgv00yn306dujsbanji",
+                  "parentNode": "d91e9b91-54ad-49e7-8b7a-d56c223842bb",
+                  "links": [
+                    "71e8d9e6-e7f5-4c09-8caa-e5552a31dee7"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"where\": {\n  \t\"calendarId\": {\n      \"_isNull\": false\n    },\n    \"workcenterGroupId\": (workcenterGroupId) ? {\n      \"_eq\": workcenterGroupId\n    },\n    \"workcenterTypeId\": (workcenterTypeId) ? {\n      \"_eq\": workcenterTypeId\n    }\n  }\n}",
+                "query": "query workcenter($where:WorkcenterWhereInput!){\n  workcenter(where:$where) {\n    edges {\n      node {\n        id\n        name\n        workcenterGroup {\n          id\n          name\n        }\n        calendarId\n      }\n    }\n  } \n}",
+                "nextNodes": [
+                  "ee5e6780-84e9-40fb-bd9e-054b91cc7248"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query - Workcenter(s) with Calendars",
+              "note": "Query - Workcenter(s) with Calendars"
+            },
+            "ee5e6780-84e9-40fb-bd9e-054b91cc7248": {
+              "id": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+              "type": "transform",
+              "selected": false,
+              "x": 765,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldetfy0f011l306dzipl4d7e",
+                  "type": "default",
+                  "x": 757,
+                  "y": 301.73,
+                  "name": "cldetfy0f011m306dve2udnn2",
+                  "parentNode": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+                  "links": [
+                    "71e8d9e6-e7f5-4c09-8caa-e5552a31dee7"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldetfy0f011n306d52uh8cay",
+                  "type": "default",
+                  "x": 925.44,
+                  "y": 301.73,
+                  "name": "cldetfy0f011o306dq0zf5uf7",
+                  "parentNode": "ee5e6780-84e9-40fb-bd9e-054b91cc7248",
+                  "links": [
+                    "62407433-a834-4a02-821a-1b6b8e748da6"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "(\n  $diff := function($start,$end) {\n    $moment($end).diff($moment($start))\n  };\n  \n  $uniq($.**.node).\n  (\n    /* Get the calendar objects */\n    $currentCalendar := $getCalendar({\"id\": calendarId, \"name\": \"\"}); \n    \n    ($currentCalendar) ? (\n      $eventList := $getAvailabilityBetween(\n        $moment().add(0,'days').startOf('day'), \n        $moment().add($coalesce([$state.context.daysOut,5]),'days').endOf('day'), \n        $currentCalendar\n      ).(\n          $between := $eventsBetween(start,end,$currentCalendar);\n          \n          $obj := $merge([$,{\n            \"startAt\": $moment(start).format(\"MM/DD/YYYY\"),\n            \"endAt\": $moment(end).format(\"MM/DD/YYYY\"),\n            \"total\": $diff(start, end)/1000/60,\n\n            \"eventsBetween\": ($count($between)=0) ? $between : $getEventsAt(start,$currentCalendar)[-1]\n            \n          }]).(\n            /* Pass back through and look at the events between to determine actual availability */\n            $currentType := (groupEventType=\"unallocated\") ? \"unallocated\" : \n              ($coalesce([$count(eventsBetween[calendarEventTypeId='unavailable']),0])>0) ? \"unavailable\"\n                : \"available\";         \n          \n            $merge([$,{\n              \"available\": ($currentType=\"available\") ? $diff(start, end)/1000/60 : 0,\n              \"unAvailable\": ($currentType=\"unavailable\") ? $diff(start, end)/1000/60 : 0,\n              \"unAllocated\": ($currentType=\"unallocated\") ? $diff(start, end)/1000/60 : 0\n            }])\n          );\n          \n          /* Unallocation happens for that time between 23:59:59.999Z and 00:00:00.000Z so we need to omit them */\n          ($obj.total > 0.0001) ? $obj\n        );\n      \n      ($eventList) ? (\n        $eventList := $groupBy($eventList, function ($v) { $v.endAt });\n\n        $merge([$,{\n          \"events\": $eventList,\n          \"total\": $sum($eventList.**.total),\n          \"available\": $sum($eventList.**.available),\n          \"unAvailable\": $sum($eventList.**.unAvailable),\n          \"unAllocated\": $sum($eventList.**.unAllocated)\n        }]).(\n          $merge([$,{\n            \"availablePct\": $round(available/total * 100, 2),\n            \"unAvailablePct\": $round(unAvailable/total * 100, 2),\n            \"unAllocatedPct\": $round(unAllocated/total * 100,2)\n          }]);\n        );\n      )\n    )\n  );\n)",
+                "nextNodes": [
+                  "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Process Calendar Data"
+            },
+            "d771da13-f52f-4c32-8640-622d30fe563a": {
+              "id": "d771da13-f52f-4c32-8640-622d30fe563a",
+              "type": "request",
+              "selected": false,
+              "x": -185,
+              "y": 190,
+              "ports": [
+                {
+                  "id": "cldkiwmq700il306d97wdj0md",
+                  "type": "default",
+                  "x": -39,
+                  "y": 221.73,
+                  "name": "cldkiwmq700im306dys4arn81",
+                  "parentNode": "d771da13-f52f-4c32-8640-622d30fe563a",
+                  "links": [
+                    "706d6647-f16f-4473-b585-9f2128262790"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "43f1f57b-9292-442b-9a5a-50ce568e24bb"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "7b67595e-157f-40d2-a260-ce0e33a8c435": {
+              "id": "7b67595e-157f-40d2-a260-ce0e33a8c435",
+              "type": "response",
+              "selected": false,
+              "x": 1285,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldkiwr7800ip306dommvz8or",
+                  "type": "default",
+                  "x": 1277,
+                  "y": 301.73,
+                  "name": "cldkiwr7800iq306di1rvcz03",
+                  "parentNode": "7b67595e-157f-40d2-a260-ce0e33a8c435",
+                  "links": [
+                    "788176ef-bff3-488e-b4e2-32738d0c3444"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cldkiwr7800ir306dxtxvl6n1",
+                  "type": "default",
+                  "x": 1430.98,
+                  "y": 301.73,
+                  "name": "cldkiwr7800is306den6wcxke",
+                  "parentNode": "7b67595e-157f-40d2-a260-ce0e33a8c435",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "$",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf": {
+              "id": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+              "type": "transform",
+              "selected": false,
+              "x": 1040,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldkj9op100lw306d3wy3fz9u",
+                  "type": "default",
+                  "x": 1032,
+                  "y": 301.73,
+                  "name": "cldkj9op100lx306d6cv351wu",
+                  "parentNode": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+                  "links": [
+                    "62407433-a834-4a02-821a-1b6b8e748da6"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldkj9op100ly306d5e1yi6jf",
+                  "type": "default",
+                  "x": 1186,
+                  "y": 301.73,
+                  "name": "cldkj9op100lz306d817etci7",
+                  "parentNode": "2d151b32-b6b4-49ba-8d2f-c2b6c6af8dcf",
+                  "links": [
+                    "788176ef-bff3-488e-b4e2-32738d0c3444"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "7b67595e-157f-40d2-a260-ce0e33a8c435"
+                ],
+                "transform": "(\n  $available := \"#62B58D\";\n  $unallocated := \"#E7E7E7\";\n  $unavailable := \"#d84343\";\n                \n  {  \n     \"chart\": {\n          \"dateFormat\": \"mm/dd/yyyy hh:mm:ss\",\n          \"caption\": \"Workcenter Utilization Overview\",\n          \"legendCaption\": \"Included Statuses\",\n          \"showTaskLabels\": false,\n          \"showTaskEndDate\": false,\n          \"animation\": false,\n          \"exportEnabled\": true,\n          \"ganttPaneDuration\": 1,\n          \"ganttPaneDurationUnit\": 'm',\n          \"toolBarPosition\": \"TR\",\n          \"toolBarButtonColor\": \"#FFC533\",\n          \"showLegend\": 1,\n          \"legendShadow\": 0\n              },\n    \"legend\": {\n      \"item\": [\n        {\n          \"label\": \"available\",\n          \"color\": $available\n        },\n        {\n          \"label\": \"unavailable\",\n          \"color\": $unavailable\n        },\n        {\n          \"label\": \"unallocated\",\n          \"color\": $unallocated\n        }        \n      ]\n    },\n    \"tasks\": {\n      \"task\": [\n        $.(\n          $name := name;\n          $workcenterGroup := workcenterGroup;\n          $calendarId := calendarId;\n          \n          \n          $values(events).*.($).(\n            $label := ($.eventsBetween.title) ? \n              $join([$.eventsBetween.title],\", \")\n              : $uppercase($substring(groupEventType,0,1)) & $substring(groupEventType,1);\n\n            /* (groupEventType=\"unavailable\") ? $unavailable : $available*/\n            \n            $currentColor := (groupEventType=\"unallocated\") ? $unallocated : \n              ($coalesce([$count(eventsBetween[calendarEventTypeId='unavailable']),0])>0) ? $unavailable\n                : $available;\n                \n            {\n              \"label\": $label,\n              \"processid\": $name,\n              \"start\": $moment(start).format(\"MM/DD/YYYY HH:MM:ss\"),\n              \"end\": $moment(end).format(\"MM/DD/YYYY HH:MM:ss\"),\n              \"bordercolor\": $currentColor,\n              \"color\": $currentColor,\n              \"toppadding\": \"12%\",\n              \"height\": \"32%\",\n              \"link\": \"https://demo.fuuz.app/system/configuration/calendars/\" & $calendarId & \"?component=CalendarEventViewForm\"\n            }\n          )\n        )\n      ]\n    },\n    \"processes\": {\n      \"isbold\": \"1\",\n      \"headertext\": \"Workcenters\",\n      \"process\": [\n        $.{\n          \"label\": name & \"<BR>\" & availablePct & \"%\",\n          \"id\": name,\n          \"link\": \"https://demo.fuuz.app/system/configuration/calendars/\" & calendarId & \"?component=CalendarEventViewForm\"\n        }\n      ]\n    },\n    \"categories\": [\n      {\n        \"category\": [\n          $keys($.**.events).{\n            \"start\": $ & \" 00:00:00\",\n            \"end\": $ & \" 23:59:59\",\n            \"name\": $\n          }\n        ]\n      }\n    ]\n  }\n)"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Convert to Gantt"
+            },
+            "43f1f57b-9292-442b-9a5a-50ce568e24bb": {
+              "id": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 155,
+              "y": 270,
+              "ports": [
+                {
+                  "id": "cldok289f00vp306dzhekmuye",
+                  "type": "default",
+                  "x": 147,
+                  "y": 301.73,
+                  "name": "cldok289f00vq306d2dwjjpmd",
+                  "parentNode": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+                  "links": [
+                    "08ec0058-a3ff-441a-a666-2bbe2d9bbc92",
+                    "706d6647-f16f-4473-b585-9f2128262790"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cldok289f00vr306d2fg65u1v",
+                  "type": "default",
+                  "x": 301,
+                  "y": 301.73,
+                  "name": "cldok289f00vs306dlti88d5z",
+                  "parentNode": "43f1f57b-9292-442b-9a5a-50ce568e24bb",
+                  "links": [
+                    "e3e0d319-31ce-4047-bd8d-b1c219366e85"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "d91e9b91-54ad-49e7-8b7a-d56c223842bb"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            }
+          }
+        }
+      ],
+      "name": "Workcenter Gantt Chart Data from Calendar Events",
+      "type": "System",
+      "version": "0.0.10",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

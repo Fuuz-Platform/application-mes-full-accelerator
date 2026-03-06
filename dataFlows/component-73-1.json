@@ -1,0 +1,1336 @@
+{
+  "header": {
+    "id": "locationsOnWorkcenterCreation",
+    "name": "Locations on Workcenter Creation",
+    "description": "Create location/productionSetup to match workcenters on creation",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": null
+  },
+  "version": {
+    "id": "clve7241u1of001544x9w779m",
+    "number": "0.0.16",
+    "description": "",
+    "dataFlowId": "locationsOnWorkcenterCreation",
+    "flow": {
+      "id": "clve7241u1of001544x9w779m",
+      "name": "Locations on Workcenter Creation",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "1b8ccaad-1898-4cb5-a155-1ce167b5d4e4",
+          "name": "On Workcenter Create",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "type": "Workcenter",
+            "operations": [
+              "Create"
+            ],
+            "nextNodes": [
+              "3da951dd-e507-4539-b941-371b53f89e40"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "765756c3-e118-411f-9a83-54841af2307e",
+          "name": "Create Location/Production Setup",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "(\n  $wc := $state.context.WORKCENTER_CREATE;\n  {\n    \"payloadW\": $isNilOrEmpty($wc.facilityId) ? [] : {\n      \"create\": {\n        \"id\":\"WORKCENTER-\" & $wc.id,\n        \"name\": $wc.name,\n        \"locationTypeId\": \"Workcenter\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      },\n      \"update\": {\n        \n        \"name\": $wc.name,\n        \"locationTypeId\": \"Workcenter\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      },\"where\": {\n        \"id\": \"WORKCENTER-\" & $wc.id\n      }\n    },\n    \"payloadWI\":$isNilOrEmpty($wc.facilityId) ? [] : {\n      \"create\": {\n        \"id\": \"WORKCENTER-INPUT-\" & $wc.id,\n        \"name\": $wc.name & \"-INPUT\",\n        \"locationTypeId\": \"Workcenter Input\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\": $wc.facilityId\n      },\"update\": {\n        \"name\": $wc.name & \"-\" & \"INPUT\",\n        \"locationTypeId\": \"Workcenter Input\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      }, \"where\": {\n          \"id\":  \"WORKCENTER-INPUT-\" & $wc.id\n      }\n    },\n    \"payloadPS\": {\n      \"create\": {\n        \n        \"workcenterId\": $wc.id\n      },\n        \"update\": {\n        \n        \"workcenterId\": $wc.id\n      },\"where\":{\n        \"id\":$wc.id\n      }\n    }\n\n  }\n)",
+            "mutation": "mutation CreateLocation($payloadW: [LocationUpsertPayloadInput!]!,$payloadWI: [LocationUpsertPayloadInput!]!,$payloadPS:[ProductionSetupUpsertPayloadInput!]!) {\n  workcenterLocation:upsertLocation(payload:$payloadW) {\n    id\n},\n   workcenterInputLocation:upsertLocation(payload:$payloadWI) {\n    id\n},\n  upsertProductionSetup(payload: $payloadPS) {\n    id\n  workcenterId\n  }\n}",
+            "nextNodes": [
+              "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": true,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+          "name": "Query All Workcenters",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{}",
+            "query": "query Query($where: WorkcenterWhereInput, $orderBy: [WorkcenterOrderByInput!], $first: Int, $after: String) {\n  workcenter(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        name\n    facilityId\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "3b7732e5-b606-47a7-8efa-5c8465c90a0c"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+          "name": "Broadcast",
+          "type": "broadcast",
+          "data": {
+            "nextNodes": [
+              "27baa7ae-749b-4ba7-8608-921ce1212b7e"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+          "name": "Select edges.node",
+          "type": "transform",
+          "data": {
+            "transform": "$.workcenter.edges.node",
+            "nextNodes": [
+              "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3da951dd-e507-4539-b941-371b53f89e40",
+          "name": "Select value.after",
+          "type": "transform",
+          "data": {
+            "transform": "$.value.after",
+            "nextNodes": [
+              "3aa4a749-729b-4c7a-a863-a27351b79430"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "3aa4a749-729b-4c7a-a863-a27351b79430",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "765756c3-e118-411f-9a83-54841af2307e"
+            ],
+            "transform": "{\n  \"WORKCENTER_CREATE\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"LOCAL\": $\n}",
+            "nextNodes": [
+              "56e5c118-f333-4cf9-8b5d-ffafe828eaa4"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+          "name": "Set Context",
+          "type": "setContext",
+          "data": {
+            "nextNodes": [
+              "765756c3-e118-411f-9a83-54841af2307e"
+            ],
+            "transform": "{\n  \"WORKCENTER_CREATE\": $\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "56e5c118-f333-4cf9-8b5d-ffafe828eaa4",
+          "name": "Create WorkcenterInput/Update Workcenter",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{\n  \"payloadC\": $isNilOrEmpty($state.context.WORKCENTER_CREATE.facilityId) ? [] : {\n    \"create\": {\n      \"id\": $state.context.LOCAL.workcenterInputLocation.id,\n      \"name\": $state.context.WORKCENTER_CREATE.name & \"-INPUT\",\n      \"workcenterId\": $state.context.WORKCENTER_CREATE.id,\n      \"locationId\": $state.context.LOCAL.workcenterInputLocation.id\n    },\"update\": {\n          \"name\": $state.context.WORKCENTER_CREATE.name & \"-INPUT\",\n      \"workcenterId\": $state.context.WORKCENTER_CREATE.id,\n      \"locationId\": $state.context.LOCAL.workcenterInputLocation.id\n    },\"where\": {\n      \"id\":$state.context.LOCAL.workcenterInputLocation.id\n    }\n  },\n\n  \"payloadU\": {\n    \"update\": {\n      \"locationId\": $state.context.LOCAL.workcenterLocation.id\n    },\n    \n    \"where\": {\n      \"id\": $state.context.WORKCENTER_CREATE.id\n    }\n  }\n}\n",
+            "mutation": "mutation C($payloadC:[WorkcenterInputUpsertPayloadInput!]!,$payloadU:[WorkcenterUpdatePayloadInput!]!){\n  upsertWorkcenterInput(payload:$payloadC){id},\n  updateWorkcenter(payload:$payloadU) {id}\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "0a3c322d-e361-4002-becf-d2fdb00f2bd1",
+          "name": "Data Changes: WC UPDATE",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "type": "Workcenter",
+            "operations": [
+              "Update"
+            ],
+            "nextNodes": [
+              "6a1cfb3c-a259-4c13-8e85-da06b1022625"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+          "name": "Accept: FACILITY",
+          "type": "when",
+          "data": {
+            "transform": "$not($isNilOrEmpty(value.after.facilityId))\nand\nvalue.before.facilityId != value.after.facilityId",
+            "nextNodes": [
+              "3da951dd-e507-4539-b941-371b53f89e40"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.15"
+    },
+    "diagram": {
+      "id": "clve7241u1of001544x9w779m",
+      "offsetX": -540.38,
+      "offsetY": 59.27,
+      "zoom": 87.34,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "913c9804-8217-4bd1-9509-9ccfb7283a12",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "b764d9ed-fe68-4dd7-8b93-df8ef202901f": {
+              "points": [
+                {
+                  "id": "9659b45b-0ace-4603-a7cd-5191d49a4ab4",
+                  "type": "point",
+                  "x": 113.08,
+                  "y": 783.81
+                },
+                {
+                  "id": "827ec45e-13ab-417f-b4b0-9578d4775150",
+                  "type": "point",
+                  "x": 233.22,
+                  "y": 783.81
+                }
+              ],
+              "id": "b764d9ed-fe68-4dd7-8b93-df8ef202901f",
+              "type": "default",
+              "source": "1b8ccaad-1898-4cb5-a155-1ce167b5d4e4",
+              "sourcePort": "clqxt5xm9009n356mpnkc0p9h",
+              "target": "3da951dd-e507-4539-b941-371b53f89e40",
+              "targetPort": "clqxt5xmp00b9356miavjmw55",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b929a466-5fd3-4efc-ac53-6c547410d26b": {
+              "points": [
+                {
+                  "id": "5a2d0a98-a82a-4b89-900c-5a826939648b",
+                  "type": "point",
+                  "x": 974.18,
+                  "y": 683.81
+                },
+                {
+                  "id": "4e7e52ee-94fd-4908-be69-5da51bd6437f",
+                  "type": "point",
+                  "x": 1038.22,
+                  "y": 683.81
+                }
+              ],
+              "id": "b929a466-5fd3-4efc-ac53-6c547410d26b",
+              "type": "default",
+              "source": "765756c3-e118-411f-9a83-54841af2307e",
+              "sourcePort": "clqxt5xmd009z356m7r8p8txo",
+              "target": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+              "targetPort": "clqxt5xmu00bx356mzha3x49s",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "60483401-9577-47bb-af11-83f311d05715": {
+              "points": [
+                {
+                  "id": "2138b84e-cd6f-4666-a50c-99eb076ea7d4",
+                  "type": "point",
+                  "x": 139.31,
+                  "y": 593.81
+                },
+                {
+                  "id": "6c56e9b1-5d51-47cf-980f-95c8a49ae098",
+                  "type": "point",
+                  "x": 178.22,
+                  "y": 593.81
+                }
+              ],
+              "id": "60483401-9577-47bb-af11-83f311d05715",
+              "type": "default",
+              "source": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+              "sourcePort": "clqxt5xmh00ab356mggbd4iun",
+              "target": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+              "targetPort": "clqxt5xmm00ax356mod5zajpd",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d21723ab-4026-4424-9847-1bdcc1327722": {
+              "points": [
+                {
+                  "id": "5c7ac074-b6c9-4e37-8125-d4750f1ae1ac",
+                  "type": "point",
+                  "x": 529,
+                  "y": 593.81
+                },
+                {
+                  "id": "cbe40c92-1ad8-42a0-ae30-9c25f774bdbb",
+                  "type": "point",
+                  "x": 588.22,
+                  "y": 583.81
+                }
+              ],
+              "id": "d21723ab-4026-4424-9847-1bdcc1327722",
+              "type": "default",
+              "source": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+              "sourcePort": "clqxt5xml00an356m8ufwwccj",
+              "target": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+              "targetPort": "clqxt5xmv00c9356m3vyrxp8a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d166ca3b-fdb9-4a78-be35-a8f0d6baa69e": {
+              "points": [
+                {
+                  "id": "0194e715-529e-422c-a0b5-9672235502cd",
+                  "type": "point",
+                  "x": 334,
+                  "y": 593.81
+                },
+                {
+                  "id": "3e9a7eb8-7864-4180-9127-955f5867e1b1",
+                  "type": "point",
+                  "x": 373.22,
+                  "y": 593.81
+                }
+              ],
+              "id": "d166ca3b-fdb9-4a78-be35-a8f0d6baa69e",
+              "type": "default",
+              "source": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+              "sourcePort": "clqxt5xmm00az356mkc4kxole",
+              "target": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+              "targetPort": "clqxt5xml00al356mofcogu7r",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ff3bd7bb-45b0-44ea-be65-9fbcfe10e808": {
+              "points": [
+                {
+                  "id": "16bfe19f-6d2c-465e-a7f8-9b7a8405e96c",
+                  "type": "point",
+                  "x": 389,
+                  "y": 783.81
+                },
+                {
+                  "id": "0fe392a2-4fdc-437e-88c8-52f9fbbe8956",
+                  "type": "point",
+                  "x": 478.22,
+                  "y": 768.81
+                }
+              ],
+              "id": "ff3bd7bb-45b0-44ea-be65-9fbcfe10e808",
+              "type": "default",
+              "source": "3da951dd-e507-4539-b941-371b53f89e40",
+              "sourcePort": "clqxt5xmp00bb356m793b4ofj",
+              "target": "3aa4a749-729b-4c7a-a863-a27351b79430",
+              "targetPort": "clqxt5xmr00bl356mz5m2vdhn",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "83ab18c7-7ba4-4e28-8705-b4efd84314cf": {
+              "points": [
+                {
+                  "id": "be9d7e21-93a2-4d97-a6ec-488052d7c7ae",
+                  "type": "point",
+                  "x": 634,
+                  "y": 768.81
+                },
+                {
+                  "id": "f15f5cdb-ba79-49c0-af0c-43af4b95565c",
+                  "type": "point",
+                  "x": 743.22,
+                  "y": 683.81
+                }
+              ],
+              "id": "83ab18c7-7ba4-4e28-8705-b4efd84314cf",
+              "type": "default",
+              "source": "3aa4a749-729b-4c7a-a863-a27351b79430",
+              "sourcePort": "clqxt5xmr00bn356mr3dycxvs",
+              "target": "765756c3-e118-411f-9a83-54841af2307e",
+              "targetPort": "clqxt5xmd009x356mwwy17ypw",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1f71efcd-d6a0-412b-8860-fdb0b30f3236": {
+              "points": [
+                {
+                  "id": "d62c2fc5-2d6c-47b7-a0d5-09fd5e678418",
+                  "type": "point",
+                  "x": 744,
+                  "y": 583.81
+                },
+                {
+                  "id": "e5ef5509-3c9f-41f9-8df8-3720c2936c09",
+                  "type": "point",
+                  "x": 743.22,
+                  "y": 683.81
+                }
+              ],
+              "id": "1f71efcd-d6a0-412b-8860-fdb0b30f3236",
+              "type": "default",
+              "source": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+              "sourcePort": "clqxt5xmv00cb356m8vvsfeg8",
+              "target": "765756c3-e118-411f-9a83-54841af2307e",
+              "targetPort": "clqxt5xmd009x356mwwy17ypw",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "7615d499-c326-4add-9f7a-01042f4e7840": {
+              "points": [
+                {
+                  "id": "e527519e-b1e8-4c8f-b47b-95d08fd7659c",
+                  "type": "point",
+                  "x": 1194,
+                  "y": 683.81
+                },
+                {
+                  "id": "0cc08104-c65a-429b-b67b-ef59099c907c",
+                  "type": "point",
+                  "x": 1253.22,
+                  "y": 683.81
+                }
+              ],
+              "id": "7615d499-c326-4add-9f7a-01042f4e7840",
+              "type": "default",
+              "selected": false,
+              "source": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+              "sourcePort": "clqxt5xmu00bz356m27qmploc",
+              "target": "56e5c118-f333-4cf9-8b5d-ffafe828eaa4",
+              "targetPort": "clqxt7qyr00ij356mcbo33ey0",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c15d86d8-eed8-48d0-ba28-e57e49199e68": {
+              "points": [
+                {
+                  "id": "2232672a-faec-469d-82a7-12e8c2d283ac",
+                  "type": "point",
+                  "x": -97.11,
+                  "y": 888.81
+                },
+                {
+                  "id": "6de55ad6-96f9-4b15-ab9d-1007684e9df7",
+                  "type": "point",
+                  "x": -51.78,
+                  "y": 888.81
+                }
+              ],
+              "id": "c15d86d8-eed8-48d0-ba28-e57e49199e68",
+              "type": "default",
+              "selected": false,
+              "source": "0a3c322d-e361-4002-becf-d2fdb00f2bd1",
+              "sourcePort": "clve33xr1006j356n22zmmnvc",
+              "target": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+              "targetPort": "clve343se006p356n3m15qe6a",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6ebfbc65-7af7-4a14-a36b-2a2db799bf7c": {
+              "points": [
+                {
+                  "id": "ca4db56e-eaab-4871-ba48-ad1bd72743e4",
+                  "type": "point",
+                  "x": 104,
+                  "y": 888.81
+                },
+                {
+                  "id": "e0fe2854-4c20-4b97-8c9c-8668219d4b0b",
+                  "type": "point",
+                  "x": 233.22,
+                  "y": 783.81
+                }
+              ],
+              "id": "6ebfbc65-7af7-4a14-a36b-2a2db799bf7c",
+              "type": "default",
+              "selected": false,
+              "source": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+              "sourcePort": "clve343se006r356nwdlnc5m2",
+              "target": "3da951dd-e507-4539-b941-371b53f89e40",
+              "targetPort": "clqxt5xmp00b9356miavjmw55",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "553187cc-6d5a-495f-8d58-0d36be26d9e0": {
+              "points": [
+                {
+                  "id": "8b3ec926-a20d-42d2-8284-10137f1cbe6c",
+                  "type": "point",
+                  "x": 65.15,
+                  "y": 431.05
+                },
+                {
+                  "id": "78546d44-5424-4bbd-9631-c3d867a34695",
+                  "type": "point",
+                  "x": -26.78,
+                  "y": 593.81
+                }
+              ],
+              "id": "553187cc-6d5a-495f-8d58-0d36be26d9e0",
+              "type": "default",
+              "selected": false,
+              "source": "99071d31-a084-4800-951d-8db81261b721",
+              "sourcePort": "clve6ocw000n8356nza5q838h",
+              "target": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+              "targetPort": "clqxt5xmh00a9356mj2kkrshl",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "19fd56a5-3727-45eb-9c8f-fce0fc28cc4b",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "1b8ccaad-1898-4cb5-a155-1ce167b5d4e4": {
+              "id": "1b8ccaad-1898-4cb5-a155-1ce167b5d4e4",
+              "type": "dataChanges",
+              "selected": false,
+              "x": -50,
+              "y": 745,
+              "ports": [
+                {
+                  "id": "clqxt5xm9009n356mpnkc0p9h",
+                  "type": "default",
+                  "x": 105.97,
+                  "y": 776.7,
+                  "name": "clqxt5xm9009o356m30pylq4a",
+                  "parentNode": "1b8ccaad-1898-4cb5-a155-1ce167b5d4e4",
+                  "links": [
+                    "b764d9ed-fe68-4dd7-8b93-df8ef202901f"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "type": "Workcenter",
+                "operations": [
+                  "Create"
+                ],
+                "nextNodes": [
+                  "3da951dd-e507-4539-b941-371b53f89e40"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "On Workcenter Create"
+            },
+            "765756c3-e118-411f-9a83-54841af2307e": {
+              "id": "765756c3-e118-411f-9a83-54841af2307e",
+              "type": "mutate",
+              "selected": false,
+              "x": 745,
+              "y": 645,
+              "ports": [
+                {
+                  "id": "clqxt5xmd009x356mwwy17ypw",
+                  "type": "default",
+                  "x": 736.11,
+                  "y": 676.7,
+                  "name": "clqxt5xmd009y356mv752am6l",
+                  "parentNode": "765756c3-e118-411f-9a83-54841af2307e",
+                  "links": [
+                    "83ab18c7-7ba4-4e28-8705-b4efd84314cf",
+                    "1f71efcd-d6a0-412b-8860-fdb0b30f3236"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmd009z356m7r8p8txo",
+                  "type": "default",
+                  "x": 967.07,
+                  "y": 676.7,
+                  "name": "clqxt5xmd00a0356my70ee4as",
+                  "parentNode": "765756c3-e118-411f-9a83-54841af2307e",
+                  "links": [
+                    "b929a466-5fd3-4efc-ac53-6c547410d26b"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "(\n  $wc := $state.context.WORKCENTER_CREATE;\n  {\n    \"payloadW\": $isNilOrEmpty($wc.facilityId) ? [] : {\n      \"create\": {\n        \"id\":\"WORKCENTER-\" & $wc.id,\n        \"name\": $wc.name,\n        \"locationTypeId\": \"Workcenter\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      },\n      \"update\": {\n        \n        \"name\": $wc.name,\n        \"locationTypeId\": \"Workcenter\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      },\"where\": {\n        \"id\": \"WORKCENTER-\" & $wc.id\n      }\n    },\n    \"payloadWI\":$isNilOrEmpty($wc.facilityId) ? [] : {\n      \"create\": {\n        \"id\": \"WORKCENTER-INPUT-\" & $wc.id,\n        \"name\": $wc.name & \"-INPUT\",\n        \"locationTypeId\": \"Workcenter Input\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\": $wc.facilityId\n      },\"update\": {\n        \"name\": $wc.name & \"-\" & \"INPUT\",\n        \"locationTypeId\": \"Workcenter Input\",\n        \"locationStatusId\": \"Active\",\n        \"facilityId\":  $wc.facilityId\n      }, \"where\": {\n          \"id\":  \"WORKCENTER-INPUT-\" & $wc.id\n      }\n    },\n    \"payloadPS\": {\n      \"create\": {\n        \n        \"workcenterId\": $wc.id\n      },\n        \"update\": {\n        \n        \"workcenterId\": $wc.id\n      },\"where\":{\n        \"id\":$wc.id\n      }\n    }\n\n  }\n)",
+                "mutation": "mutation CreateLocation($payloadW: [LocationUpsertPayloadInput!]!,$payloadWI: [LocationUpsertPayloadInput!]!,$payloadPS:[ProductionSetupUpsertPayloadInput!]!) {\n  workcenterLocation:upsertLocation(payload:$payloadW) {\n    id\n},\n   workcenterInputLocation:upsertLocation(payload:$payloadWI) {\n    id\n},\n  upsertProductionSetup(payload: $payloadPS) {\n    id\n  workcenterId\n  }\n}",
+                "nextNodes": [
+                  "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": true,
+                "executionFailed": true
+              },
+              "name": "Create Location/Production Setup",
+              "note": "Create Location with id/name as \"workcenter.name(workcenter.id)\", locationType as \"Workcenter\", and locationStatus as \"Active\""
+            },
+            "0687cb02-03fd-4229-adf8-0ae1243f2eb3": {
+              "id": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+              "type": "query",
+              "selected": false,
+              "x": -25,
+              "y": 555,
+              "ports": [
+                {
+                  "id": "clqxt5xmh00a9356mj2kkrshl",
+                  "type": "default",
+                  "x": -33.89,
+                  "y": 586.7,
+                  "name": "clqxt5xmh00aa356mo0ga33mq",
+                  "parentNode": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+                  "links": [
+                    "553187cc-6d5a-495f-8d58-0d36be26d9e0"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmh00ab356mggbd4iun",
+                  "type": "default",
+                  "x": 132.2,
+                  "y": 586.7,
+                  "name": "clqxt5xmh00ac356mxvk2u6ig",
+                  "parentNode": "0687cb02-03fd-4229-adf8-0ae1243f2eb3",
+                  "links": [
+                    "60483401-9577-47bb-af11-83f311d05715"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{}",
+                "query": "query Query($where: WorkcenterWhereInput, $orderBy: [WorkcenterOrderByInput!], $first: Int, $after: String) {\n  workcenter(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        id\n        name\n    facilityId\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "3b7732e5-b606-47a7-8efa-5c8465c90a0c"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Query All Workcenters"
+            },
+            "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688": {
+              "id": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+              "type": "broadcast",
+              "selected": false,
+              "x": 375,
+              "y": 555,
+              "ports": [
+                {
+                  "id": "clqxt5xml00al356mofcogu7r",
+                  "type": "default",
+                  "x": 366.11,
+                  "y": 586.7,
+                  "name": "clqxt5xml00am356m3gbq90ye",
+                  "parentNode": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+                  "links": [
+                    "d166ca3b-fdb9-4a78-be35-a8f0d6baa69e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xml00an356m8ufwwccj",
+                  "type": "default",
+                  "x": 521.89,
+                  "y": 586.7,
+                  "name": "clqxt5xml00ao356m4f0o3m0w",
+                  "parentNode": "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688",
+                  "links": [
+                    "d21723ab-4026-4424-9847-1bdcc1327722"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "27baa7ae-749b-4ba7-8608-921ce1212b7e"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Broadcast"
+            },
+            "3b7732e5-b606-47a7-8efa-5c8465c90a0c": {
+              "id": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+              "type": "transform",
+              "selected": false,
+              "x": 180,
+              "y": 555,
+              "ports": [
+                {
+                  "id": "clqxt5xmm00ax356mod5zajpd",
+                  "type": "default",
+                  "x": 171.11,
+                  "y": 586.7,
+                  "name": "clqxt5xmm00ay356mc4hmt9ay",
+                  "parentNode": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+                  "links": [
+                    "60483401-9577-47bb-af11-83f311d05715"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmm00az356mkc4kxole",
+                  "type": "default",
+                  "x": 326.89,
+                  "y": 586.7,
+                  "name": "clqxt5xmm00b0356mag5z8rze",
+                  "parentNode": "3b7732e5-b606-47a7-8efa-5c8465c90a0c",
+                  "links": [
+                    "d166ca3b-fdb9-4a78-be35-a8f0d6baa69e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$.workcenter.edges.node",
+                "nextNodes": [
+                  "de5a32a7-fec7-4f62-ac6a-f7c3d81fc688"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Select edges.node"
+            },
+            "3da951dd-e507-4539-b941-371b53f89e40": {
+              "id": "3da951dd-e507-4539-b941-371b53f89e40",
+              "type": "transform",
+              "selected": false,
+              "x": 235,
+              "y": 745,
+              "ports": [
+                {
+                  "id": "clqxt5xmp00b9356miavjmw55",
+                  "type": "default",
+                  "x": 226.11,
+                  "y": 776.7,
+                  "name": "clqxt5xmp00ba356mo0hjbgr7",
+                  "parentNode": "3da951dd-e507-4539-b941-371b53f89e40",
+                  "links": [
+                    "b764d9ed-fe68-4dd7-8b93-df8ef202901f",
+                    "6ebfbc65-7af7-4a14-a36b-2a2db799bf7c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmp00bb356m793b4ofj",
+                  "type": "default",
+                  "x": 381.89,
+                  "y": 776.7,
+                  "name": "clqxt5xmp00bc356mnj6is7ft",
+                  "parentNode": "3da951dd-e507-4539-b941-371b53f89e40",
+                  "links": [
+                    "ff3bd7bb-45b0-44ea-be65-9fbcfe10e808"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$.value.after",
+                "nextNodes": [
+                  "3aa4a749-729b-4c7a-a863-a27351b79430"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Select value.after"
+            },
+            "3aa4a749-729b-4c7a-a863-a27351b79430": {
+              "id": "3aa4a749-729b-4c7a-a863-a27351b79430",
+              "type": "setContext",
+              "selected": false,
+              "x": 480,
+              "y": 730,
+              "ports": [
+                {
+                  "id": "clqxt5xmr00bl356mz5m2vdhn",
+                  "type": "default",
+                  "x": 471.11,
+                  "y": 761.7,
+                  "name": "clqxt5xmr00bm356m1wd07rty",
+                  "parentNode": "3aa4a749-729b-4c7a-a863-a27351b79430",
+                  "links": [
+                    "ff3bd7bb-45b0-44ea-be65-9fbcfe10e808"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmr00bn356mr3dycxvs",
+                  "type": "default",
+                  "x": 626.89,
+                  "y": 761.7,
+                  "name": "clqxt5xmr00bo356mkjmccn1h",
+                  "parentNode": "3aa4a749-729b-4c7a-a863-a27351b79430",
+                  "links": [
+                    "83ab18c7-7ba4-4e28-8705-b4efd84314cf"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "765756c3-e118-411f-9a83-54841af2307e"
+                ],
+                "transform": "{\n  \"WORKCENTER_CREATE\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9": {
+              "id": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1040,
+              "y": 645,
+              "ports": [
+                {
+                  "id": "clqxt5xmu00bx356mzha3x49s",
+                  "type": "default",
+                  "x": 1031.11,
+                  "y": 676.7,
+                  "name": "clqxt5xmu00by356mwj2t1jc7",
+                  "parentNode": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+                  "links": [
+                    "b929a466-5fd3-4efc-ac53-6c547410d26b"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmu00bz356m27qmploc",
+                  "type": "default",
+                  "x": 1186.89,
+                  "y": 676.7,
+                  "name": "clqxt5xmu00c0356mt4nqszcn",
+                  "parentNode": "9ed83e99-ee2c-40a6-a17f-befa75d4bbb9",
+                  "links": [
+                    "7615d499-c326-4add-9f7a-01042f4e7840"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"LOCAL\": $\n}",
+                "nextNodes": [
+                  "56e5c118-f333-4cf9-8b5d-ffafe828eaa4"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "27baa7ae-749b-4ba7-8608-921ce1212b7e": {
+              "id": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+              "type": "setContext",
+              "selected": false,
+              "x": 590,
+              "y": 545,
+              "ports": [
+                {
+                  "id": "clqxt5xmv00c9356m3vyrxp8a",
+                  "type": "default",
+                  "x": 581.11,
+                  "y": 576.7,
+                  "name": "clqxt5xmv00ca356m5slwxfwn",
+                  "parentNode": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+                  "links": [
+                    "d21723ab-4026-4424-9847-1bdcc1327722"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt5xmv00cb356m8vvsfeg8",
+                  "type": "default",
+                  "x": 736.89,
+                  "y": 576.7,
+                  "name": "clqxt5xmv00cc356mxonu7i40",
+                  "parentNode": "27baa7ae-749b-4ba7-8608-921ce1212b7e",
+                  "links": [
+                    "1f71efcd-d6a0-412b-8860-fdb0b30f3236"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "765756c3-e118-411f-9a83-54841af2307e"
+                ],
+                "transform": "{\n  \"WORKCENTER_CREATE\": $\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Set Context"
+            },
+            "56e5c118-f333-4cf9-8b5d-ffafe828eaa4": {
+              "id": "56e5c118-f333-4cf9-8b5d-ffafe828eaa4",
+              "type": "mutate",
+              "selected": true,
+              "x": 1255,
+              "y": 645,
+              "ports": [
+                {
+                  "id": "clqxt7qyr00ij356mcbo33ey0",
+                  "type": "default",
+                  "x": 1246.11,
+                  "y": 676.7,
+                  "name": "clqxt7qyr00ik356mubk8o3qr",
+                  "parentNode": "56e5c118-f333-4cf9-8b5d-ffafe828eaa4",
+                  "links": [
+                    "7615d499-c326-4add-9f7a-01042f4e7840"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clqxt7qyr00il356mlgm0p5am",
+                  "type": "default",
+                  "x": 1529.67,
+                  "y": 676.7,
+                  "name": "clqxt7qyr00im356ml8ckj02a",
+                  "parentNode": "56e5c118-f333-4cf9-8b5d-ffafe828eaa4",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{\n  \"payloadC\": $isNilOrEmpty($state.context.WORKCENTER_CREATE.facilityId) ? [] : {\n    \"create\": {\n      \"id\": $state.context.LOCAL.workcenterInputLocation.id,\n      \"name\": $state.context.WORKCENTER_CREATE.name & \"-INPUT\",\n      \"workcenterId\": $state.context.WORKCENTER_CREATE.id,\n      \"locationId\": $state.context.LOCAL.workcenterInputLocation.id\n    },\"update\": {\n          \"name\": $state.context.WORKCENTER_CREATE.name & \"-INPUT\",\n      \"workcenterId\": $state.context.WORKCENTER_CREATE.id,\n      \"locationId\": $state.context.LOCAL.workcenterInputLocation.id\n    },\"where\": {\n      \"id\":$state.context.LOCAL.workcenterInputLocation.id\n    }\n  },\n\n  \"payloadU\": {\n    \"update\": {\n      \"locationId\": $state.context.LOCAL.workcenterLocation.id\n    },\n    \n    \"where\": {\n      \"id\": $state.context.WORKCENTER_CREATE.id\n    }\n  }\n}\n",
+                "mutation": "mutation C($payloadC:[WorkcenterInputUpsertPayloadInput!]!,$payloadU:[WorkcenterUpdatePayloadInput!]!){\n  upsertWorkcenterInput(payload:$payloadC){id},\n  updateWorkcenter(payload:$payloadU) {id}\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create WorkcenterInput/Update Workcenter"
+            },
+            "0a3c322d-e361-4002-becf-d2fdb00f2bd1": {
+              "id": "0a3c322d-e361-4002-becf-d2fdb00f2bd1",
+              "type": "dataChanges",
+              "selected": false,
+              "x": -290,
+              "y": 850,
+              "ports": [
+                {
+                  "id": "clve33xr1006j356n22zmmnvc",
+                  "type": "default",
+                  "x": -104.22,
+                  "y": 881.7,
+                  "name": "clve33xr1006k356nivsu7df3",
+                  "parentNode": "0a3c322d-e361-4002-becf-d2fdb00f2bd1",
+                  "links": [
+                    "c15d86d8-eed8-48d0-ba28-e57e49199e68"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "type": "Workcenter",
+                "operations": [
+                  "Update"
+                ],
+                "nextNodes": [
+                  "6a1cfb3c-a259-4c13-8e85-da06b1022625"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Data Changes: WC UPDATE"
+            },
+            "6a1cfb3c-a259-4c13-8e85-da06b1022625": {
+              "id": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+              "type": "when",
+              "selected": false,
+              "x": -50,
+              "y": 850,
+              "ports": [
+                {
+                  "id": "clve343se006p356n3m15qe6a",
+                  "type": "default",
+                  "x": -58.89,
+                  "y": 881.7,
+                  "name": "clve343se006q356nrsrobnn1",
+                  "parentNode": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+                  "links": [
+                    "c15d86d8-eed8-48d0-ba28-e57e49199e68"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clve343se006r356nwdlnc5m2",
+                  "type": "default",
+                  "x": 96.89,
+                  "y": 881.7,
+                  "name": "clve343se006s356nxfjqjl4b",
+                  "parentNode": "6a1cfb3c-a259-4c13-8e85-da06b1022625",
+                  "links": [
+                    "6ebfbc65-7af7-4a14-a36b-2a2db799bf7c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$not($isNilOrEmpty(value.after.facilityId))\nand\nvalue.before.facilityId != value.after.facilityId",
+                "nextNodes": [
+                  "3da951dd-e507-4539-b941-371b53f89e40"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Accept: FACILITY"
+            },
+            "99071d31-a084-4800-951d-8db81261b721": {
+              "id": "99071d31-a084-4800-951d-8db81261b721",
+              "type": "debugSource",
+              "x": -88.87,
+              "y": 392.24,
+              "ports": [
+                {
+                  "id": "clve6ocw000n8356nza5q838h",
+                  "type": "default",
+                  "x": 58.04,
+                  "y": 423.94,
+                  "name": "clve6ocw000n9356nstuy1r4u",
+                  "parentNode": "99071d31-a084-4800-951d-8db81261b721",
+                  "links": [
+                    "553187cc-6d5a-495f-8d58-0d36be26d9e0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {},
+                "context": {},
+                "nextNodes": [
+                  "0687cb02-03fd-4229-adf8-0ae1243f2eb3"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            }
+          }
+        }
+      ],
+      "name": "Locations on Workcenter Creation",
+      "type": "System",
+      "version": "0.0.15",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

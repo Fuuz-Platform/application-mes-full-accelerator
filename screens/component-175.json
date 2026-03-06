@@ -1,0 +1,800 @@
+{
+  "header": {
+    "id": "dispatchScheduleViewer",
+    "name": "Dispatch Schedule Viewer",
+    "description": "",
+    "active": true,
+    "moduleId": "workOrderManagement",
+    "isWidget": false
+  },
+  "version": {
+    "id": "cm1tn4df8qmpb010rgc7w8xd6",
+    "number": "0.0.2",
+    "description": "Added filters for work orders, products, and scheduled workcenters only",
+    "screenId": "dispatchScheduleViewer",
+    "design": {
+      "components": [
+        {
+          "name": "New Screen",
+          "tabTitle": "New Tab",
+          "type": "canvas",
+          "props": {
+            "design": {
+              "ROOT": {
+                "type": {
+                  "resolvedName": "Screen"
+                },
+                "isCanvas": true,
+                "props": {
+                  "padding": 0,
+                  "margin": 0,
+                  "flexDirection": "column",
+                  "flexWrap": false,
+                  "alignItems": "stretch",
+                  "justifyContent": "flex-start",
+                  "width": "100%",
+                  "height": "100%",
+                  "hidden": false,
+                  "flexGrow": false,
+                  "shadow": false,
+                  "borderRadius": 0,
+                  "flowsDelay": 0
+                },
+                "displayName": "Screen",
+                "custom": {
+                  "elementName": "Screen",
+                  "elementCounts": {
+                    "Scheduler": 1,
+                    "Container": 3,
+                    "Form": 1,
+                    "Select": 6,
+                    "Action Button": 2,
+                    "Resizable Panel": 1,
+                    "JSON": 1,
+                    "Text": 1,
+                    "Options": 1,
+                    "Switch": 1
+                  }
+                },
+                "parent": null,
+                "hidden": false,
+                "nodes": [
+                  "_gXDre2UV",
+                  "AFDfBXUpi"
+                ],
+                "linkedNodes": {}
+              },
+              "AFDfBXUpi": {
+                "type": {
+                  "resolvedName": "Scheduler"
+                },
+                "isCanvas": false,
+                "props": {
+                  "query": {
+                    "api": "Application",
+                    "query": "query Scheduler($workcenterWhere:WorkcenterWhereInput, $distributionWhere:WorkOrderProcessDistributionWhereInput) {\n  workcenter(where: $workcenterWhere) {\n    edges {\n      node {\n        id\n        name\n        productionSetup {\n          mode {\n            name\n            modeType {\n              production\n              maintenance\n              changeover\n              idle\n              color\n            }\n          }\n        }\n        workcenterGroup {\n          name\n        }\n        shiftGroup {\n          id\n          name\n          shifts {\n            edges { \n              node {  \n                shift {\n                  name\n                  startAt\n                  endAt\n                  sunday\n                  monday\n                  tuesday\n                  wednesday\n                  thursday\n                  friday\n                  saturday\n                }\n              }\n            }\n          }\n        }\n        image {\n          thumbnailUrl\n        }\n      }\n    }\n  }\n  \n  workOrderProcessDistribution(where: $distributionWhere) {\n    edges {\n      node {\n        id\n        number\n      \tleadingDistributionId\n        resourceId: workcenterId\n        startDate: scheduledStartAt\n        endDate: scheduledFinishAt\n        requiredQuantity\n        workOrderProcessDistributionStatus {\n          name\n          color\n        }\n        workOrderProcess {\n          order\n          process {\n\t\t\t\t\t\tcode\n          }\n          workOrder {\n            number\n            quantity\n            workOrderPriority {\n              color\n              name\n            }\n          }\n          productStrategyProcess {\n            code\n          }\n          productStrategy {\n            product {\n              number\n            }\n          }\n        }\n      }\n    }\n  }\n}",
+                    "dataPath": null,
+                    "dataTransform": {
+                      "transform": null,
+                      "remote": true
+                    },
+                    "dataSubscription": {
+                      "enabled": false
+                    },
+                    "autoLoad": true,
+                    "fields": [
+                      "id"
+                    ],
+                    "parameters": "(\n  $variables := $components.Form1.fn.getVariables(true);\n  $mergeDeep([$variables, {\n  \"distributionWhere\": {\n    \"scheduledStartAt\": {\n      \"_gt\": $moment().subtract(14, 'd')\n    }\n  }\n  }])\n)"
+                  },
+                  "blockNavigationWhenDirty": true,
+                  "scheduler": {
+                    "config": {
+                      "groupFeature": {
+                        "field": "workcenterGroup.name"
+                      }
+                    },
+                    "events": {
+                      "__transform": "[data.workOrderProcessDistribution.edges.node\n  ~> | $ | {\n    \"name\": workOrderProcess.productStrategy.product.number & \" - Qty \" & requiredQuantity,\n    \"eventColor\": $coalesce([\n      workOrderProcessDistributionStatus.color,\n      \"light-gray\"\n    ]),\n    \"tooltipHtml\": '<b>Work Order:</b> ' & workOrderProcess.workOrder.number & '<br />'\n      & '&nbsp;&nbsp;' & workOrderProcess.workOrder.quantity & ' of <i>' & workOrderProcess.productStrategy.product.number & '</i> due by ' & $moment(workOrderProcess.workOrder.promiseAt).format('L') & '<br />'\n      & '&nbsp;&nbsp;<b>Priority: </b>' & \"<i style='color:\" & workOrderProcess.workOrder.workOrderPriority.color & \"' class='b-fa-solid b-fa-circle'></i> \" & workOrderProcess.workOrder.workOrderPriority.name & '<br />'\n      & '<b>Process:</b> ' & workOrderProcess.order & ' (' & workOrderProcess.process.code & ') <br />'\n      & '&nbsp;&nbsp;<b>Status: </b>' & \"<i style='color:\" & workOrderProcessDistributionStatus.color & \"' class='b-fa-solid b-fa-circle'></i> \" & workOrderProcessDistributionStatus.name & '<br />'\n      & '&nbsp;&nbsp;<b>Scheduled: </b>' & (\n        startDate ? $moment(startDate).format('L LT') : '?'\n      ) & ' - ' & (\n        endDate ? $moment(endDate).format('L LT') : '?'\n      ) & '<br />',\n    \"eventHtml\": '<div>' \n      & workOrderProcess.productStrategy.product.number\n      & '<br />' \n      & 'Qty ' & requiredQuantity\n      & '</div>'\n  } |]",
+                      "__dynamicFields": {
+                        "payload": [
+                          "data.workOrderProcessDistribution"
+                        ],
+                        "context": []
+                      },
+                      "__cacheKey": "events",
+                      "__remote": false,
+                      "__fallbackValue": []
+                    },
+                    "resources": {
+                      "__transform": "(\n  [data.workcenter.edges.node\n    ~> | $ | {\n      \"imageUrl\": image.thumbnailUrl,\n      \"workcenterGroup\": $coalesce([workcenterGroup, {\n        \"name\": \"(No Group)\"\n      }]),\n      \"calendar\": shiftGroup.id,\n      \"metaHtml\": $isNilOrEmpty(productionSetup.mode) \n        ? null\n        : (\n          $modeType := productionSetup.mode.modeType;\n\n          $icon := $modeType.production\n            ? 'circle-check'\n            : $modeType.maintenance\n            ? 'wrench'\n            : $modeType.changeover\n            ? 'exchange'\n            : $modeType.idle\n            ? 'ellipsis-h'\n            : '';\n\n          \"<i style='color:\" & $modeType.color & \"' class='b-fa-solid b-fa-\" & $icon & \"'></i>&nbsp;&nbsp;\" & productionSetup.mode.name\n        )\n  } |][\n    $components.Form1.data.scheduledWorkcentersOnly ? (\n      $eventsByWorkcenter := $groupBy($$.data.workOrderProcessDistribution.edges.node, function($v) { $v.resourceId });\n      \n      $isNotNilOrEmpty($lookup($eventsByWorkcenter, $.id))\n    ) : true\n  ]\n\n)",
+                      "__dynamicFields": {
+                        "payload": [
+                          "data.workcenter"
+                        ],
+                        "context": [
+                          "components.Form1.data.scheduledWorkcentersOnly"
+                        ]
+                      },
+                      "__cacheKey": "resources",
+                      "__remote": false,
+                      "__fallbackValue": []
+                    },
+                    "calendars": {
+                      "__transform": "(\n  $convertDate := function($date) {\n    $moment($date).tz(\"UTC\").tz($momentTzGuess(), true)\n  };\n\n  $formatTime := function($date) {\n    $moment($date).tz(\"UTC\").tz($momentTzGuess(), true).format('HH:mm')\n  };\n  \n  $formatDays := function($shift, $overnight) {\n    $join([\n      ($shift.sunday ? ($overnight ? 'monday' : 'sunday')),\n      ($shift.monday ? ($overnight ? 'tuesday' : 'monday')),\n      ($shift.tuesday ? ($overnight ? 'wednesday' : 'tuesday')),\n      ($shift.wednesday ? ($overnight ? 'thursday' : 'wednesday')),\n      ($shift.thursday ? ($overnight ? 'friday' : 'thursday')),\n      ($shift.friday ? ($overnight ? 'saturday' : 'friday')),\n      ($shift.saturday ? ($overnight ? 'sunday' : 'saturday'))\n    ][$isNotNilOrEmpty($)], ',')\n  };\n\n  [\n    $uniqBy(\n      [data.workcenter.edges.node.shiftGroup],\n      function($v) { $v.id }\n    ).{\n      \"id\": id,\n      \"name\": name,\n      \"unspecifiedTimeIsWorking\": false,\n      \"intervals\": [shifts.edges.node.shift[\n        $isNotNilOrEmpty(startAt)\n          and $isNotNilOrEmpty(endAt)\n      ].(\n        $startAt := $convertDate(startAt);\n        $endAt := $convertDate(endAt);\n        \n        {\n          \"name\": name,\n          \"recurrentStartDate\": \"at \" & $startAt.format('HH:mm') & \" on \" & $formatDays($, false),\n          \"recurrentEndDate\": \"at \"& $endAt.format('HH:mm') & \" on \" & $formatDays($, $moment($endAt).isBefore($startAt)),\n          \"isWorking\": true\n        }\n      )]\n    }\n  ]\n)",
+                      "__dynamicFields": {
+                        "payload": [
+                          "data.workcenter"
+                        ],
+                        "context": []
+                      },
+                      "__cacheKey": "calendars",
+                      "__remote": false,
+                      "__fallbackValue": []
+                    },
+                    "dependencies": {
+                      "__transform": "[\n  data.workOrderProcessDistribution.edges.node[\n    $isNotNilOrEmpty(leadingDistributionId)\n  ].{\n    \"id\": leadingDistributionId & \"~\" & id,\n    \"from\": leadingDistributionId,\n    \"to\": id\n  }\n]",
+                      "__dynamicFields": {
+                        "payload": [
+                          "data.workOrderProcessDistribution"
+                        ],
+                        "context": []
+                      },
+                      "__cacheKey": "dependencies",
+                      "__remote": false,
+                      "__fallbackValue": []
+                    },
+                    "assignments": [],
+                    "includeUnassignedResource": true,
+                    "includeResourceInfoColumn": true,
+                    "includeUtilizationColumn": true,
+                    "additionalColumns": [],
+                    "unassignedResource": {
+                      "workcenterGroup": {
+                        "name": " Unassigned"
+                      }
+                    },
+                    "resourceInfoColumn": {
+                      "text": "Workcenter",
+                      "showEventCount": false,
+                      "width": 200
+                    },
+                    "disabled": true
+                  },
+                  "disabled": true
+                },
+                "displayName": "Scheduler",
+                "custom": {
+                  "elementName": "Scheduler1"
+                },
+                "parent": "ROOT",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "_gXDre2UV": {
+                "type": {
+                  "resolvedName": "Container"
+                },
+                "isCanvas": true,
+                "props": {
+                  "padding": 0,
+                  "margin": 0,
+                  "flexWrap": true,
+                  "flexDirection": "column",
+                  "justifyContent": "flex-start",
+                  "alignItems": "stretch",
+                  "width": "100%",
+                  "height": "auto",
+                  "hidden": false,
+                  "flexGrow": false,
+                  "shadow": false,
+                  "borderRadius": 0,
+                  "collapsible": false,
+                  "collapsedFooter": false,
+                  "collapsedSize": 0,
+                  "collapsedByDefault": false,
+                  "onClickTransform": false,
+                  "layout": "flex",
+                  "bordersInput": {},
+                  "justifyItems": "start",
+                  "style": {}
+                },
+                "displayName": "Container",
+                "custom": {
+                  "elementName": "Container1"
+                },
+                "parent": "ROOT",
+                "hidden": false,
+                "nodes": [
+                  "oO8fmPJXV",
+                  "s4NHRHr2a"
+                ],
+                "linkedNodes": {}
+              },
+              "oO8fmPJXV": {
+                "type": {
+                  "resolvedName": "Form"
+                },
+                "isCanvas": true,
+                "props": {
+                  "query": {
+                    "api": "Application",
+                    "query": null,
+                    "dataPath": "edges[0]",
+                    "dataTransform": {
+                      "transform": null,
+                      "remote": true
+                    },
+                    "dataSubscription": {
+                      "enabled": false
+                    },
+                    "autoLoad": true,
+                    "parameters": "{\n  \"filter\": {\n    \"id\": {\n      \"_eq\": id\n    }\n  },\n  \"first\": 1\n}",
+                    "fields": [
+                      "id"
+                    ],
+                    "disableDataChangeIndicator": false
+                  },
+                  "blockNavigationWhenDirty": true
+                },
+                "displayName": "Form",
+                "custom": {
+                  "elementName": "Form1"
+                },
+                "parent": "_gXDre2UV",
+                "hidden": false,
+                "nodes": [
+                  "-58_z0GoXI"
+                ],
+                "linkedNodes": {}
+              },
+              "-58_z0GoXI": {
+                "type": {
+                  "resolvedName": "Container"
+                },
+                "isCanvas": true,
+                "props": {
+                  "padding": 8,
+                  "margin": 0,
+                  "flexWrap": true,
+                  "flexDirection": "row",
+                  "justifyContent": "flex-start",
+                  "alignItems": "stretch",
+                  "width": "100%",
+                  "height": "auto",
+                  "hidden": false,
+                  "flexGrow": false,
+                  "shadow": true,
+                  "borderRadius": 4,
+                  "collapsible": false,
+                  "collapsedFooter": true,
+                  "collapsedSize": 0,
+                  "collapsedByDefault": false,
+                  "onClickTransform": false,
+                  "layout": "flex",
+                  "bordersInput": {},
+                  "justifyItems": "start",
+                  "style": {},
+                  "background": "paper"
+                },
+                "displayName": "Container",
+                "custom": {
+                  "elementName": "Container2"
+                },
+                "parent": "oO8fmPJXV",
+                "hidden": false,
+                "nodes": [
+                  "_T0MvVbRr",
+                  "RNFv9gxRgi",
+                  "YbYHcOS6FD",
+                  "reFv3DEuAI",
+                  "S0bKc6EBWu",
+                  "b4YICyxXGH",
+                  "I2jgd24vv"
+                ],
+                "linkedNodes": {}
+              },
+              "s4NHRHr2a": {
+                "type": {
+                  "resolvedName": "Container"
+                },
+                "isCanvas": true,
+                "props": {
+                  "padding": 0,
+                  "margin": 4,
+                  "flexWrap": true,
+                  "flexDirection": "column",
+                  "justifyContent": "flex-start",
+                  "alignItems": "stretch",
+                  "width": "100%",
+                  "height": "auto",
+                  "hidden": false,
+                  "flexGrow": false,
+                  "shadow": false,
+                  "borderRadius": 0,
+                  "collapsible": false,
+                  "collapsedFooter": false,
+                  "collapsedSize": 0,
+                  "collapsedByDefault": false,
+                  "onClickTransform": false,
+                  "layout": "flex",
+                  "bordersInput": {},
+                  "justifyItems": "start",
+                  "style": {}
+                },
+                "displayName": "Container",
+                "custom": {
+                  "elementName": "Container3"
+                },
+                "parent": "_gXDre2UV",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "_T0MvVbRr": {
+                "type": {
+                  "resolvedName": "SelectInput"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "300px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "select",
+                  "label": "Workcenter Groups",
+                  "dialogMode": "never",
+                  "multiselect": true,
+                  "isClearable": true,
+                  "selectAll": true,
+                  "searchPredicate": "contains",
+                  "api": "Application",
+                  "stateTracking": "full",
+                  "optionLimit": 5,
+                  "optionLimitFlex": 5,
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": "workcenterWhere.workcenterGroupId._in"
+                  },
+                  "dataPath": "workcenterWhere.workcenterGroupId",
+                  "predicate": "_in",
+                  "labelPath": "name",
+                  "orderByField": "name",
+                  "query": {
+                    "fields": [
+                      "workcenterGroups.id",
+                      "workcenterGroups.name"
+                    ]
+                  },
+                  "dataModel": "WorkcenterGroup",
+                  "selectFields": [
+                    "name"
+                  ],
+                  "additionalFields": [],
+                  "orderByDirection": "asc",
+                  "additionalFilter": {
+                    "_and": [
+                      {
+                        "usable": {
+                          "_eq": true
+                        }
+                      }
+                    ]
+                  }
+                },
+                "displayName": "Select",
+                "custom": {
+                  "elementName": "Select1"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "I2jgd24vv": {
+                "type": {
+                  "resolvedName": "ActionButton"
+                },
+                "isCanvas": false,
+                "props": {
+                  "margin": 6,
+                  "buttonColor": "primary",
+                  "icon": {
+                    "icon": "magnifying-glass",
+                    "color": "inherit",
+                    "variant": "duotone",
+                    "size": "icon"
+                  },
+                  "width": "76px",
+                  "height": "auto",
+                  "disabled": false,
+                  "hidden": false,
+                  "useIconButton": false,
+                  "disableHover": false,
+                  "disableRipple": false,
+                  "action": [
+                    {
+                      "type": "transformation",
+                      "remote": false,
+                      "transformation": "$components.Scheduler1.fn.loadData()"
+                    }
+                  ]
+                },
+                "displayName": "Action Button",
+                "custom": {
+                  "elementName": "ActionButton1"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "YbYHcOS6FD": {
+                "type": {
+                  "resolvedName": "SelectInput"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "300px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "select",
+                  "label": "Workcenters",
+                  "dialogMode": "advanced",
+                  "multiselect": true,
+                  "isClearable": true,
+                  "selectAll": true,
+                  "searchPredicate": "contains",
+                  "api": "Application",
+                  "stateTracking": "full",
+                  "optionLimit": 5,
+                  "optionLimitFlex": 5,
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": "workcenterWhere.id._in"
+                  },
+                  "dataPath": "workcenterWhere.id",
+                  "predicate": "_in",
+                  "labelPath": "code",
+                  "orderByField": "code",
+                  "query": {
+                    "fields": [
+                      "workcenterWhere.workcenterId.id",
+                      "workcenterWhere.workcenterId.code"
+                    ]
+                  },
+                  "dataModel": "Workcenter",
+                  "selectFields": [
+                    "code",
+                    "description",
+                    "name",
+                    "workcenterGroup.name",
+                    "workcenterType.name"
+                  ],
+                  "additionalFields": [],
+                  "orderByDirection": "asc",
+                  "additionalFilter": {
+                    "_and": [
+                      {
+                        "active": {
+                          "_eq": true
+                        }
+                      }
+                    ]
+                  }
+                },
+                "displayName": "Select",
+                "custom": {
+                  "elementName": "Select2"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "RNFv9gxRgi": {
+                "type": {
+                  "resolvedName": "SelectInput"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "300px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "select",
+                  "label": "Workcenter Types",
+                  "dialogMode": "never",
+                  "multiselect": true,
+                  "isClearable": true,
+                  "selectAll": true,
+                  "searchPredicate": "contains",
+                  "api": "Application",
+                  "stateTracking": "full",
+                  "optionLimit": 5,
+                  "optionLimitFlex": 5,
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": "workcenterWhere.workcenterTypeId._in"
+                  },
+                  "dataPath": "workcenterWhere.workcenterTypeId",
+                  "predicate": "_in",
+                  "labelPath": "name",
+                  "orderByField": "name",
+                  "query": {
+                    "fields": [
+                      "workcenterWhere.workcenterTypeId.id",
+                      "workcenterWhere.workcenterTypeId.name"
+                    ]
+                  },
+                  "dataModel": "WorkcenterType",
+                  "selectFields": [
+                    "name"
+                  ],
+                  "additionalFields": [],
+                  "orderByDirection": "asc",
+                  "additionalFilter": {
+                    "_and": [
+                      {
+                        "usable": {
+                          "_eq": true
+                        }
+                      }
+                    ]
+                  }
+                },
+                "displayName": "Select",
+                "custom": {
+                  "elementName": "Select3"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "reFv3DEuAI": {
+                "type": {
+                  "resolvedName": "SelectInput"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "300px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "select",
+                  "label": "Work Orders",
+                  "dialogMode": "advanced",
+                  "multiselect": true,
+                  "isClearable": true,
+                  "selectAll": true,
+                  "searchPredicate": "contains",
+                  "api": "Application",
+                  "stateTracking": "full",
+                  "optionLimit": 5,
+                  "optionLimitFlex": 5,
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": "distributionWhere.workOrderId._in"
+                  },
+                  "dataPath": "distributionWhere.workOrderId",
+                  "predicate": "_in",
+                  "labelPath": "number",
+                  "orderByField": "number",
+                  "query": {
+                    "fields": [
+                      "distributionWhere.workOrderId.id",
+                      "distributionWhere.workOrderId.number"
+                    ]
+                  },
+                  "selectFields": [
+                    "number",
+                    "quantity",
+                    "product.code"
+                  ],
+                  "additionalFields": [],
+                  "orderByDirection": "asc",
+                  "additionalFilter": {
+                    "_and": [
+                      {
+                        "workOrderStatus": {
+                          "active": {
+                            "_eq": true
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "dataModel": "WorkOrder"
+                },
+                "displayName": "Select",
+                "custom": {
+                  "elementName": "Select5"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "S0bKc6EBWu": {
+                "type": {
+                  "resolvedName": "SelectInput"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "300px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "select",
+                  "label": "Products",
+                  "dialogMode": "advanced",
+                  "multiselect": true,
+                  "isClearable": true,
+                  "selectAll": true,
+                  "searchPredicate": "contains",
+                  "api": "Application",
+                  "stateTracking": "full",
+                  "optionLimit": 5,
+                  "optionLimitFlex": 5,
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": "distributionWhere.workOrderProcess.productStrategy.productId._in"
+                  },
+                  "dataPath": "distributionWhere.productId",
+                  "predicate": "_in",
+                  "labelPath": "code",
+                  "orderByField": "code",
+                  "query": {
+                    "fields": [
+                      "distributionWhere.productId.id",
+                      "distributionWhere.productId.code"
+                    ]
+                  },
+                  "selectFields": [
+                    "code",
+                    "description",
+                    "productType.name"
+                  ],
+                  "additionalFields": [],
+                  "orderByDirection": "asc",
+                  "additionalFilter": {
+                    "_and": [
+                      {
+                        "active": {
+                          "_eq": true
+                        }
+                      }
+                    ]
+                  },
+                  "dataModel": "Product"
+                },
+                "displayName": "Select",
+                "custom": {
+                  "elementName": "Select6"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              },
+              "b4YICyxXGH": {
+                "type": {
+                  "resolvedName": "Switch"
+                },
+                "isCanvas": false,
+                "props": {
+                  "padding": 8,
+                  "width": "200px",
+                  "height": "auto",
+                  "validation": {
+                    "required": false
+                  },
+                  "uniqueValidationEnabled": false,
+                  "visible": true,
+                  "type": "switch",
+                  "label": "Scheduled Workcenters Only",
+                  "formElement": "Form1",
+                  "target": {
+                    "dataPath": null
+                  },
+                  "dataPath": "scheduledWorkcentersOnly",
+                  "description": "Only display workcenters which have work orders assigned.",
+                  "defaultValue": true
+                },
+                "displayName": "Switch",
+                "custom": {
+                  "elementName": "Switch1"
+                },
+                "parent": "-58_z0GoXI",
+                "hidden": false,
+                "nodes": [],
+                "linkedNodes": {}
+              }
+            }
+          }
+        }
+      ],
+      "sidebarMenu": {
+        "title": "App Admin",
+        "items": [
+          {
+            "text": "Access Control"
+          },
+          {
+            "text": "App Users",
+            "link": "/system/accessControl/users"
+          },
+          {
+            "text": "Policies",
+            "link": "/system/accessControl/accessControlPolicies"
+          },
+          {
+            "text": "Policy Groups",
+            "link": "/system/accessControl/accessControlPolicyGroups"
+          },
+          {
+            "text": "Roles",
+            "link": "/system/configuration/roles"
+          },
+          {
+            "text": "App Configuration"
+          },
+          {
+            "text": "Settings",
+            "link": "/system/configuration/settings"
+          },
+          {
+            "text": "Configurations",
+            "link": "/system/configuration/applicationConfigurations"
+          },
+          {
+            "text": "Calendars",
+            "link": "/system/configuration/calendars"
+          },
+          {
+            "text": "Flow Schedules",
+            "link": "/system/orchestration/dataFlowSchedulesEditor"
+          },
+          {
+            "text": "Notifications",
+            "link": "/system/internetOfThings/notificationChannels"
+          }
+        ]
+      }
+    }
+  },
+  "routes": [
+    {
+      "id": "cm1p90ldycxsy013y89hqdhr2",
+      "title": "Dispatch Schedule Viewer",
+      "path": "/productionManagement/workOrderManagement/dispatchScheduleViewer",
+      "moduleId": "workOrderManagement",
+      "screenId": "dispatchScheduleViewer",
+      "isMenuAccessible": true,
+      "submenu": ""
+    }
+  ]
+}

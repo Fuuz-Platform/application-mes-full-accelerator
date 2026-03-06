@@ -1,0 +1,1624 @@
+{
+  "header": {
+    "id": "createDeviceSubscriptionFromIotTags",
+    "name": "Create Device Subscription From Iot Tags",
+    "description": "",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "internetOfThings"
+  },
+  "version": {
+    "id": "clsm1m18l00hq017i3m5s8m7i",
+    "number": "1.0.0",
+    "description": "",
+    "dataFlowId": "createDeviceSubscriptionFromIotTags",
+    "flow": {
+      "id": "clsm1m18l00hq017i3m5s8m7i",
+      "name": "Create Device Subscription From Iot Tags",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "841bdddf-d195-4520-bf79-26c50392e628",
+          "name": "Route",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "Create ",
+                "transform": "$state.context.value.operation = \"create\"",
+                "nextNodes": [
+                  "6cc090a7-cfc7-4a33-b94b-7c6d353914fa"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+          "name": "Prepare OPCUA Subscription Payload",
+          "type": "transform",
+          "data": {
+            "transform": "$state.context.value.after.{\n  \"create\":{\n    \"id\": id,\n    \"name\": name,\n    \"description\": description,\n    \"deviceSubscriptionTypeId\": \"nodeValues\",\n    \"deviceGatewayDeviceId\": $state.context.deviceGatewayDeviceId,\n    \"updateFrequencySeconds\": 0,\n    \"configuration\":{\n      \"nodes\": [ configuration.nodeId ],\n      \"continuousValues\": false,\n      \"storeAndForward\": false\n    }\n    \n  }\n}",
+            "nextNodes": [
+              "3e9cf8b5-8869-46bc-8945-c2a55d5827d7"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+          "name": "Query Device Gateway Device",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{ \"deviceId\": value.after.deviceId }",
+            "query": "query ($deviceId: String!){\n  deviceGatewayDevice(\n    where:{\n      deviceId:{_eq: $deviceId}\n    }\n    first:1\n  ){\n    total\n    edges{\n      node{\n        id\n      }\n    }\n  }\n    \n  \n}",
+            "nextNodes": [
+              "daee3019-f92e-478b-8c96-b11f647f24dd"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "d1001efa-f19a-41a1-b757-fb69d3dfa1e5"
+            ],
+            "transform": "$"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+          "name": "Route",
+          "type": "switch",
+          "data": {
+            "branches": [
+              {
+                "name": "OPCUA ",
+                "transform": "$state.context.value.after.iotTagTypeId = \"OPCUA\"",
+                "nextNodes": [
+                  "b1369ec5-71b0-4557-892a-5ea21f5c484c"
+                ]
+              },
+              {
+                "name": "MQTT",
+                "transform": "$state.context.value.after.iotTagTypeId = \"MQTT\"",
+                "nextNodes": [
+                  "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48"
+                ]
+              }
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "70da603f-419d-4503-a8db-ecc661496a9d",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "nextNodes": [
+              "841bdddf-d195-4520-bf79-26c50392e628"
+            ],
+            "transform": "{\n  \"deviceGatewayDeviceId\": deviceGatewayDevice.edges.node.id\n}"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "daee3019-f92e-478b-8c96-b11f647f24dd",
+          "name": "If Else",
+          "type": "ifElse",
+          "data": {
+            "transform": "deviceGatewayDevice.total = 1",
+            "onTrueNextNodes": [
+              "70da603f-419d-4503-a8db-ecc661496a9d"
+            ],
+            "onFalseNextNodes": [
+              "c595d63f-99ae-480e-a39a-457e355712f0"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "c595d63f-99ae-480e-a39a-457e355712f0",
+          "name": "Throw Error",
+          "type": "throwError",
+          "data": {
+            "errorInfoTransform": "{}",
+            "messageTransform": "\"The Device is not linked to a Gateway\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+          "name": "Create Device Subscription",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "$",
+            "mutation": "mutation ($create: DeviceSubscriptionCreateInput!){\n  createDeviceSubscription(\n    payload:{\n      create: $create\n    }\n){\n  id\n}\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "27e71a35-ed17-42c0-9d1e-7db17caa5646",
+          "name": "Create Tag",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "type": "IotTag",
+            "operations": [
+              "Create"
+            ],
+            "nextNodes": [
+              "96f8b4a3-c226-4bdf-baa9-342722f96492"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+          "name": "Delete Device Subscription",
+          "type": "mutate",
+          "data": {
+            "api": "Application",
+            "variablesTransform": "{ \"id\": value.before.id }",
+            "mutation": "mutation ($id: ID!){\n  deleteDeviceSubscription(\n    payload:{\n      where:{\n        id: $id\n      }\n    }\n  ){\n    id\n  }\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "f45fbb29-5f67-450e-94a8-8a7361125dd9",
+          "name": "Delete Tag",
+          "type": "dataChanges",
+          "data": {
+            "api": "Application",
+            "type": "IotTag",
+            "operations": [
+              "Delete"
+            ],
+            "nextNodes": [
+              "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+          "name": "Prepare MQTT Subscription Payload",
+          "type": "transform",
+          "data": {
+            "transform": "$state.context.value.after.{\n  \"create\":{\n    \"id\": id,\n    \"name\": name,\n    \"description\": description,\n    \"deviceSubscriptionTypeId\": \"mqttTopics\",\n    \"deviceGatewayDeviceId\": $state.context.deviceGatewayDeviceId,\n    \"updateFrequencySeconds\": 0,\n    \"configuration\":{\n      \"topics\": [ configuration.topic ],\n      \"continuousValues\": false,\n      \"storeAndForward\": false\n    }\n    \n  }\n}",
+            "nextNodes": [
+              "3e9cf8b5-8869-46bc-8945-c2a55d5827d7"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "1.0.0"
+    },
+    "diagram": {
+      "id": "clsm1m18l00hq017i3m5s8m7i",
+      "offsetX": -1292,
+      "offsetY": -67,
+      "zoom": 100,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "df021a35-1620-4cac-90e2-9d4642dd2feb",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "4270942e-2071-440a-8b34-4fb6c14dd419": {
+              "points": [
+                {
+                  "id": "1b498e32-8a33-4cb4-a6e6-ca149a6492e7",
+                  "type": "point",
+                  "x": 310.92,
+                  "y": 399.57
+                },
+                {
+                  "id": "1892be06-c7dd-4563-b4db-b0354b90d394",
+                  "type": "point",
+                  "x": 331,
+                  "y": 399.57
+                }
+              ],
+              "id": "4270942e-2071-440a-8b34-4fb6c14dd419",
+              "type": "default",
+              "source": "a479c5ec-7fec-4253-856f-53d97b06bf19",
+              "sourcePort": "clsm1m9cp000y3j6cmo6lcm7r",
+              "target": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+              "targetPort": "clsm1m9cz00283j6ci2n1efo6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f9098a06-016c-4694-a913-5af2447b347d": {
+              "points": [
+                {
+                  "id": "776dc54a-cb16-4cb7-bae4-d73c86255d89",
+                  "type": "point",
+                  "x": 1275,
+                  "y": 344.57
+                },
+                {
+                  "id": "48713f8c-8ad1-48ed-b4c0-0cf5ef8cf402",
+                  "type": "point",
+                  "x": 1300,
+                  "y": 254.73
+                }
+              ],
+              "id": "f9098a06-016c-4694-a913-5af2447b347d",
+              "type": "default",
+              "source": "841bdddf-d195-4520-bf79-26c50392e628",
+              "sourcePort": "clsm1m9cs001a3j6collpkgkg",
+              "target": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+              "targetPort": "clsm1m9d1002o3j6cd2297tik",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "87f4c8df-2ca0-4b7e-b794-b6b4ed5d37f0": {
+              "points": [
+                {
+                  "id": "25416d5d-51da-44c3-968c-44cb44e9be98",
+                  "type": "point",
+                  "x": 1763.45,
+                  "y": 189.57
+                },
+                {
+                  "id": "bb37fb19-40b1-4b67-98d7-1882b6dee884",
+                  "type": "point",
+                  "x": 1821,
+                  "y": 289.57
+                }
+              ],
+              "id": "87f4c8df-2ca0-4b7e-b794-b6b4ed5d37f0",
+              "type": "default",
+              "source": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+              "sourcePort": "clsm1m9cu001m3j6cry3wpxs3",
+              "target": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+              "targetPort": "clsm1m9da00423j6c4eue4k22",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "89e6295f-44fc-44d3-89c9-43a760faef2a": {
+              "points": [
+                {
+                  "id": "4fc91731-9c95-4e50-a476-f836e4616f44",
+                  "type": "point",
+                  "x": 710.59,
+                  "y": 399.57
+                },
+                {
+                  "id": "a0b9b53b-7694-4508-bed5-1f05f4cf9c20",
+                  "type": "point",
+                  "x": 736,
+                  "y": 399.57
+                }
+              ],
+              "id": "89e6295f-44fc-44d3-89c9-43a760faef2a",
+              "type": "default",
+              "source": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+              "sourcePort": "clsm1m9cy001y3j6c18rqbh8y",
+              "target": "daee3019-f92e-478b-8c96-b11f647f24dd",
+              "targetPort": "clsm1m9d5003i3j6cg5ja28sq",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "1279c849-1c24-4fe9-8b34-746e2eafe90a": {
+              "points": [
+                {
+                  "id": "03a9863e-30c4-4189-89bd-70806b366949",
+                  "type": "point",
+                  "x": 484.99,
+                  "y": 399.57
+                },
+                {
+                  "id": "100d8f5a-5fbf-483c-ba42-4f17331b701f",
+                  "type": "point",
+                  "x": 506,
+                  "y": 399.57
+                }
+              ],
+              "id": "1279c849-1c24-4fe9-8b34-746e2eafe90a",
+              "type": "default",
+              "source": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+              "sourcePort": "clsm1m9cz002a3j6cn9djzibz",
+              "target": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+              "targetPort": "clsm1m9cy001w3j6ctmdt4wa8",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "ee308860-0f6f-4131-ac69-5efd5e63919c": {
+              "points": [
+                {
+                  "id": "3a47370a-65d4-48f8-954c-35e6a338e094",
+                  "type": "point",
+                  "x": 1454,
+                  "y": 254.73
+                },
+                {
+                  "id": "d8f4590b-c580-46ba-ba53-9508e08de313",
+                  "type": "point",
+                  "x": 1516,
+                  "y": 189.57
+                }
+              ],
+              "id": "ee308860-0f6f-4131-ac69-5efd5e63919c",
+              "type": "default",
+              "source": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+              "sourcePort": "clsm1m9d1002q3j6cwy75ehm8",
+              "target": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+              "targetPort": "clsm1m9cu001k3j6cowla7qpo",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "5a25c0f2-2ed4-442e-aa44-8802c4c24379": {
+              "points": [
+                {
+                  "id": "1dd9de9a-5937-4668-a470-366e4a3c866e",
+                  "type": "point",
+                  "x": 1454,
+                  "y": 279.89
+                },
+                {
+                  "id": "da3f1b7c-6ea9-41ff-9579-ac0bc16c4ca7",
+                  "type": "point",
+                  "x": 1516,
+                  "y": 289.57
+                }
+              ],
+              "id": "5a25c0f2-2ed4-442e-aa44-8802c4c24379",
+              "type": "default",
+              "source": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+              "sourcePort": "clsm1m9d1002s3j6cwf99rm5p",
+              "target": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+              "targetPort": "clsm1m9dh00583j6c8w3hx1z2",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e9e322dc-ce5f-4fd6-9206-500e30a771ec": {
+              "points": [
+                {
+                  "id": "6eb403a9-815d-4113-9bba-8b2b7b586c9b",
+                  "type": "point",
+                  "x": 1089.99,
+                  "y": 344.57
+                },
+                {
+                  "id": "de218cbe-b0a6-45a7-bc48-cec2dc4bfffe",
+                  "type": "point",
+                  "x": 1121,
+                  "y": 344.57
+                }
+              ],
+              "id": "e9e322dc-ce5f-4fd6-9206-500e30a771ec",
+              "type": "default",
+              "source": "70da603f-419d-4503-a8db-ecc661496a9d",
+              "sourcePort": "clsm1m9d300343j6ctuadao08",
+              "target": "841bdddf-d195-4520-bf79-26c50392e628",
+              "targetPort": "clsm1m9cs00183j6ckdy44ari",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "51454c9c-1e21-4b7e-b122-4264609f1240": {
+              "points": [
+                {
+                  "id": "56305d07-f201-40cf-898b-54f842cd4d07",
+                  "type": "point",
+                  "x": 889.99,
+                  "y": 399.57
+                },
+                {
+                  "id": "02ff76a3-4a03-4ef0-92af-403b15c5d9a8",
+                  "type": "point",
+                  "x": 936,
+                  "y": 344.57
+                }
+              ],
+              "id": "51454c9c-1e21-4b7e-b122-4264609f1240",
+              "type": "default",
+              "source": "daee3019-f92e-478b-8c96-b11f647f24dd",
+              "sourcePort": "clsm1m9d5003k3j6czhbvu94k",
+              "target": "70da603f-419d-4503-a8db-ecc661496a9d",
+              "targetPort": "clsm1m9d300323j6crgf1hgao",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "f69aee78-8878-4af4-a598-36bf9b5e3e03": {
+              "points": [
+                {
+                  "id": "e0ffdb35-4fc0-44f3-8a58-cdb019ad7a05",
+                  "type": "point",
+                  "x": 889.99,
+                  "y": 424.73
+                },
+                {
+                  "id": "30e29482-b85c-4034-b6c0-d37cf04b41ca",
+                  "type": "point",
+                  "x": 921,
+                  "y": 479.57
+                }
+              ],
+              "id": "f69aee78-8878-4af4-a598-36bf9b5e3e03",
+              "type": "default",
+              "source": "daee3019-f92e-478b-8c96-b11f647f24dd",
+              "sourcePort": "clsm1m9d5003m3j6cv7jgxtkz",
+              "target": "c595d63f-99ae-480e-a39a-457e355712f0",
+              "targetPort": "clsm1m9d8003s3j6cd58yylfy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "519c6321-fc01-49e8-8210-bd6309e69c4e": {
+              "points": [
+                {
+                  "id": "90a6f7cc-85cc-4b65-a122-ae8891dbcdd5",
+                  "type": "point",
+                  "x": 310,
+                  "y": 339.57
+                },
+                {
+                  "id": "8d033d6a-4625-42fc-86d3-a3c0e6710f5d",
+                  "type": "point",
+                  "x": 331,
+                  "y": 399.57
+                }
+              ],
+              "id": "519c6321-fc01-49e8-8210-bd6309e69c4e",
+              "type": "default",
+              "source": "27e71a35-ed17-42c0-9d1e-7db17caa5646",
+              "sourcePort": "clsm1m9db004a3j6cb5x9l6ke",
+              "target": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+              "targetPort": "clsm1m9cz00283j6ci2n1efo6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "b2933281-654b-41df-b716-14feed0cd997": {
+              "points": [
+                {
+                  "id": "c87b1ff3-aaae-4ae0-8b2c-7731d703ad13",
+                  "type": "point",
+                  "x": 310.92,
+                  "y": 554.57
+                },
+                {
+                  "id": "5731962b-5436-4fe1-8ed4-dd9d38adfc76",
+                  "type": "point",
+                  "x": 351,
+                  "y": 554.57
+                }
+              ],
+              "id": "b2933281-654b-41df-b716-14feed0cd997",
+              "type": "default",
+              "source": "c0ac1f92-c8de-412c-b60a-d6a69c93213a",
+              "sourcePort": "clsm1m9dd004g3j6cllbhryks",
+              "target": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+              "targetPort": "clsm1m9de004q3j6cb8vlfiy2",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "298cd40d-fb53-4827-a48e-f9d46a4aef56": {
+              "points": [
+                {
+                  "id": "dfa35db2-410f-42f7-823c-7ed66aa4c294",
+                  "type": "point",
+                  "x": 310,
+                  "y": 494.57
+                },
+                {
+                  "id": "586fb6d5-bf1b-45d9-9764-8fb3561d1523",
+                  "type": "point",
+                  "x": 351,
+                  "y": 554.57
+                }
+              ],
+              "id": "298cd40d-fb53-4827-a48e-f9d46a4aef56",
+              "type": "default",
+              "source": "f45fbb29-5f67-450e-94a8-8a7361125dd9",
+              "sourcePort": "clsm1m9df004y3j6cqo3ic0at",
+              "target": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+              "targetPort": "clsm1m9de004q3j6cb8vlfiy2",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "a9faa105-c1bf-4518-9f36-4134eef37fb3": {
+              "points": [
+                {
+                  "id": "8674727c-ba47-448c-a366-129f88353df2",
+                  "type": "point",
+                  "x": 1756.86,
+                  "y": 289.57
+                },
+                {
+                  "id": "1a4a1b79-2021-4e07-a329-6636502745af",
+                  "type": "point",
+                  "x": 1821,
+                  "y": 289.57
+                }
+              ],
+              "id": "a9faa105-c1bf-4518-9f36-4134eef37fb3",
+              "type": "default",
+              "source": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+              "sourcePort": "clsm1m9dh005a3j6cv985lkgs",
+              "target": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+              "targetPort": "clsm1m9da00423j6c4eue4k22",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "c3dd6687-6c3d-4296-9c09-4989e943b317",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "a479c5ec-7fec-4253-856f-53d97b06bf19": {
+              "id": "a479c5ec-7fec-4253-856f-53d97b06bf19",
+              "type": "debugDataChange",
+              "selected": false,
+              "x": 156,
+              "y": 359.84,
+              "ports": [
+                {
+                  "id": "clsm1m9cp000y3j6cmo6lcm7r",
+                  "type": "default",
+                  "x": 302.92,
+                  "y": 391.57,
+                  "name": "clsm1m9cp000z3j6ctwzumc9w",
+                  "parentNode": "a479c5ec-7fec-4253-856f-53d97b06bf19",
+                  "links": [
+                    "4270942e-2071-440a-8b34-4fb6c14dd419"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "beforeData": {},
+                "afterData": {
+                  "id": "cloj5cw63001p01673bmk22iy",
+                  "name": "AAA",
+                  "description": null,
+                  "active": true,
+                  "storeHistory": true,
+                  "currentValue": null,
+                  "configuration": {
+                    "nodeId": "ns=3;i=1001"
+                  },
+                  "deviceId": "clo8uyf8d000m017zgannb6hz",
+                  "iotTagTypeId": "OPCUA",
+                  "iotTagUseCaseId": "Production",
+                  "metadata": {
+                    "output": {
+                      "id": "faa34f70-74c3-4d76-bf7a-718a701843ec",
+                      "workcenter": {
+                        "code": "LS9"
+                      },
+                      "outputId": null,
+                      "workcenterId": "faa34f70-74c3-4d76-bf7a-718a701843ec"
+                    }
+                  }
+                },
+                "type": "IotTag",
+                "operation": "Create",
+                "nextNodes": [
+                  "96f8b4a3-c226-4bdf-baa9-342722f96492"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Data Change Source"
+            },
+            "841bdddf-d195-4520-bf79-26c50392e628": {
+              "id": "841bdddf-d195-4520-bf79-26c50392e628",
+              "type": "switch",
+              "selected": false,
+              "x": 1121,
+              "y": 304.84,
+              "ports": [
+                {
+                  "id": "clsm1m9cs00183j6ckdy44ari",
+                  "type": "default",
+                  "x": 1113,
+                  "y": 336.57,
+                  "name": "clsm1m9cs00193j6clea1jutz",
+                  "parentNode": "841bdddf-d195-4520-bf79-26c50392e628",
+                  "links": [
+                    "e9e322dc-ce5f-4fd6-9206-500e30a771ec"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9cs001a3j6collpkgkg",
+                  "type": "default",
+                  "x": 1267,
+                  "y": 336.57,
+                  "name": "clsm1m9cs001b3j6c7d2xtptq",
+                  "parentNode": "841bdddf-d195-4520-bf79-26c50392e628",
+                  "links": [
+                    "f9098a06-016c-4694-a913-5af2447b347d"
+                  ],
+                  "in": false,
+                  "groupName": "Create ",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "Create ",
+                    "transform": "$state.context.value.operation = \"create\"",
+                    "nextNodes": [
+                      "6cc090a7-cfc7-4a33-b94b-7c6d353914fa"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route"
+            },
+            "b1369ec5-71b0-4557-892a-5ea21f5c484c": {
+              "id": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+              "type": "transform",
+              "selected": false,
+              "x": 1516,
+              "y": 149.84,
+              "ports": [
+                {
+                  "id": "clsm1m9cu001k3j6cowla7qpo",
+                  "type": "default",
+                  "x": 1508,
+                  "y": 181.57,
+                  "name": "clsm1m9cu001l3j6ciil69w61",
+                  "parentNode": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+                  "links": [
+                    "ee308860-0f6f-4131-ac69-5efd5e63919c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9cu001m3j6cry3wpxs3",
+                  "type": "default",
+                  "x": 1755.45,
+                  "y": 181.57,
+                  "name": "clsm1m9cu001n3j6cju2m2ty0",
+                  "parentNode": "b1369ec5-71b0-4557-892a-5ea21f5c484c",
+                  "links": [
+                    "87f4c8df-2ca0-4b7e-b794-b6b4ed5d37f0"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$state.context.value.after.{\n  \"create\":{\n    \"id\": id,\n    \"name\": name,\n    \"description\": description,\n    \"deviceSubscriptionTypeId\": \"nodeValues\",\n    \"deviceGatewayDeviceId\": $state.context.deviceGatewayDeviceId,\n    \"updateFrequencySeconds\": 0,\n    \"configuration\":{\n      \"nodes\": [ configuration.nodeId ],\n      \"continuousValues\": false,\n      \"storeAndForward\": false\n    }\n    \n  }\n}",
+                "nextNodes": [
+                  "3e9cf8b5-8869-46bc-8945-c2a55d5827d7"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Prepare OPCUA Subscription Payload"
+            },
+            "d1001efa-f19a-41a1-b757-fb69d3dfa1e5": {
+              "id": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+              "type": "query",
+              "selected": false,
+              "x": 506,
+              "y": 359.84,
+              "ports": [
+                {
+                  "id": "clsm1m9cy001w3j6ctmdt4wa8",
+                  "type": "default",
+                  "x": 498,
+                  "y": 391.57,
+                  "name": "clsm1m9cy001x3j6cbrgcml9j",
+                  "parentNode": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+                  "links": [
+                    "1279c849-1c24-4fe9-8b34-746e2eafe90a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9cy001y3j6c18rqbh8y",
+                  "type": "default",
+                  "x": 702.59,
+                  "y": 391.57,
+                  "name": "clsm1m9cy001z3j6c6ln713uc",
+                  "parentNode": "d1001efa-f19a-41a1-b757-fb69d3dfa1e5",
+                  "links": [
+                    "89e6295f-44fc-44d3-89c9-43a760faef2a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{ \"deviceId\": value.after.deviceId }",
+                "query": "query ($deviceId: String!){\n  deviceGatewayDevice(\n    where:{\n      deviceId:{_eq: $deviceId}\n    }\n    first:1\n  ){\n    total\n    edges{\n      node{\n        id\n      }\n    }\n  }\n    \n  \n}",
+                "nextNodes": [
+                  "daee3019-f92e-478b-8c96-b11f647f24dd"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Device Gateway Device"
+            },
+            "96f8b4a3-c226-4bdf-baa9-342722f96492": {
+              "id": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 331,
+              "y": 359.84,
+              "ports": [
+                {
+                  "id": "clsm1m9cz00283j6ci2n1efo6",
+                  "type": "default",
+                  "x": 323,
+                  "y": 391.57,
+                  "name": "clsm1m9cz00293j6cdht6limk",
+                  "parentNode": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+                  "links": [
+                    "4270942e-2071-440a-8b34-4fb6c14dd419",
+                    "519c6321-fc01-49e8-8210-bd6309e69c4e"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9cz002a3j6cn9djzibz",
+                  "type": "default",
+                  "x": 476.99,
+                  "y": 391.57,
+                  "name": "clsm1m9cz002b3j6c0q3w40h1",
+                  "parentNode": "96f8b4a3-c226-4bdf-baa9-342722f96492",
+                  "links": [
+                    "1279c849-1c24-4fe9-8b34-746e2eafe90a"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "d1001efa-f19a-41a1-b757-fb69d3dfa1e5"
+                ],
+                "transform": "$"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "6cc090a7-cfc7-4a33-b94b-7c6d353914fa": {
+              "id": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+              "type": "switch",
+              "selected": false,
+              "x": 1300,
+              "y": 215,
+              "ports": [
+                {
+                  "id": "clsm1m9d1002o3j6cd2297tik",
+                  "type": "default",
+                  "x": 1292,
+                  "y": 246.73,
+                  "name": "clsm1m9d1002p3j6cu18625k7",
+                  "parentNode": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+                  "links": [
+                    "f9098a06-016c-4694-a913-5af2447b347d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9d1002q3j6cwy75ehm8",
+                  "type": "default",
+                  "x": 1446,
+                  "y": 246.73,
+                  "name": "clsm1m9d1002r3j6ctzw993ic",
+                  "parentNode": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+                  "links": [
+                    "ee308860-0f6f-4131-ac69-5efd5e63919c"
+                  ],
+                  "in": false,
+                  "groupName": "OPCUA ",
+                  "groupIndex": 0,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                },
+                {
+                  "id": "clsm1m9d1002s3j6cwf99rm5p",
+                  "type": "default",
+                  "x": 1446,
+                  "y": 271.89,
+                  "name": "clsm1m9d1002t3j6czjdtovkq",
+                  "parentNode": "6cc090a7-cfc7-4a33-b94b-7c6d353914fa",
+                  "links": [
+                    "5a25c0f2-2ed4-442e-aa44-8802c4c24379"
+                  ],
+                  "in": false,
+                  "groupName": "MQTT",
+                  "groupIndex": 1,
+                  "groupPath": "data.branches",
+                  "fieldLabel": null,
+                  "fieldPath": "nextNodes"
+                }
+              ],
+              "data": {
+                "branches": [
+                  {
+                    "name": "OPCUA ",
+                    "transform": "$state.context.value.after.iotTagTypeId = \"OPCUA\"",
+                    "nextNodes": [
+                      "b1369ec5-71b0-4557-892a-5ea21f5c484c"
+                    ]
+                  },
+                  {
+                    "name": "MQTT",
+                    "transform": "$state.context.value.after.iotTagTypeId = \"MQTT\"",
+                    "nextNodes": [
+                      "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48"
+                    ]
+                  }
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Route"
+            },
+            "70da603f-419d-4503-a8db-ecc661496a9d": {
+              "id": "70da603f-419d-4503-a8db-ecc661496a9d",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 936,
+              "y": 304.84,
+              "ports": [
+                {
+                  "id": "clsm1m9d300323j6crgf1hgao",
+                  "type": "default",
+                  "x": 928,
+                  "y": 336.57,
+                  "name": "clsm1m9d300333j6cwo0grron",
+                  "parentNode": "70da603f-419d-4503-a8db-ecc661496a9d",
+                  "links": [
+                    "51454c9c-1e21-4b7e-b122-4264609f1240"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9d300343j6ctuadao08",
+                  "type": "default",
+                  "x": 1081.99,
+                  "y": 336.57,
+                  "name": "clsm1m9d300353j6cyliimtua",
+                  "parentNode": "70da603f-419d-4503-a8db-ecc661496a9d",
+                  "links": [
+                    "e9e322dc-ce5f-4fd6-9206-500e30a771ec"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "841bdddf-d195-4520-bf79-26c50392e628"
+                ],
+                "transform": "{\n  \"deviceGatewayDeviceId\": deviceGatewayDevice.edges.node.id\n}"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "daee3019-f92e-478b-8c96-b11f647f24dd": {
+              "id": "daee3019-f92e-478b-8c96-b11f647f24dd",
+              "type": "ifElse",
+              "selected": false,
+              "x": 736,
+              "y": 359.84,
+              "ports": [
+                {
+                  "id": "clsm1m9d5003i3j6cg5ja28sq",
+                  "type": "default",
+                  "x": 728,
+                  "y": 391.57,
+                  "name": "clsm1m9d5003j3j6cn34j9pbo",
+                  "parentNode": "daee3019-f92e-478b-8c96-b11f647f24dd",
+                  "links": [
+                    "89e6295f-44fc-44d3-89c9-43a760faef2a"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9d5003k3j6czhbvu94k",
+                  "type": "default",
+                  "x": 881.99,
+                  "y": 391.57,
+                  "name": "clsm1m9d5003l3j6cb7ruwyyu",
+                  "parentNode": "daee3019-f92e-478b-8c96-b11f647f24dd",
+                  "links": [
+                    "51454c9c-1e21-4b7e-b122-4264609f1240"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "clsm1m9d5003m3j6cv7jgxtkz",
+                  "type": "default",
+                  "x": 881.99,
+                  "y": 416.73,
+                  "name": "clsm1m9d5003n3j6cgstw9j4z",
+                  "parentNode": "daee3019-f92e-478b-8c96-b11f647f24dd",
+                  "links": [
+                    "f69aee78-8878-4af4-a598-36bf9b5e3e03"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "transform": "deviceGatewayDevice.total = 1",
+                "onTrueNextNodes": [
+                  "70da603f-419d-4503-a8db-ecc661496a9d"
+                ],
+                "onFalseNextNodes": [
+                  "c595d63f-99ae-480e-a39a-457e355712f0"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "If Else"
+            },
+            "c595d63f-99ae-480e-a39a-457e355712f0": {
+              "id": "c595d63f-99ae-480e-a39a-457e355712f0",
+              "type": "throwError",
+              "selected": false,
+              "x": 921,
+              "y": 439.84,
+              "ports": [
+                {
+                  "id": "clsm1m9d8003s3j6cd58yylfy",
+                  "type": "default",
+                  "x": 913,
+                  "y": 471.57,
+                  "name": "clsm1m9d8003t3j6cs28konds",
+                  "parentNode": "c595d63f-99ae-480e-a39a-457e355712f0",
+                  "links": [
+                    "f69aee78-8878-4af4-a598-36bf9b5e3e03"
+                  ],
+                  "in": true
+                }
+              ],
+              "data": {
+                "errorInfoTransform": "{}",
+                "messageTransform": "\"The Device is not linked to a Gateway\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Throw Error"
+            },
+            "3e9cf8b5-8869-46bc-8945-c2a55d5827d7": {
+              "id": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+              "type": "mutate",
+              "selected": false,
+              "x": 1821,
+              "y": 249.84,
+              "ports": [
+                {
+                  "id": "clsm1m9da00423j6c4eue4k22",
+                  "type": "default",
+                  "x": 1813,
+                  "y": 281.57,
+                  "name": "clsm1m9da00433j6c3j3sytc1",
+                  "parentNode": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+                  "links": [
+                    "87f4c8df-2ca0-4b7e-b794-b6b4ed5d37f0",
+                    "a9faa105-c1bf-4518-9f36-4134eef37fb3"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9da00443j6cihw6srlh",
+                  "type": "default",
+                  "x": 2003.66,
+                  "y": 281.57,
+                  "name": "clsm1m9da00453j6chqyua5wv",
+                  "parentNode": "3e9cf8b5-8869-46bc-8945-c2a55d5827d7",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "$",
+                "mutation": "mutation ($create: DeviceSubscriptionCreateInput!){\n  createDeviceSubscription(\n    payload:{\n      create: $create\n    }\n){\n  id\n}\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create Device Subscription"
+            },
+            "27e71a35-ed17-42c0-9d1e-7db17caa5646": {
+              "id": "27e71a35-ed17-42c0-9d1e-7db17caa5646",
+              "type": "dataChanges",
+              "selected": false,
+              "x": 156,
+              "y": 299.84,
+              "ports": [
+                {
+                  "id": "clsm1m9db004a3j6cb5x9l6ke",
+                  "type": "default",
+                  "x": 302,
+                  "y": 331.57,
+                  "name": "clsm1m9db004b3j6cx91s0hfw",
+                  "parentNode": "27e71a35-ed17-42c0-9d1e-7db17caa5646",
+                  "links": [
+                    "519c6321-fc01-49e8-8210-bd6309e69c4e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "type": "IotTag",
+                "operations": [
+                  "Create"
+                ],
+                "nextNodes": [
+                  "96f8b4a3-c226-4bdf-baa9-342722f96492"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Create Tag"
+            },
+            "c0ac1f92-c8de-412c-b60a-d6a69c93213a": {
+              "id": "c0ac1f92-c8de-412c-b60a-d6a69c93213a",
+              "type": "debugDataChange",
+              "selected": false,
+              "x": 156,
+              "y": 514.84,
+              "ports": [
+                {
+                  "id": "clsm1m9dd004g3j6cllbhryks",
+                  "type": "default",
+                  "x": 302.92,
+                  "y": 546.57,
+                  "name": "clsm1m9dd004h3j6ci840dv30",
+                  "parentNode": "c0ac1f92-c8de-412c-b60a-d6a69c93213a",
+                  "links": [
+                    "b2933281-654b-41df-b716-14feed0cd997"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "beforeData": {
+                  "id": "cloj5cw63001p01673bmk22iy",
+                  "name": "AAA",
+                  "description": null,
+                  "active": true,
+                  "storeHistory": true,
+                  "currentValue": null,
+                  "configuration": {
+                    "nodeId": "ns=3;i=1001"
+                  },
+                  "deviceId": "clo8uyf8d000m017zgannb6hz",
+                  "iotTagTypeId": "OPCUA",
+                  "iotTagUseCaseId": "Production",
+                  "metadata": {
+                    "output": {
+                      "id": "faa34f70-74c3-4d76-bf7a-718a701843ec",
+                      "workcenter": {
+                        "code": "LS9"
+                      },
+                      "outputId": null,
+                      "workcenterId": "faa34f70-74c3-4d76-bf7a-718a701843ec"
+                    }
+                  }
+                },
+                "afterData": {},
+                "type": "IotTag",
+                "operation": "Delete",
+                "nextNodes": [
+                  "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Data Change Source"
+            },
+            "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2": {
+              "id": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+              "type": "mutate",
+              "selected": false,
+              "x": 351,
+              "y": 514.84,
+              "ports": [
+                {
+                  "id": "clsm1m9de004q3j6cb8vlfiy2",
+                  "type": "default",
+                  "x": 343,
+                  "y": 546.57,
+                  "name": "clsm1m9de004r3j6cambvxk48",
+                  "parentNode": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+                  "links": [
+                    "b2933281-654b-41df-b716-14feed0cd997",
+                    "298cd40d-fb53-4827-a48e-f9d46a4aef56"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9de004s3j6ckat4o95e",
+                  "type": "default",
+                  "x": 532.51,
+                  "y": 546.57,
+                  "name": "clsm1m9de004t3j6cpelkpfpv",
+                  "parentNode": "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "variablesTransform": "{ \"id\": value.before.id }",
+                "mutation": "mutation ($id: ID!){\n  deleteDeviceSubscription(\n    payload:{\n      where:{\n        id: $id\n      }\n    }\n  ){\n    id\n  }\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Delete Device Subscription"
+            },
+            "f45fbb29-5f67-450e-94a8-8a7361125dd9": {
+              "id": "f45fbb29-5f67-450e-94a8-8a7361125dd9",
+              "type": "dataChanges",
+              "selected": false,
+              "x": 156,
+              "y": 454.84,
+              "ports": [
+                {
+                  "id": "clsm1m9df004y3j6cqo3ic0at",
+                  "type": "default",
+                  "x": 302,
+                  "y": 486.57,
+                  "name": "clsm1m9df004z3j6cy4qlwes1",
+                  "parentNode": "f45fbb29-5f67-450e-94a8-8a7361125dd9",
+                  "links": [
+                    "298cd40d-fb53-4827-a48e-f9d46a4aef56"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Message",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "Application",
+                "type": "IotTag",
+                "operations": [
+                  "Delete"
+                ],
+                "nextNodes": [
+                  "c6e08d53-b3f7-4b03-b7a6-688f2ce6abb2"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Delete Tag"
+            },
+            "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48": {
+              "id": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+              "type": "transform",
+              "selected": false,
+              "x": 1516,
+              "y": 249.84,
+              "ports": [
+                {
+                  "id": "clsm1m9dh00583j6c8w3hx1z2",
+                  "type": "default",
+                  "x": 1508,
+                  "y": 281.57,
+                  "name": "clsm1m9dh00593j6cil9fict5",
+                  "parentNode": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+                  "links": [
+                    "5a25c0f2-2ed4-442e-aa44-8802c4c24379"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "clsm1m9dh005a3j6cv985lkgs",
+                  "type": "default",
+                  "x": 1748.86,
+                  "y": 281.57,
+                  "name": "clsm1m9dh005b3j6c1agkkjh3",
+                  "parentNode": "9932dab8-d19f-4f4a-a3fc-5bec9daf6c48",
+                  "links": [
+                    "a9faa105-c1bf-4518-9f36-4134eef37fb3"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$state.context.value.after.{\n  \"create\":{\n    \"id\": id,\n    \"name\": name,\n    \"description\": description,\n    \"deviceSubscriptionTypeId\": \"mqttTopics\",\n    \"deviceGatewayDeviceId\": $state.context.deviceGatewayDeviceId,\n    \"updateFrequencySeconds\": 0,\n    \"configuration\":{\n      \"topics\": [ configuration.topic ],\n      \"continuousValues\": false,\n      \"storeAndForward\": false\n    }\n    \n  }\n}",
+                "nextNodes": [
+                  "3e9cf8b5-8869-46bc-8945-c2a55d5827d7"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Prepare MQTT Subscription Payload"
+            }
+          }
+        }
+      ],
+      "name": "Create Device Subscription From Iot Tags",
+      "type": "System",
+      "version": "1.0.0",
+      "walkthrough": {
+        "steps": []
+      }
+    }
+  }
+}

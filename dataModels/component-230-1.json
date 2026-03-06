@@ -1,0 +1,688 @@
+{
+  "header": {
+    "id": "workOrderProcessGroup",
+    "name": "WorkOrderProcessGroup",
+    "description": "Intra Workcenter WO Process Groups. \n\nProvides a mechanism to consolidate individual work order processes, which need to occur at the same workcenter - to consider things like common tooling/assets/product attrbutes/etc.",
+    "dataModelKindId": "reference"
+  },
+  "version": {
+    "id": "clzse6nrc02pe017ve9n04k1t",
+    "number": "2",
+    "dataModelId": "workOrderProcessGroup",
+    "modelDefinition": {
+      "name": "WorkOrderProcessGroup",
+      "metadata": {
+        "mfgx": {
+          "module": {
+            "id": "workOrderManagement",
+            "group": {
+              "id": "productionManagement"
+            }
+          },
+          "exposed": true,
+          "mutable": true,
+          "mutations": {
+            "create": true,
+            "update": true,
+            "del": true
+          },
+          "dataChangeCapture": {
+            "exposed": false,
+            "retentionDays": 120
+          },
+          "editor": {
+            "autosort": true
+          },
+          "labelField": "number"
+        },
+        "mongo": {
+          "collection": "workOrderProcessGroup"
+        },
+        "graphql": {
+          "type": "Object"
+        }
+      },
+      "kind": "Reference",
+      "fields": [
+        {
+          "name": "id",
+          "type": "ID!",
+          "description": "The primary unique ID of the record.  Every model should have an id field.",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": false
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": true
+          }
+        },
+        {
+          "name": "number",
+          "type": "String!",
+          "description": "A system generated sequenc number to represent this group.\n\nDefault = Sequence (string)",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "sequence": {
+                "id": "workOrderProcessGroupNumber"
+              }
+            },
+            "unique": true
+          }
+        },
+        {
+          "name": "dispatchSequence",
+          "type": "Int!",
+          "description": "Dispatch Sequence is used to 'order' groups within a dispatch list. When using this field, the dispatch sequence takes precedence over any date field.\n\nDefault = 0 (INT)",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "aggQuantity",
+          "type": "Float!",
+          "description": "Aggregate (sum) of all WorkOrderProcess Qty in the group. This field is non-user editable.\n\nDefault = 0",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "aggRunDuration",
+          "type": "Float!",
+          "description": "Aggregate Run Duration - is ALWAYS the SUM of all work order process durations within the group - regardless of sequentialOutput.\n\nDefault = 0",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "aggSetupDuration",
+          "type": "Float!",
+          "description": "Aggregated (sum) of all setRates within the group. This field is non-user editable.\n\nDefault = 0",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "productionDuration",
+          "type": "Float!",
+          "description": "Run duration for this group - this is the duration to be used for scheduling purposes - this run duration should NOT include any setup time, purely production time - based upon the standardRate from the work order processes within the group.\n\nrunDuration - also considers if sequentialOutput is true - when true, the run duration is the sum of all the outputs.\n\nDefault = 0",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "setupDuration",
+          "type": "Float!",
+          "description": "The actual setup time used for this group - This may not be = the aggSetupRate - if 'single setup rate' is being used, if single setup rate is used, than the longest SetupRate from all of the workOrderProcesses within the Group should be used (max.). This value should ONLY represent the \"initial\" setup time required for this group - any minor setup time (between work order processes should not be counted here).\n\nThis setup time, can be manually adjusted by the user - prior to scheduling the Group - but after scheduling is completed this must be read Only.\n\nDefault = 0",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": 0
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "locked",
+          "type": "Boolean!",
+          "description": "When locked, the group may not be edited.\n\nDefault = False",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": false
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "scheduled",
+          "type": "Boolean!",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": false
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "sequentialOutput",
+          "type": "Boolean!",
+          "description": "Sequential output refers to the sequencing of the work order processes within a given work order process group.\n\nWhen True - all work order processes will be completed finish to start. Logic: Sum of all work order process durations = Group duration.\n\nWhen False - the group will be completed in parallel: Logic:\nLongest running work order process duration = Group duration.\n\nDefault = True",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": true
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "singleSetupDuration",
+          "type": "Boolean!",
+          "description": "When True (managed by user at time of creating the group) - then aggregate (average) all the setupRates of all associated work Order Processes within the group.\n\nuse the setupRate field, to indicate the \"true\" initial setup time for the entire group.\n\nDefault = False",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": false
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "useMinorSetupDuration",
+          "type": "Boolean!",
+          "description": "Minor Setup durations - are additional / incremental setup durations required between work order processes -\n\nONLY applies - when sequentialOutput = True \nAND\nwhen the timeToStart field on the WorkOrderProcess is > 0 (seconds)\n\nWhen these conditions are met - the Schedule Output - needs to include the total of all the timeToStart durations as \"additionalSetupDuration\" to provide the accurate 'overall run time' for the work order process group. \n\nWhen updating / creating Work Order Process distributions - for each work order process within the Group - the start/end and durations of those individual distributions must incorporate the value from the timeToStart field. This value maybe unique for each work order process within the group.",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              },
+              "defaultValue": false
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "externalId",
+          "type": "String",
+          "description": "ExternalId with a 3rd party system - must be unique!",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": true
+          }
+        },
+        {
+          "name": "actualFinishAt",
+          "type": "DateTime",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "actualStartAt",
+          "type": "DateTime",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "earliestStartAt",
+          "type": "DateTime!",
+          "description": "The EarliestStartAt is = the Earliest Start At date/time from the collection of Work Order Processes within the Group. This represents the abosolute earliest possible date/time this group can be scheduled to start at.\n\nField maybe edited by the user, this would impact the scheduling. This field makes no impact after scheduling has been completed.\n\nREQUIRED (no default in API)",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "latestEndAt",
+          "type": "DateTime!",
+          "description": "LatestEndAt is the latest date from the collection of Work Order Processes within the Group. This represents the absolute due date for this entire group - to be considered by scheduling.\n\nField maybe edited by the user, this would impact the scheduling. This field makes no impact after scheduling has been completed.\n\nREQUIRED (no default in API)",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "scheduledEndAt",
+          "type": "DateTime",
+          "description": "The date/time determined by scheduling of when this group will finish, This date/time should never exceed the latestEndAt - if it does, this should generated a scheduling exception.\n\nThis field must be read Only after scheduling is completed - only deleting scheduled events for this group will delete this value.",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "scheduledStartAt",
+          "type": "DateTime",
+          "description": "ScheduledStartAt is the date/time determined by scheduling of when this group can start based on workcenter capacity. This date should never be earlier than the earliestStartAt date/time - otherwise, this should generate a scheduling exception.\n\nThis field must be read Only after scheduling is completed - only deleting scheduled events for this group will delete this value.",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "customData",
+          "type": "JSON",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "integrationData",
+          "type": "JSON",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "workcenterId",
+          "type": "ID!",
+          "description": "",
+          "metadata": {
+            "mfgx": {
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "workcenter",
+          "description": "",
+          "type": "Workcenter!",
+          "metadata": {
+            "mfgx": {
+              "relation": {
+                "deletionReferenceBehavior": "prevent",
+                "fields": {
+                  "from": "workcenterId",
+                  "to": "id"
+                }
+              },
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        },
+        {
+          "name": "workOrderProcesses",
+          "description": "",
+          "type": "[WorkOrderProcess!]!",
+          "metadata": {
+            "mfgx": {
+              "relation": {
+                "fields": {
+                  "from": "id",
+                  "to": "workOrderProcessGroupId"
+                }
+              },
+              "mutations": {
+                "create": {
+                  "include": true
+                },
+                "update": {
+                  "include": true
+                }
+              },
+              "queries": {
+                "include": true
+              },
+              "where": {
+                "include": true
+              }
+            },
+            "unique": false
+          }
+        }
+      ],
+      "description": "Intra Workcenter WO Process Groups. \n\nProvides a mechanism to consolidate individual work order processes, which need to occur at the same workcenter - to consider things like common tooling/assets/product attrbutes/etc."
+    }
+  },
+  "migration": "$",
+  "migrations": [
+    {
+      "dataModelVersionId": "clzse6nrc02pe017ve9n04k1t",
+      "dataModelVersion": {
+        "number": "2"
+      },
+      "mappingExpression": "$"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "header": {
+    "id": "oeeAverages",
+    "name": "OEE Averages",
+    "description": "",
+    "active": true,
+    "deprecated": false
+  },
+  "version": {
+    "id": "clpksn3ow007i01swcr6ze4kk",
+    "number": "1.0.0",
+    "description": "",
+    "savedTransformId": "oeeAverages",
+    "scriptLanguageId": "JSONata",
+    "transform": "(\n  $.(\n    {\n      \"availability\": $not($isNil(availability)) ? availability * $coalesce([availabilityWeight,1]) : 1,\n      \"availabilityWeight\": $not($isNil(availability)) ? $coalesce([availabilityWeight,1]) : 1,\n      \"performance\": $not($isNil(performance)) ? performance * $coalesce([performanceWeight,1]): 1,\n      \"performanceWeight\": $not($isNil(performance)) ? $coalesce([performanceWeight,1]): 1,\n      \"quality\": $not($isNil(quality)) ? quality * $coalesce([qualityWeight,1]): 1,\n      \"qualityWeight\": $not($isNil(quality)) ? $coalesce([qualityWeight,1]) :1\n    }\n  ){\n    \"total\": {\n      \"availability\": $sum(availability) / $sum(availabilityWeight),\n      \"performance\": $sum(performance) / $sum(performanceWeight),\n      \"quality\": $sum(quality) / $sum(qualityWeight)\n    }\n  }\n).total ~> | $ | {\n  \"oee\": $reduce(\n    [availability, performance, quality], \n    function($value, $acc) { $isNumber($value) ? $value * $coalesce([$acc,1]) : $acc }\n  )\n} |\n",
+    "inputSchema": {},
+    "outputSchema": {}
+  }
+}

@@ -1,0 +1,1289 @@
+{
+  "header": {
+    "id": "validateCertifications",
+    "name": "Validate Certifications",
+    "description": "This only validates wiki certs at the moment.",
+    "active": true,
+    "dataFlowTypeId": "System",
+    "moduleId": "controlPanels"
+  },
+  "version": {
+    "id": "cm8xb7vr0005y077528frbmgw",
+    "number": "0.0.7",
+    "description": "",
+    "dataFlowId": "validateCertifications",
+    "flow": {
+      "id": "cm8xb7vr0005y077528frbmgw",
+      "name": "Validate Certifications",
+      "type": "System",
+      "nodes": [
+        {
+          "id": "b5d59a96-5d18-4ccb-8e62-39c71982d264",
+          "name": "Request",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "43a90b27-e52c-4733-843f-b63365c14d6f"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "43a90b27-e52c-4733-843f-b63365c14d6f",
+          "name": "Validate",
+          "type": "validate",
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "workcenterId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "workcenterId"
+              ]
+            },
+            "nextNodes": [
+              "2ff73dd5-8f27-4e22-ab8d-5e651c100d07"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+          "name": "Query Outputs",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"filter\": {\n    \"workcenterId\": {\n      \"_eq\": workcenterId\n    },\n    \"workOrderDistribution\": {\n      \"virtual\": {\n        \"_eq\": false\n      }\n    }\n  }\n}",
+            "query": "query ProductionSetupOutput($filter: ProductionSetupOutputWhereInput, $orderBy: [ProductionSetupOutputOrderByInput!], $first: Int, $after: String, $readPreference: ReadPreferenceEnum) {\n  outputs: productionSetupOutput(where: $filter, orderBy: $orderBy, first: $first, after: $after, readPreference: $readPreference) {\n    total\n    edges {\n      node {\n        id\n        workcenterId\n        workOrder {\n          number\n          productStrategy {\n            certification\n          }\n        }\n        product {\n          code\n          certification\n        }\n        productId\n        workOrderProcess {\n          process {\n            code\n            certification\n          }\n          order\n        }\n        workOrderDistributionGroupId\n        productStrategyProcessId\n        productStrategyProcess {\n          id\n          certification\n          processId\n          productStrategyId\n        }\n        distributionQuantity\n        producedQuantity\n        scrappedQuantity\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "cfa4bc59-9d44-4391-bd97-1b072d65559c"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+          "name": "Query CertRequirements",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "/* Alerts*/\n(\n  $now := $moment().format();\n  {\n    \"filter\": {\n      \"_and\":[\n        {\n          \"_or\":[\n            { \"workcenterId\": { \"_in\": [outputs.edges.node.workcenterId] } },\n            { \"processId\": { \"_in\": [outputs.edges.node.productStrategyProcess.processId]} },\n            { \"productId\": { \"_in\": [outputs.edges.node.productId]} },\n            { \"productStrategyId\": { \"_in\": [outputs.edges.node.productStrategyProcess.productStrategyId]} },\n            { \"productStrategyProcessId\": { \"_in\": [outputs.edges.node.productStrategyProcess.id]} }\n          ]\n        },\n        {\n          \"_or\": [\n            { \"effectiveAt\": { \"_lte\": $now } },\n            { \"effectiveAt\": { \"_isNull\": true } }\n          ]\n        },\n        {\n          \"_or\": [\n            { \"expirationAt\": { \"_gt\": $now} },\n            { \"expirationAt\": { \"_isNull\": true } }\n          ]\n        },\n        {\n          \"active\":{\n            \"_eq\": true\n          }\n        }\n      ]\n\n    }\n  }\n)\n",
+            "query": "query Query($filter: CertificationRequirementWhereInput) {\n  certificationRequirement(where: $filter){\n    edges{\n      node{\n        id\n        name\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "e333ff0f-0854-417a-9fef-5eb4dd6bab65"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "{\n  \"certificationRequirements\": certificationRequirement.edges.node\n}",
+            "nextNodes": [
+              "02cb1335-237f-499f-bd30-f8ae6459a3ad"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+          "name": "Query Operators",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "{\n  \"workcenterId\": $state.context.workcenterId,\n  \"certificationRequirements\": [certificationRequirement.edges.node.id],\n  \"now\": $moment().format()\n}",
+            "query": "query ($workcenterId: String, $certificationRequirements: [String!]!, $now: Date) {\n  productionSetupOperator(where: {workcenterId: {_eq: $workcenterId}}) {\n    edges {\n      node {\n        id\n        employee {\n          id\n          employeeCertifications(where: {certificationId: {_in: $certificationRequirements}, active: {_eq: true}, _and: [{_or: [{effectiveAt: {_lte: $now}}, {effectiveAt: {_isNull: true}}]}, {_or: [{expirationAt: {_gt: $now}}, {expirationAt: {_isNull: true}}]}]}) {\n            edges {\n              node {\n                id\n                certificationId\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+            "nextNodes": [
+              "93d23c49-d5d6-479b-a20d-0d6ed66bdf94"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+          "name": "Merge Context",
+          "type": "mergeContext",
+          "data": {
+            "transform": "$",
+            "nextNodes": [
+              "9e5c19f4-2db2-4406-8f78-fd7141292e86"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+          "name": "Validate Certifications",
+          "type": "transform",
+          "data": {
+            "transform": " [ productionSetupOperator.edges.node.employee.(\n\n    $certs := [employeeCertifications.edges.node];\n    $requirements := [$state.context.certificationRequirements];\n\n    $areAllRequirmentsMet := $leftOuterJoin(\n      $requirements , \n      $certs, \n      'id', \n      'certificationId',\n      \"met\"\n    )\n    ~>$groupBy(\n      function($v){\n      $v.met? \"complete\" : \"incomplete\"\n    });\n\n    $exists($areAllRequirmentsMet.incomplete) = false\n\n  )]~>$all(?, function($v){ $v= true })",
+            "nextNodes": [
+              "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+          "name": "If Else",
+          "type": "ifElse",
+          "data": {
+            "transform": "$",
+            "onTrueNextNodes": [
+              "febc6fca-8183-4df8-bc95-dda956b03fe8"
+            ],
+            "onFalseNextNodes": [
+              "9804ae87-eb0f-4a68-b586-305a7cd0215c"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "febc6fca-8183-4df8-bc95-dda956b03fe8",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"success\": true\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        },
+        {
+          "id": "9804ae87-eb0f-4a68-b586-305a7cd0215c",
+          "name": "Response",
+          "type": "response",
+          "data": {
+            "responseTransform": "{\n  \"success\": false,\n  \"message\": \"Not all operators are certified for every requirment.\"\n}",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true,
+            "enableTraceLogging": false
+          }
+        }
+      ],
+      "version": "0.0.6"
+    },
+    "diagram": {
+      "id": "cm8xb7vr0005y077528frbmgw",
+      "offsetX": -891.01,
+      "offsetY": 147.09,
+      "zoom": 78.33,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "d886cd38-79fa-4d12-b022-6f370b9fba0a",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "89a5466b-4c51-4d88-9e07-90fe29f5de2e": {
+              "points": [
+                {
+                  "id": "454a284e-689c-4681-9beb-be02b486cc49",
+                  "type": "point",
+                  "x": 193.98,
+                  "y": 144.73
+                },
+                {
+                  "id": "eeb8add6-b557-4120-b888-3c2b5ff04e2c",
+                  "type": "point",
+                  "x": 255,
+                  "y": 174.73
+                }
+              ],
+              "id": "89a5466b-4c51-4d88-9e07-90fe29f5de2e",
+              "type": "default",
+              "selected": false,
+              "source": "8f6e139e-efbd-4fd2-adbc-669e2c52ba4a",
+              "sourcePort": "cm0zl4w7t000d356h2dohvzsq",
+              "target": "43a90b27-e52c-4733-843f-b63365c14d6f",
+              "targetPort": "cm0zl55k0000h356hucq55e7o",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "e9b2a1d6-e71b-42b0-ad8d-84c4ee114a4d": {
+              "points": [
+                {
+                  "id": "38f21432-e471-4c23-a25f-be807cd78d06",
+                  "type": "point",
+                  "x": 194,
+                  "y": 214.73
+                },
+                {
+                  "id": "5aae4cde-d468-4bb3-8076-abc2c4695c8e",
+                  "type": "point",
+                  "x": 255,
+                  "y": 174.73
+                }
+              ],
+              "id": "e9b2a1d6-e71b-42b0-ad8d-84c4ee114a4d",
+              "type": "default",
+              "selected": false,
+              "source": "b5d59a96-5d18-4ccb-8e62-39c71982d264",
+              "sourcePort": "cm0zl51h6000f356hop2fng8s",
+              "target": "43a90b27-e52c-4733-843f-b63365c14d6f",
+              "targetPort": "cm0zl55k0000h356hucq55e7o",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6a4614e4-e94b-48b0-8c09-cbcc2ea5002c": {
+              "points": [
+                {
+                  "id": "a5065bb3-c1ba-4d1a-94a1-9b2c7375fa4c",
+                  "type": "point",
+                  "x": 784,
+                  "y": 174.73
+                },
+                {
+                  "id": "84dd92fa-a079-4316-85bd-0412bda21949",
+                  "type": "point",
+                  "x": 825,
+                  "y": 174.73
+                }
+              ],
+              "id": "6a4614e4-e94b-48b0-8c09-cbcc2ea5002c",
+              "type": "default",
+              "selected": false,
+              "source": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+              "sourcePort": "cm0zl9tgv0014356hf547o2ui",
+              "target": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+              "targetPort": "cm0zlmmyh003y356h702gojz3",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "98ac943a-2a05-4319-be6a-47e8f2a36579": {
+              "points": [
+                {
+                  "id": "f3141525-bdfe-4f1b-85a9-c3b58663692a",
+                  "type": "point",
+                  "x": 1002.31,
+                  "y": 174.73
+                },
+                {
+                  "id": "110cea2e-f96c-48af-a17c-5b18efcd35c6",
+                  "type": "point",
+                  "x": 1030,
+                  "y": 174.73
+                }
+              ],
+              "id": "98ac943a-2a05-4319-be6a-47e8f2a36579",
+              "type": "default",
+              "selected": false,
+              "source": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+              "sourcePort": "cm0zlmmyh0040356hj9j06jtx",
+              "target": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+              "targetPort": "cm0znff0d00cs356h70wfs8ig",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "48ad36a4-3749-4ced-bd62-47288c829480": {
+              "points": [
+                {
+                  "id": "b1e1a54a-f18f-4460-97b3-12b0e3f735cf",
+                  "type": "point",
+                  "x": 594,
+                  "y": 174.73
+                },
+                {
+                  "id": "f0b4b496-22fb-4d5d-b412-2d9940f7ade0",
+                  "type": "point",
+                  "x": 630,
+                  "y": 174.73
+                }
+              ],
+              "id": "48ad36a4-3749-4ced-bd62-47288c829480",
+              "type": "default",
+              "selected": false,
+              "source": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+              "sourcePort": "cm0znhf9600h7356hkrgv5jkm",
+              "target": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+              "targetPort": "cm0zl9tgv0012356hqx841bk3",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6f378c73-9c0e-44c5-904b-aebc0dcd45fc": {
+              "points": [
+                {
+                  "id": "b4eaebfa-81ab-4aeb-b896-6ad0d24a73a6",
+                  "type": "point",
+                  "x": 409,
+                  "y": 174.73
+                },
+                {
+                  "id": "adc22329-1cf6-4d1d-b260-c2edd4f04a33",
+                  "type": "point",
+                  "x": 440,
+                  "y": 174.73
+                }
+              ],
+              "id": "6f378c73-9c0e-44c5-904b-aebc0dcd45fc",
+              "type": "default",
+              "selected": false,
+              "source": "43a90b27-e52c-4733-843f-b63365c14d6f",
+              "sourcePort": "cm0zl55k0000j356h4hjgydco",
+              "target": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+              "targetPort": "cm0znhf9600h5356hrn1ewmzx",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "c29880e5-4981-4eb0-9b7c-2fe6797040d8": {
+              "points": [
+                {
+                  "id": "28fa2ff2-26e8-46e6-963a-943d03bf5e52",
+                  "type": "point",
+                  "x": 1184,
+                  "y": 174.73
+                },
+                {
+                  "id": "ff798a78-eefd-47a4-8840-f368589ad973",
+                  "type": "point",
+                  "x": 1215,
+                  "y": 174.73
+                }
+              ],
+              "id": "c29880e5-4981-4eb0-9b7c-2fe6797040d8",
+              "type": "default",
+              "selected": false,
+              "source": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+              "sourcePort": "cm0znff0d00cu356hw37loqg3",
+              "target": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+              "targetPort": "cm0znggpp00du356hbt5hsnc6",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "6e663a2e-6497-46af-a05b-35de1ae10093": {
+              "points": [
+                {
+                  "id": "3a55de9f-212f-499f-9fd1-7252758980a9",
+                  "type": "point",
+                  "x": 1369,
+                  "y": 174.73
+                },
+                {
+                  "id": "6ee3e232-7047-4bdd-ade8-f2db6d5a17dd",
+                  "type": "point",
+                  "x": 1400,
+                  "y": 174.73
+                }
+              ],
+              "id": "6e663a2e-6497-46af-a05b-35de1ae10093",
+              "type": "default",
+              "selected": false,
+              "source": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+              "sourcePort": "cm0znggpp00dw356hu1ltu5uq",
+              "target": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+              "targetPort": "cm0zntvey00t3356h3sahnphm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "da0986d9-dfcd-46f3-8af4-80fa6f97d523": {
+              "points": [
+                {
+                  "id": "0568180c-be7b-4a24-b233-0b3515e28233",
+                  "type": "point",
+                  "x": 1564.94,
+                  "y": 174.73
+                },
+                {
+                  "id": "d30d59b5-1a17-446b-abb7-ef42e099f826",
+                  "type": "point",
+                  "x": 1595,
+                  "y": 174.73
+                }
+              ],
+              "id": "da0986d9-dfcd-46f3-8af4-80fa6f97d523",
+              "type": "default",
+              "selected": false,
+              "source": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+              "sourcePort": "cm0zntvey00t5356hdx19qzew",
+              "target": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+              "targetPort": "cm0zoklcc01cj356hdnh3lj7d",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "9ecb5dba-8043-4ea8-9f56-e4edd5b80175": {
+              "points": [
+                {
+                  "id": "48252ab0-af60-4d0d-951c-9855872a4042",
+                  "type": "point",
+                  "x": 1748.98,
+                  "y": 174.73
+                },
+                {
+                  "id": "f6967a12-04d6-4ff6-86aa-9037b43ae15f",
+                  "type": "point",
+                  "x": 1775,
+                  "y": 114.73
+                }
+              ],
+              "id": "9ecb5dba-8043-4ea8-9f56-e4edd5b80175",
+              "type": "default",
+              "selected": false,
+              "source": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+              "sourcePort": "cm0zoklcc01cl356htdrnplh8",
+              "target": "febc6fca-8183-4df8-bc95-dda956b03fe8",
+              "targetPort": "cm0zom2hx01d0356h075npxdy",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "60abaff7-e9d0-4bf1-b6f0-695efd160d55": {
+              "points": [
+                {
+                  "id": "dd12438a-244d-456e-82e2-e92e1238591b",
+                  "type": "point",
+                  "x": 1748.98,
+                  "y": 199.89
+                },
+                {
+                  "id": "f5f49583-32b3-4a50-abe2-50333972b0fd",
+                  "type": "point",
+                  "x": 1790,
+                  "y": 254.73
+                }
+              ],
+              "id": "60abaff7-e9d0-4bf1-b6f0-695efd160d55",
+              "type": "default",
+              "selected": false,
+              "source": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+              "sourcePort": "cm0zoklcc01cn356hvtk2rix4",
+              "target": "9804ae87-eb0f-4a68-b586-305a7cd0215c",
+              "targetPort": "cm0zom45601d4356h5qtdl2k4",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "f4217fe8-fbfe-495d-b39c-aaa9c5babf3b",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "8f6e139e-efbd-4fd2-adbc-669e2c52ba4a": {
+              "id": "8f6e139e-efbd-4fd2-adbc-669e2c52ba4a",
+              "type": "debugSource",
+              "selected": false,
+              "x": 40,
+              "y": 105,
+              "ports": [
+                {
+                  "id": "cm0zl4w7t000d356h2dohvzsq",
+                  "type": "default",
+                  "x": 185.98,
+                  "y": 136.73,
+                  "name": "cm0zl4w7t000e356hpn6e6tf4",
+                  "parentNode": "8f6e139e-efbd-4fd2-adbc-669e2c52ba4a",
+                  "links": [
+                    "89a5466b-4c51-4d88-9e07-90fe29f5de2e"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "payload": {
+                  "workcenterId": "cm5prk3d301y1077568fie8hq"
+                },
+                "context": {},
+                "nextNodes": [
+                  "43a90b27-e52c-4733-843f-b63365c14d6f"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Source"
+            },
+            "b5d59a96-5d18-4ccb-8e62-39c71982d264": {
+              "id": "b5d59a96-5d18-4ccb-8e62-39c71982d264",
+              "type": "request",
+              "selected": false,
+              "x": 40,
+              "y": 175,
+              "ports": [
+                {
+                  "id": "cm0zl51h6000f356hop2fng8s",
+                  "type": "default",
+                  "x": 186,
+                  "y": 206.73,
+                  "name": "cm0zl51h6000g356hiy6rjbek",
+                  "parentNode": "b5d59a96-5d18-4ccb-8e62-39c71982d264",
+                  "links": [
+                    "e9b2a1d6-e71b-42b0-ad8d-84c4ee114a4d"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "43a90b27-e52c-4733-843f-b63365c14d6f"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Request"
+            },
+            "43a90b27-e52c-4733-843f-b63365c14d6f": {
+              "id": "43a90b27-e52c-4733-843f-b63365c14d6f",
+              "type": "validate",
+              "selected": false,
+              "x": 255,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0zl55k0000h356hucq55e7o",
+                  "type": "default",
+                  "x": 247,
+                  "y": 166.73,
+                  "name": "cm0zl55k0000i356hx6jnzfdy",
+                  "parentNode": "43a90b27-e52c-4733-843f-b63365c14d6f",
+                  "links": [
+                    "89a5466b-4c51-4d88-9e07-90fe29f5de2e",
+                    "e9b2a1d6-e71b-42b0-ad8d-84c4ee114a4d"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0zl55k0000j356h4hjgydco",
+                  "type": "default",
+                  "x": 401,
+                  "y": 166.73,
+                  "name": "cm0zl55k0000k356hts6i9cx1",
+                  "parentNode": "43a90b27-e52c-4733-843f-b63365c14d6f",
+                  "links": [
+                    "6f378c73-9c0e-44c5-904b-aebc0dcd45fc"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "workcenterId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "workcenterId"
+                  ]
+                },
+                "nextNodes": [
+                  "2ff73dd5-8f27-4e22-ab8d-5e651c100d07"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Validate"
+            },
+            "9e5c19f4-2db2-4406-8f78-fd7141292e86": {
+              "id": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+              "type": "query",
+              "selected": false,
+              "x": 630,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0zl9tgv0012356hqx841bk3",
+                  "type": "default",
+                  "x": 622,
+                  "y": 166.73,
+                  "name": "cm0zl9tgv0013356h909fq372",
+                  "parentNode": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+                  "links": [
+                    "48ad36a4-3749-4ced-bd62-47288c829480"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0zl9tgv0014356hf547o2ui",
+                  "type": "default",
+                  "x": 776,
+                  "y": 166.73,
+                  "name": "cm0zl9tgv0015356hcnxq6cmc",
+                  "parentNode": "9e5c19f4-2db2-4406-8f78-fd7141292e86",
+                  "links": [
+                    "6a4614e4-e94b-48b0-8c09-cbcc2ea5002c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"filter\": {\n    \"workcenterId\": {\n      \"_eq\": workcenterId\n    },\n    \"workOrderDistribution\": {\n      \"virtual\": {\n        \"_eq\": false\n      }\n    }\n  }\n}",
+                "query": "query ProductionSetupOutput($filter: ProductionSetupOutputWhereInput, $orderBy: [ProductionSetupOutputOrderByInput!], $first: Int, $after: String, $readPreference: ReadPreferenceEnum) {\n  outputs: productionSetupOutput(where: $filter, orderBy: $orderBy, first: $first, after: $after, readPreference: $readPreference) {\n    total\n    edges {\n      node {\n        id\n        workcenterId\n        workOrder {\n          number\n          productStrategy {\n            certification\n          }\n        }\n        product {\n          code\n          certification\n        }\n        productId\n        workOrderProcess {\n          process {\n            code\n            certification\n          }\n          order\n        }\n        workOrderDistributionGroupId\n        productStrategyProcessId\n        productStrategyProcess {\n          id\n          certification\n          processId\n          productStrategyId\n        }\n        distributionQuantity\n        producedQuantity\n        scrappedQuantity\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "cfa4bc59-9d44-4391-bd97-1b072d65559c"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Outputs"
+            },
+            "cfa4bc59-9d44-4391-bd97-1b072d65559c": {
+              "id": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+              "type": "query",
+              "selected": false,
+              "x": 825,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0zlmmyh003y356h702gojz3",
+                  "type": "default",
+                  "x": 817,
+                  "y": 166.73,
+                  "name": "cm0zlmmyh003z356hsai2385m",
+                  "parentNode": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+                  "links": [
+                    "6a4614e4-e94b-48b0-8c09-cbcc2ea5002c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0zlmmyh0040356hj9j06jtx",
+                  "type": "default",
+                  "x": 994.31,
+                  "y": 166.73,
+                  "name": "cm0zlmmyi0041356hdpkizwij",
+                  "parentNode": "cfa4bc59-9d44-4391-bd97-1b072d65559c",
+                  "links": [
+                    "98ac943a-2a05-4319-be6a-47e8f2a36579"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "/* Alerts*/\n(\n  $now := $moment().format();\n  {\n    \"filter\": {\n      \"_and\":[\n        {\n          \"_or\":[\n            { \"workcenterId\": { \"_in\": [outputs.edges.node.workcenterId] } },\n            { \"processId\": { \"_in\": [outputs.edges.node.productStrategyProcess.processId]} },\n            { \"productId\": { \"_in\": [outputs.edges.node.productId]} },\n            { \"productStrategyId\": { \"_in\": [outputs.edges.node.productStrategyProcess.productStrategyId]} },\n            { \"productStrategyProcessId\": { \"_in\": [outputs.edges.node.productStrategyProcess.id]} }\n          ]\n        },\n        {\n          \"_or\": [\n            { \"effectiveAt\": { \"_lte\": $now } },\n            { \"effectiveAt\": { \"_isNull\": true } }\n          ]\n        },\n        {\n          \"_or\": [\n            { \"expirationAt\": { \"_gt\": $now} },\n            { \"expirationAt\": { \"_isNull\": true } }\n          ]\n        },\n        {\n          \"active\":{\n            \"_eq\": true\n          }\n        }\n      ]\n\n    }\n  }\n)\n",
+                "query": "query Query($filter: CertificationRequirementWhereInput) {\n  certificationRequirement(where: $filter){\n    edges{\n      node{\n        id\n        name\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "e333ff0f-0854-417a-9fef-5eb4dd6bab65"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query CertRequirements"
+            },
+            "e333ff0f-0854-417a-9fef-5eb4dd6bab65": {
+              "id": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 1030,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0znff0d00cs356h70wfs8ig",
+                  "type": "default",
+                  "x": 1022,
+                  "y": 166.73,
+                  "name": "cm0znff0d00ct356hcfgxohkr",
+                  "parentNode": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+                  "links": [
+                    "98ac943a-2a05-4319-be6a-47e8f2a36579"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0znff0d00cu356hw37loqg3",
+                  "type": "default",
+                  "x": 1176,
+                  "y": 166.73,
+                  "name": "cm0znff0d00cv356hi56o1fjc",
+                  "parentNode": "e333ff0f-0854-417a-9fef-5eb4dd6bab65",
+                  "links": [
+                    "c29880e5-4981-4eb0-9b7c-2fe6797040d8"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "{\n  \"certificationRequirements\": certificationRequirement.edges.node\n}",
+                "nextNodes": [
+                  "02cb1335-237f-499f-bd30-f8ae6459a3ad"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "02cb1335-237f-499f-bd30-f8ae6459a3ad": {
+              "id": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+              "type": "query",
+              "selected": false,
+              "x": 1215,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0znggpp00du356hbt5hsnc6",
+                  "type": "default",
+                  "x": 1207,
+                  "y": 166.73,
+                  "name": "cm0znggpp00dv356hvkqci9o4",
+                  "parentNode": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+                  "links": [
+                    "c29880e5-4981-4eb0-9b7c-2fe6797040d8"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0znggpp00dw356hu1ltu5uq",
+                  "type": "default",
+                  "x": 1361,
+                  "y": 166.73,
+                  "name": "cm0znggpp00dx356hz7wdsfhi",
+                  "parentNode": "02cb1335-237f-499f-bd30-f8ae6459a3ad",
+                  "links": [
+                    "6e663a2e-6497-46af-a05b-35de1ae10093"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "{\n  \"workcenterId\": $state.context.workcenterId,\n  \"certificationRequirements\": [certificationRequirement.edges.node.id],\n  \"now\": $moment().format()\n}",
+                "query": "query ($workcenterId: String, $certificationRequirements: [String!]!, $now: Date) {\n  productionSetupOperator(where: {workcenterId: {_eq: $workcenterId}}) {\n    edges {\n      node {\n        id\n        employee {\n          id\n          employeeCertifications(where: {certificationId: {_in: $certificationRequirements}, active: {_eq: true}, _and: [{_or: [{effectiveAt: {_lte: $now}}, {effectiveAt: {_isNull: true}}]}, {_or: [{expirationAt: {_gt: $now}}, {expirationAt: {_isNull: true}}]}]}) {\n            edges {\n              node {\n                id\n                certificationId\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n",
+                "nextNodes": [
+                  "93d23c49-d5d6-479b-a20d-0d6ed66bdf94"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Query Operators"
+            },
+            "2ff73dd5-8f27-4e22-ab8d-5e651c100d07": {
+              "id": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+              "type": "mergeContext",
+              "selected": false,
+              "x": 440,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0znhf9600h5356hrn1ewmzx",
+                  "type": "default",
+                  "x": 432,
+                  "y": 166.73,
+                  "name": "cm0znhf9600h6356h7isc5txm",
+                  "parentNode": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+                  "links": [
+                    "6f378c73-9c0e-44c5-904b-aebc0dcd45fc"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0znhf9600h7356hkrgv5jkm",
+                  "type": "default",
+                  "x": 586,
+                  "y": 166.73,
+                  "name": "cm0znhf9600h8356hyniovinr",
+                  "parentNode": "2ff73dd5-8f27-4e22-ab8d-5e651c100d07",
+                  "links": [
+                    "48ad36a4-3749-4ced-bd62-47288c829480"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$",
+                "nextNodes": [
+                  "9e5c19f4-2db2-4406-8f78-fd7141292e86"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Merge Context"
+            },
+            "93d23c49-d5d6-479b-a20d-0d6ed66bdf94": {
+              "id": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+              "type": "transform",
+              "selected": true,
+              "x": 1400,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0zntvey00t3356h3sahnphm",
+                  "type": "default",
+                  "x": 1392,
+                  "y": 166.73,
+                  "name": "cm0zntvey00t4356hc0l5cudg",
+                  "parentNode": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+                  "links": [
+                    "6e663a2e-6497-46af-a05b-35de1ae10093"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0zntvey00t5356hdx19qzew",
+                  "type": "default",
+                  "x": 1556.94,
+                  "y": 166.73,
+                  "name": "cm0zntvey00t6356hopmgq6br",
+                  "parentNode": "93d23c49-d5d6-479b-a20d-0d6ed66bdf94",
+                  "links": [
+                    "da0986d9-dfcd-46f3-8af4-80fa6f97d523"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "transform": " [ productionSetupOperator.edges.node.employee.(\n\n    $certs := [employeeCertifications.edges.node];\n    $requirements := [$state.context.certificationRequirements];\n\n    $areAllRequirmentsMet := $leftOuterJoin(\n      $requirements , \n      $certs, \n      'id', \n      'certificationId',\n      \"met\"\n    )\n    ~>$groupBy(\n      function($v){\n      $v.met? \"complete\" : \"incomplete\"\n    });\n\n    $exists($areAllRequirmentsMet.incomplete) = false\n\n  )]~>$all(?, function($v){ $v= true })",
+                "nextNodes": [
+                  "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Validate Certifications"
+            },
+            "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3": {
+              "id": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+              "type": "ifElse",
+              "selected": false,
+              "x": 1595,
+              "y": 135,
+              "ports": [
+                {
+                  "id": "cm0zoklcc01cj356hdnh3lj7d",
+                  "type": "default",
+                  "x": 1587,
+                  "y": 166.73,
+                  "name": "cm0zoklcc01ck356hrsmhkz6n",
+                  "parentNode": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+                  "links": [
+                    "da0986d9-dfcd-46f3-8af4-80fa6f97d523"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cm0zoklcc01cl356htdrnplh8",
+                  "type": "default",
+                  "x": 1740.98,
+                  "y": 166.73,
+                  "name": "cm0zoklcc01cm356heu196xie",
+                  "parentNode": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+                  "links": [
+                    "9ecb5dba-8043-4ea8-9f56-e4edd5b80175"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "True",
+                  "fieldPath": "data.onTrueNextNodes"
+                },
+                {
+                  "id": "cm0zoklcc01cn356hvtk2rix4",
+                  "type": "default",
+                  "x": 1740.98,
+                  "y": 191.89,
+                  "name": "cm0zoklcc01co356hoo2ez7c6",
+                  "parentNode": "1d33dfe2-314e-4c7f-a7ba-841c0309a3e3",
+                  "links": [
+                    "60abaff7-e9d0-4bf1-b6f0-695efd160d55"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "False",
+                  "fieldPath": "data.onFalseNextNodes"
+                }
+              ],
+              "data": {
+                "transform": "$",
+                "onTrueNextNodes": [
+                  "febc6fca-8183-4df8-bc95-dda956b03fe8"
+                ],
+                "onFalseNextNodes": [
+                  "9804ae87-eb0f-4a68-b586-305a7cd0215c"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "If Else"
+            },
+            "febc6fca-8183-4df8-bc95-dda956b03fe8": {
+              "id": "febc6fca-8183-4df8-bc95-dda956b03fe8",
+              "type": "response",
+              "selected": false,
+              "x": 1775,
+              "y": 75,
+              "ports": [
+                {
+                  "id": "cm0zom2hx01d0356h075npxdy",
+                  "type": "default",
+                  "x": 1767,
+                  "y": 106.73,
+                  "name": "cm0zom2hy01d1356hcrbji59y",
+                  "parentNode": "febc6fca-8183-4df8-bc95-dda956b03fe8",
+                  "links": [
+                    "9ecb5dba-8043-4ea8-9f56-e4edd5b80175"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cm0zom2hy01d2356hntmt4x0t",
+                  "type": "default",
+                  "x": 1920.98,
+                  "y": 106.73,
+                  "name": "cm0zom2hy01d3356hwd24c90k",
+                  "parentNode": "febc6fca-8183-4df8-bc95-dda956b03fe8",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"success\": true\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            },
+            "9804ae87-eb0f-4a68-b586-305a7cd0215c": {
+              "id": "9804ae87-eb0f-4a68-b586-305a7cd0215c",
+              "type": "response",
+              "selected": false,
+              "x": 1790,
+              "y": 215,
+              "ports": [
+                {
+                  "id": "cm0zom45601d4356h5qtdl2k4",
+                  "type": "default",
+                  "x": 1782,
+                  "y": 246.73,
+                  "name": "cm0zom45601d5356hfpcqp6om",
+                  "parentNode": "9804ae87-eb0f-4a68-b586-305a7cd0215c",
+                  "links": [
+                    "60abaff7-e9d0-4bf1-b6f0-695efd160d55"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cm0zom45601d6356hssfyedu9",
+                  "type": "default",
+                  "x": 1935.98,
+                  "y": 246.73,
+                  "name": "cm0zom45601d7356hpqfpik3a",
+                  "parentNode": "9804ae87-eb0f-4a68-b586-305a7cd0215c",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "{\n  \"success\": false,\n  \"message\": \"Not all operators are certified for every requirment.\"\n}",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true,
+                "enableTraceLogging": false
+              },
+              "name": "Response"
+            }
+          }
+        }
+      ],
+      "name": "Validate Certifications",
+      "type": "System",
+      "version": "0.0.6",
+      "walkthrough": {
+        "steps": [],
+        "includeIntroduction": true
+      }
+    }
+  }
+}

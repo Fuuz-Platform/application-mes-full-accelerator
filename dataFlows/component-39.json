@@ -1,0 +1,573 @@
+{
+  "header": {
+    "id": "documentFlowAirQualityMeasurementReport",
+    "name": "Document Flow: Air Quality Measurement Report",
+    "description": "This flow queries the AirQualityMeasurement table and then splits time and day from recordedAt field for Air Quality Measurement Report.",
+    "active": true,
+    "dataFlowTypeId": "Document",
+    "moduleId": null
+  },
+  "version": {
+    "id": "cl98w88fe05pz019m5eq6h1ri",
+    "number": "0.0.6",
+    "description": "Configure walkthrough and proper documentation",
+    "dataFlowId": "documentFlowAirQualityMeasurementReport",
+    "flow": {
+      "id": "cl98w88fe05pz019m5eq6h1ri",
+      "name": "Document Flow: Air Quality Measurement Report",
+      "type": "Document",
+      "nodes": [
+        {
+          "id": "request",
+          "name": "Request Report Generation",
+          "type": "request",
+          "data": {
+            "nextNodes": [
+              "buildPayload"
+            ]
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "buildPayload",
+          "name": "AirQualityMeasurement Query",
+          "type": "query",
+          "data": {
+            "api": "application",
+            "variablesTransform": "$",
+            "nextNodes": [
+              "8601d406-6d3a-41b9-850c-127a8c177506"
+            ],
+            "query": "query Query($where: AirQualityMeasurementWhereInput, $orderBy: [AirQualityMeasurementOrderByInput!], $first: Int, $after: String) {\n  airQualityMeasurement(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        locationId\n        location\n        parameter\n        recordedAt\n        unit\n        value\n        city\n        country\n        latitude\n        longitude\n      }\n    }\n  }\n}\n"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "renderDocument",
+          "name": "Render AirQualityMeasurement Document",
+          "type": "generateDocument",
+          "data": {
+            "documentRenderFormatTransform": "\"Pdf\"",
+            "nextNodes": [
+              "response"
+            ],
+            "documentDesignTransform": "\"airQualityMeasurementReport\""
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "response",
+          "name": "Respond with Document",
+          "type": "response",
+          "data": {
+            "responseTransform": "documentContent",
+            "nextNodes": []
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        },
+        {
+          "id": "8601d406-6d3a-41b9-850c-127a8c177506",
+          "name": "Split day and time",
+          "type": "transform",
+          "data": {
+            "nextNodes": [
+              "renderDocument"
+            ],
+            "transform": "/* (\n$maxAllTime := $max(airQualityMeasurement.edges.node.value);\n$minAllTime := $min(airQualityMeasurement.edges.node.value);\n$avgAllTime := $average(airQualityMeasurement.edges.node.value);\n$totalAllTime := $count(airQualityMeasurement.edges);\n\n$groups := $groupBy(airQualityMeasurement.edges.node, function ($v) { $moment($v.recordedAt).format('YYYY-MM-DD') });\n$dailyAgg := $each($groups, function($v,$k){\n  {'day': $k,\n    'maximum': $max($v.value),\n    'minimum' : $min($v.value),\n    'average': $average($v.value),\n   'measurements':$v\n  }\n  \n});\n {'airQualityMeasurement': {\n  'maximum': $maxAllTime,\n  'minimum': $minAllTime,\n  'average': $avgAllTime,\n  'total': $totalAllTime,\n  'dailyAgg': $dailyAgg\n  }}\n) */\n\n\n$~>|airQualityMeasurement.edges.node| {\n    'day':$moment(recordedAt).format('YYYY-MM-DD'),\n    'time': $moment(recordedAt).format('HH:mm')\n    }\n   |"
+          },
+          "debug": {
+            "breakpointEnabled": false,
+            "publishSubscribeClient": false,
+            "publishToMFGx": false
+          },
+          "logging": {
+            "executionMetrics": false,
+            "executionStarted": false,
+            "executionSucceeded": false,
+            "executionFailed": true
+          }
+        }
+      ],
+      "version": "0.0.5"
+    },
+    "diagram": {
+      "id": "cl98w88fe05pz019m5eq6h1ri",
+      "offsetX": -64.08,
+      "offsetY": -17.19,
+      "zoom": 105,
+      "gridSize": 5,
+      "layers": [
+        {
+          "id": "77569c60-82ee-42b4-8480-ad6c7528caa5",
+          "type": "diagram-links",
+          "isSvg": true,
+          "transformed": true,
+          "models": {
+            "12ae4cb6-80a4-4cf3-997d-f778b7001576": {
+              "points": [
+                {
+                  "id": "02a54b99-2156-4262-a572-01463578a2b2",
+                  "type": "point",
+                  "x": 278.82,
+                  "y": 167.95
+                },
+                {
+                  "id": "7745c790-ff80-405f-a222-1fc76b32e2ed",
+                  "type": "point",
+                  "x": 300,
+                  "y": 167.95
+                }
+              ],
+              "id": "12ae4cb6-80a4-4cf3-997d-f778b7001576",
+              "type": "default",
+              "source": "request",
+              "sourcePort": "cl98iklda0006356eycryttz9",
+              "target": "buildPayload",
+              "targetPort": "cl98ikldb000c356eks05y1zm",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d6aa50e9-719c-447d-ad18-cec4805ffc6c": {
+              "points": [
+                {
+                  "id": "d0aeeedb-0f9b-4e4a-a0ff-d727082e3539",
+                  "type": "point",
+                  "x": 527.32,
+                  "y": 167.95
+                },
+                {
+                  "id": "16171e7c-f9c7-41e0-a766-0ed5391a2847",
+                  "type": "point",
+                  "x": 555,
+                  "y": 167.95
+                }
+              ],
+              "id": "d6aa50e9-719c-447d-ad18-cec4805ffc6c",
+              "type": "default",
+              "selected": false,
+              "source": "buildPayload",
+              "sourcePort": "cl98ikldb000e356epvyeuyn3",
+              "target": "8601d406-6d3a-41b9-850c-127a8c177506",
+              "targetPort": "cl98ilsmf0010356e1i1u7iur",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "d7cb7853-bf3d-47f5-b0cd-e8802a8c0ebd": {
+              "points": [
+                {
+                  "id": "358cfcd5-2724-4bb9-8e69-255b38921b33",
+                  "type": "point",
+                  "x": 709,
+                  "y": 167.95
+                },
+                {
+                  "id": "cc4b3ed9-52b2-4eaf-a3fe-2c8c689d83f2",
+                  "type": "point",
+                  "x": 745,
+                  "y": 167.95
+                }
+              ],
+              "id": "d7cb7853-bf3d-47f5-b0cd-e8802a8c0ebd",
+              "type": "default",
+              "selected": false,
+              "source": "8601d406-6d3a-41b9-850c-127a8c177506",
+              "sourcePort": "cl98ilsmf0012356ewhgnw1bs",
+              "target": "renderDocument",
+              "targetPort": "cl98ikldb000k356ekzn9b3pp",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            },
+            "dc5a4ee2-2e14-4123-bb8f-2ef4733fbbb3": {
+              "points": [
+                {
+                  "id": "0ea6fd17-623e-4027-a7b6-e34aff3cf878",
+                  "type": "point",
+                  "x": 1046.29,
+                  "y": 167.95
+                },
+                {
+                  "id": "513b4438-9aaf-4a77-92a8-877fbb9ff45d",
+                  "type": "point",
+                  "x": 1085,
+                  "y": 167.95
+                }
+              ],
+              "id": "dc5a4ee2-2e14-4123-bb8f-2ef4733fbbb3",
+              "type": "default",
+              "selected": false,
+              "source": "renderDocument",
+              "sourcePort": "cl98ikldb000m356e585kfgd0",
+              "target": "response",
+              "targetPort": "cl98ikldc000s356el6fng750",
+              "labels": [],
+              "width": 3,
+              "curvyness": 50
+            }
+          }
+        },
+        {
+          "id": "bac9f364-b690-43c2-8420-fa58c3eac524",
+          "type": "diagram-nodes",
+          "isSvg": false,
+          "transformed": true,
+          "models": {
+            "request": {
+              "id": "request",
+              "type": "request",
+              "selected": false,
+              "x": 70,
+              "y": 125,
+              "ports": [
+                {
+                  "id": "cl98iklda0006356eycryttz9",
+                  "type": "default",
+                  "x": 270.82,
+                  "y": 159.95,
+                  "name": "cl98iklda0007356en5a8zvkl",
+                  "parentNode": "request",
+                  "links": [
+                    "12ae4cb6-80a4-4cf3-997d-f778b7001576"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Payload",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "buildPayload"
+                ]
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Request Report Generation",
+              "note": "Generic Request Node to initiate report generation"
+            },
+            "buildPayload": {
+              "id": "buildPayload",
+              "type": "query",
+              "selected": false,
+              "x": 300,
+              "y": 125,
+              "ports": [
+                {
+                  "id": "cl98ikldb000c356eks05y1zm",
+                  "type": "default",
+                  "x": 292,
+                  "y": 159.95,
+                  "name": "cl98ikldb000d356enve83flo",
+                  "parentNode": "buildPayload",
+                  "links": [
+                    "12ae4cb6-80a4-4cf3-997d-f778b7001576"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl98ikldb000e356epvyeuyn3",
+                  "type": "default",
+                  "x": 519.32,
+                  "y": 159.95,
+                  "name": "cl98ikldb000f356etd4mjeav",
+                  "parentNode": "buildPayload",
+                  "links": [
+                    "d6aa50e9-719c-447d-ad18-cec4805ffc6c"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "api": "application",
+                "variablesTransform": "$",
+                "nextNodes": [
+                  "8601d406-6d3a-41b9-850c-127a8c177506"
+                ],
+                "query": "query Query($where: AirQualityMeasurementWhereInput, $orderBy: [AirQualityMeasurementOrderByInput!], $first: Int, $after: String) {\n  airQualityMeasurement(where: $where, orderBy: $orderBy, first: $first, after: $after) {\n    edges {\n      node {\n        locationId\n        location\n        parameter\n        recordedAt\n        unit\n        value\n        city\n        country\n        latitude\n        longitude\n      }\n    }\n  }\n}\n"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "AirQualityMeasurement Query",
+              "note": "Queries AirQualityMeasurement table for all records"
+            },
+            "renderDocument": {
+              "id": "renderDocument",
+              "type": "generateDocument",
+              "selected": false,
+              "x": 745,
+              "y": 125,
+              "ports": [
+                {
+                  "id": "cl98ikldb000k356ekzn9b3pp",
+                  "type": "default",
+                  "x": 737,
+                  "y": 159.95,
+                  "name": "cl98ikldb000l356esvwn0mmb",
+                  "parentNode": "renderDocument",
+                  "links": [
+                    "d7cb7853-bf3d-47f5-b0cd-e8802a8c0ebd"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Payload"
+                },
+                {
+                  "id": "cl98ikldb000m356e585kfgd0",
+                  "type": "default",
+                  "x": 1038.3,
+                  "y": 159.95,
+                  "name": "cl98ikldb000n356eeao8ebgm",
+                  "parentNode": "renderDocument",
+                  "links": [
+                    "dc5a4ee2-2e14-4123-bb8f-2ef4733fbbb3"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "documentRenderFormatTransform": "\"Pdf\"",
+                "nextNodes": [
+                  "response"
+                ],
+                "documentDesignTransform": "\"airQualityMeasurementReport\""
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Render AirQualityMeasurement Document",
+              "note": "Renders 3 page document with detailed listing of measurements by day, summary statistics, and a line chart"
+            },
+            "response": {
+              "id": "response",
+              "type": "response",
+              "selected": true,
+              "x": 1085,
+              "y": 125,
+              "ports": [
+                {
+                  "id": "cl98ikldc000s356el6fng750",
+                  "type": "default",
+                  "x": 1077,
+                  "y": 159.95,
+                  "name": "cl98ikldc000t356e2lh01t5v",
+                  "parentNode": "response",
+                  "links": [
+                    "dc5a4ee2-2e14-4123-bb8f-2ef4733fbbb3"
+                  ],
+                  "in": true,
+                  "fieldLabel": "Response"
+                },
+                {
+                  "id": "cl98ikldc000u356e1vzf7byv",
+                  "type": "default",
+                  "x": 1270.6,
+                  "y": 159.95,
+                  "name": "cl98ikldc000v356eaipslddi",
+                  "parentNode": "response",
+                  "links": [],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "responseTransform": "documentContent",
+                "nextNodes": []
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Respond with Document",
+              "note": "Responds to caller with rendered Air Quality report"
+            },
+            "8601d406-6d3a-41b9-850c-127a8c177506": {
+              "id": "8601d406-6d3a-41b9-850c-127a8c177506",
+              "type": "transform",
+              "selected": false,
+              "x": 555,
+              "y": 125,
+              "ports": [
+                {
+                  "id": "cl98ilsmf0010356e1i1u7iur",
+                  "type": "default",
+                  "x": 547,
+                  "y": 159.95,
+                  "name": "cl98ilsmf0011356etxf5nbhm",
+                  "parentNode": "8601d406-6d3a-41b9-850c-127a8c177506",
+                  "links": [
+                    "d6aa50e9-719c-447d-ad18-cec4805ffc6c"
+                  ],
+                  "in": true
+                },
+                {
+                  "id": "cl98ilsmf0012356ewhgnw1bs",
+                  "type": "default",
+                  "x": 701,
+                  "y": 159.95,
+                  "name": "cl98ilsmf0013356enhg87d9s",
+                  "parentNode": "8601d406-6d3a-41b9-850c-127a8c177506",
+                  "links": [
+                    "d7cb7853-bf3d-47f5-b0cd-e8802a8c0ebd"
+                  ],
+                  "in": false,
+                  "groupIndex": null,
+                  "groupPath": null,
+                  "fieldLabel": "Output",
+                  "fieldPath": "data.nextNodes"
+                }
+              ],
+              "data": {
+                "nextNodes": [
+                  "renderDocument"
+                ],
+                "transform": "/* (\n$maxAllTime := $max(airQualityMeasurement.edges.node.value);\n$minAllTime := $min(airQualityMeasurement.edges.node.value);\n$avgAllTime := $average(airQualityMeasurement.edges.node.value);\n$totalAllTime := $count(airQualityMeasurement.edges);\n\n$groups := $groupBy(airQualityMeasurement.edges.node, function ($v) { $moment($v.recordedAt).format('YYYY-MM-DD') });\n$dailyAgg := $each($groups, function($v,$k){\n  {'day': $k,\n    'maximum': $max($v.value),\n    'minimum' : $min($v.value),\n    'average': $average($v.value),\n   'measurements':$v\n  }\n  \n});\n {'airQualityMeasurement': {\n  'maximum': $maxAllTime,\n  'minimum': $minAllTime,\n  'average': $avgAllTime,\n  'total': $totalAllTime,\n  'dailyAgg': $dailyAgg\n  }}\n) */\n\n\n$~>|airQualityMeasurement.edges.node| {\n    'day':$moment(recordedAt).format('YYYY-MM-DD'),\n    'time': $moment(recordedAt).format('HH:mm')\n    }\n   |"
+              },
+              "debug": {
+                "breakpointEnabled": false,
+                "publishSubscribeClient": false,
+                "publishToMFGx": false
+              },
+              "logging": {
+                "executionMetrics": false,
+                "executionStarted": false,
+                "executionSucceeded": false,
+                "executionFailed": true
+              },
+              "name": "Split day and time",
+              "note": "This Node splits day and time from recordedAt field. Please note the large commented transform -> I did not understand how grouping works in the document designer and thought that I could group it beforehand. "
+            }
+          }
+        }
+      ],
+      "name": "Document Flow: Air Quality Measurement Report",
+      "type": "Document",
+      "version": "0.0.5",
+      "walkthrough": {
+        "steps": [
+          {
+            "id": "request",
+            "target": "#mfgx-node-request",
+            "title": "Request Report Generation",
+            "subtitle": "Request",
+            "content": "Generic Request Node to initiate report generation"
+          },
+          {
+            "id": "buildPayload",
+            "target": "#mfgx-node-buildPayload",
+            "title": "AirQualityMeasurement Query",
+            "subtitle": "Query",
+            "content": "Queries AirQualityMeasurement table for all records"
+          },
+          {
+            "id": "8601d406-6d3a-41b9-850c-127a8c177506",
+            "target": "#mfgx-node-8601d406-6d3a-41b9-850c-127a8c177506",
+            "title": "Split day and time",
+            "subtitle": "JSONata",
+            "content": "This Node splits day and time from recordedAt field. Please note the large commented transform -> I did not understand how grouping works in the document designer and thought that I could group it beforehand. "
+          },
+          {
+            "id": "renderDocument",
+            "target": "#mfgx-node-renderDocument",
+            "title": "Render AirQualityMeasurement Document",
+            "subtitle": "Render Document",
+            "content": "Renders 3 page document with detailed listing of measurements by day, summary statistics, and a line chart"
+          },
+          {
+            "id": "response",
+            "target": "#mfgx-node-response",
+            "title": "Respond with Document",
+            "subtitle": "Response",
+            "content": "Responds to caller with rendered Air Quality report"
+          }
+        ],
+        "includeIntroduction": true
+      }
+    }
+  }
+}
